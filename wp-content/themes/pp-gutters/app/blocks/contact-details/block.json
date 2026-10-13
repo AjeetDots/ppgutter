@@ -1,0 +1,25 @@
+{
+  "name": "acf/module-contact-details",
+  "title": "Contact Details",
+  "description": "This is a contact details block. The information in this block is edited in Site Options.",
+  "category": "metapixels-blocks",
+  "icon": "<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18' fill='none'><path fill-rule='evenodd' clip-rule='evenodd' d='M10 7L18 7L18 11L10 11L10 7Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M9 2.91102e-07L18 9.53674e-07L18 4L9 4L9 2.91102e-07Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M12 14L18 14L18 18L12 18L12 14Z' fill='#FF884B'/><path d='M3.5 0C4.03043 0 4.53914 0.189642 4.91421 0.527208C5.28929 0.864773 5.5 1.32261 5.5 1.8C5.5 2.27739 5.28929 2.73523 4.91421 3.07279C4.53914 3.41036 4.03043 3.6 3.5 3.6C2.96957 3.6 2.46086 3.41036 2.08579 3.07279C1.71071 2.73523 1.5 2.27739 1.5 1.8C1.5 1.32261 1.71071 0.864773 2.08579 0.527208C2.46086 0.189642 2.96957 0 3.5 0ZM2 4.5H5C5.53043 4.5 6.03914 4.68964 6.41421 5.02721C6.78929 5.36477 7 5.82261 7 6.3V11.25H5.5V18H1.5V11.25H0V6.3C0 5.82261 0.210714 5.36477 0.585787 5.02721C0.96086 4.68964 1.46957 4.5 2 4.5Z' fill='#FF884B'/></svg>",
+  "keywords": ["contact"],
+  "supports": {
+    "anchor": true,
+    "customClassName": true
+  },
+  "acf": {
+    "mode": "preview",
+    "renderTemplate": "router-contact-details.php"
+  },
+  "align": "full",
+  "example": {
+    "attributes": {
+      "mode": "preview",
+      "data": {
+        "preview_image_help": "/resources/block-preview-images/contact-details-screenshot.webp"
+      }
+    }
+  }
+}

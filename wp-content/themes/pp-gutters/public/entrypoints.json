@@ -1,0 +1,93 @@
+{
+  "app": {
+    "js": [
+      "js/runtime.0c5a3d.js",
+      "js/5.981deb.js",
+      "js/988.6fbaf8.js",
+      "js/app.1774f0.js"
+    ],
+    "css": [
+      "css/app.55f8a3.css"
+    ],
+    "dependencies": [
+      "jquery"
+    ]
+  },
+  "editor": {
+    "js": [
+      "js/runtime.0c5a3d.js",
+      "js/5.981deb.js",
+      "js/editor.ae9304.js"
+    ],
+    "css": [
+      "css/editor.35714a.css"
+    ],
+    "dependencies": [
+      "jquery"
+    ]
+  },
+  "hero": {
+    "js": [
+      "js/runtime.0c5a3d.js"
+    ],
+    "css": [
+      "css/hero.b64b5d.css"
+    ],
+    "dependencies": []
+  },
+  "hero-v2": {
+    "js": [
+      "js/runtime.0c5a3d.js"
+    ],
+    "css": [
+      "css/hero-v2.aebc09.css"
+    ],
+    "dependencies": []
+  },
+  "before-after": {
+    "js": [
+      "js/runtime.0c5a3d.js",
+      "js/before-after.5a4903.js"
+    ],
+    "css": [
+      "css/before-after.1604a9.css"
+    ],
+    "dependencies": []
+  },
+  "gallery": {
+    "js": [
+      "js/runtime.0c5a3d.js"
+    ],
+    "css": [
+      "css/gallery.f1d2be.css"
+    ],
+    "dependencies": []
+  },
+  "locations": {
+    "js": [
+      "js/runtime.0c5a3d.js"
+    ],
+    "css": [
+      "css/locations.89ab11.css"
+    ],
+    "dependencies": []
+  },
+  "reviews": {
+    "js": [
+      "js/runtime.0c5a3d.js"
+    ],
+    "css": [
+      "css/reviews.924938.css"
+    ],
+    "dependencies": []
+  },
+  "form": {
+    "js": [
+      "js/runtime.0c5a3d.js"
+    ],
+    "css": [
+      "css/form.3b906d.css"
+    ],
+    "dependencies": []
+  }
+}

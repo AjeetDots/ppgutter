@@ -1,0 +1,25 @@
+{
+  "name": "acf/module-breadcrumbs",
+  "title": "Breadcrumbs",
+  "description": "This is a breadcrumbs block.",
+  "category": "metapixels-blocks",
+  "icon": "<svg xmlns='http://www.w3.org/2000/svg' width='27' height='18' viewBox='0 0 27 18' fill='none'><path fill-rule='evenodd' clip-rule='evenodd' d='M-5.3834e-07 18L8 -2.87487e-07L12.5 0L4.5 18L-5.3834e-07 18Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M7 18L15 -2.87487e-07L19.5 0L11.5 18L7 18Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M14 18L22 -2.87487e-07L26.5 0L18.5 18L14 18Z' fill='#FF884B'/></svg>",
+  "keywords": ["breadcrumbs"],
+  "supports": {
+    "anchor": true,
+    "customClassName": true
+  },
+  "acf": {
+    "mode": "preview",
+    "renderTemplate": "router-breadcrumbs.php"
+  },
+  "align": "full",
+  "example": {
+    "attributes": {
+      "mode": "preview",
+      "data": {
+        "preview_image_help": "/resources/block-preview-images/breadcrumbs-screenshot.webp"
+      }
+    }
+  }
+}

@@ -1,0 +1,222 @@
+/*
+This plugin extends lazySizes to lazyLoad:
+background images, videos/posters and scripts
+
+Background-Image:
+For background images, use data-bg attribute:
+<div class="lazyload" data-bg="bg-img.jpg"></div>
+
+ Video:
+ For video/audio use data-poster and preload="none":
+ <video class="lazyload" preload="none" data-poster="poster.jpg" src="src.mp4">
+ <!-- sources -->
+ </video>
+
+ For video that plays automatically if in view:
+ <video
+	class="lazyload"
+	preload="none"
+	muted=""
+	data-autoplay=""
+	data-poster="poster.jpg"
+	src="src.mp4">
+</video>
+
+ Scripts:
+ For scripts use data-script:
+ <div class="lazyload" data-script="module-name.js"></div>
+
+
+ Script modules using require:
+ For modules using require use data-require:
+ <div class="lazyload" data-require="module-name"></div>
+*/
+
+(function(window, factory) {
+	var globalInstall = function(){
+		factory(window.lazySizes);
+		window.removeEventListener('lazyunveilread', globalInstall, true);
+	};
+
+	factory = factory.bind(null, window, window.document);
+
+	if(typeof module == 'object' && module.exports){
+		factory(require('lazysizes'));
+	} else if (typeof define == 'function' && define.amd) {
+		define(['lazysizes'], factory);
+	} else if(window.lazySizes) {
+		globalInstall();
+	} else {
+		window.addEventListener('lazyunveilread', globalInstall, true);
+	}
+}(window, function(window, document, lazySizes) {
+	/*jshint eqnull:true */
+	'use strict';
+	var bgLoad, regBgUrlEscape;
+	var uniqueUrls = {};
+
+	if(document.addEventListener){
+		regBgUrlEscape = /\(|\)|\s|'/;
+
+		bgLoad = function (url, cb){
+			var img = document.createElement('img');
+			img.onload = function(){
+				img.onload = null;
+				img.onerror = null;
+				img = null;
+				cb();
+			};
+			img.onerror = img.onload;
+
+			img.src = url;
+
+			if(img && img.complete && img.onload){
+				img.onload();
+			}
+		};
+
+		addEventListener('lazybeforeunveil', function(e){
+			if(e.detail.instance != lazySizes){return;}
+
+			var tmp, load, bg, poster;
+			if(!e.defaultPrevented) {
+
+				var target = e.target;
+
+				if(target.preload == 'none'){
+					target.preload = target.getAttribute('data-preload') || 'auto';
+				}
+
+				if (target.getAttribute('data-autoplay') != null) {
+					if (target.getAttribute('data-expand') && !target.autoplay) {
+						try {
+							target.play();
+						} catch (er) {}
+					} else {
+						requestAnimationFrame(function () {
+							target.setAttribute('data-expand', '-10');
+							lazySizes.aC(target, lazySizes.cfg.lazyClass);
+						});
+					}
+				}
+
+				tmp = target.getAttribute('data-link');
+				if(tmp){
+					addStyleScript(tmp, true);
+				}
+
+				// handle data-script
+				tmp = target.getAttribute('data-script');
+				if(tmp){
+					e.detail.firesLoad = true;
+					load = function(){
+						e.detail.firesLoad = false;
+						lazySizes.fire(target, '_lazyloaded', {}, true, true);
+					};
+					addStyleScript(tmp, null, load);
+				}
+
+				// handle data-require
+				tmp = target.getAttribute('data-require');
+				if(tmp){
+					if(lazySizes.cfg.requireJs){
+						lazySizes.cfg.requireJs([tmp]);
+					} else {
+						addStyleScript(tmp);
+					}
+				}
+
+				// handle data-bg
+				bg = target.getAttribute('data-bg');
+				if (bg) {
+					e.detail.firesLoad = true;
+					load = function(){
+						target.style.backgroundImage = 'url(' + (regBgUrlEscape.test(bg) ? JSON.stringify(bg) : bg ) + ')';
+						e.detail.firesLoad = false;
+						lazySizes.fire(target, '_lazyloaded', {}, true, true);
+					};
+
+					bgLoad(bg, load);
+				}
+
+				// handle data-poster
+				poster = target.getAttribute('data-poster');
+				if(poster){
+					e.detail.firesLoad = true;
+					load = function(){
+						target.poster = poster;
+						e.detail.firesLoad = false;
+						lazySizes.fire(target, '_lazyloaded', {}, true, true);
+					};
+
+					bgLoad(poster, load);
+
+				}
+			}
+		}, false);
+
+	}
+
+	function addStyleScript(src, style, cb){
+		if(uniqueUrls[src]){
+			return;
+		}
+		if(typeof eio_lazy_vars.safe_domains !== 'object' || ! Array.isArray(eio_lazy_vars.safe_domains)) {
+			return;
+		}
+		if(typeof eio_lazy_vars.safe_paths !== 'object' || ! Array.isArray(eio_lazy_vars.safe_paths)) {
+			return;
+		}
+		const safeDomains = eio_lazy_vars.safe_domains;
+		console.log(safeDomains);
+		const safePaths = eio_lazy_vars.safe_paths;
+		console.log(safePaths);
+
+		var validSrc = false;
+		var i = 0;
+		var k = 0;
+		try {
+			var parsedSrc = new URL(src);
+		} catch (error) {
+			console.log(error);
+			return;
+		}
+		for(; i < safeDomains.length; i++){
+			console.log('checking if ' + src + ' matches ' + safeDomains[i]);
+			if(parsedSrc.hostname === safeDomains[i]){
+				k = 0;
+				for(; k <safePaths.length; k++){
+					console.log('checking if ' + src + ' matches ' + safePaths[k]);
+					if (parsedSrc.pathname.startsWith(safePaths[k])) {
+						console.log('src is valid');
+						validSrc = true;
+						break;
+					}
+				}
+				break;
+			}
+		}
+		if(!validSrc){
+			return;
+		}
+		var elem = document.createElement(style ? 'link' : 'script');
+		var insertElem = document.getElementsByTagName('script')[0];
+
+		if(style){
+			elem.rel = 'stylesheet';
+			elem.href = src;
+		} else {
+			elem.onload = function(){
+				elem.onerror = null;
+				elem.onload = null;
+				cb();
+			};
+			elem.onerror = elem.onload;
+
+			elem.src = src;
+		}
+		uniqueUrls[src] = true;
+		uniqueUrls[elem.src || elem.href] = true;
+		insertElem.parentNode.insertBefore(elem, insertElem);
+	}
+}));

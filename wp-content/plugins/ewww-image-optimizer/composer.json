@@ -1,0 +1,11 @@
+{
+	"config": {
+		"classmap-authoritative": true
+	},
+    "require": {
+        "lsolesen/pel": "0.9.12"
+    },
+	"require-dev": {
+		"php-stubs/wordpress-tests-stubs": "^7.0"
+	}
+}

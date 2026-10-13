@@ -1,0 +1,25 @@
+{
+  "name": "acf/module-additional-cards",
+  "title": "Additional Cards",
+  "description": "Additional Cards where you can add intro text, buttons at the bottom, and the cards that turn into a slider for smaller devices.",
+  "category": "metapixels-blocks",
+  "icon": "<svg xmlns='http://www.w3.org/2000/svg' width='17' height='18' viewBox='0 0 17 18' fill='none'><path fill-rule='evenodd' clip-rule='evenodd' d='M-9.8527e-07 11.25L-4.76837e-07 -7.18716e-07L17 0L17 11.25L-9.8527e-07 11.25Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M-5.78524e-07 14.625L-4.76837e-07 12.375L17 12.375L17 14.625L-5.78524e-07 14.625Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M-4.39322e-06 18L-4.29153e-06 15.75L11.9 15.75L11.9 18L-4.39322e-06 18Z' fill='#FF884B'/></svg>",
+  "keywords": ["gallery, slider, logos, partners"],
+  "supports": {
+    "anchor": true,
+    "customClassName": true
+  },
+  "acf": {
+    "mode": "preview",
+    "renderTemplate": "router-additional-cards.php"
+  },
+  "align": "full",
+  "example": {
+    "attributes": {
+      "mode": "preview",
+      "data": {
+        "preview_image_help": "/resources/block-preview-images/additional-cards-screenshot.webp"
+      }
+    }
+  }
+}

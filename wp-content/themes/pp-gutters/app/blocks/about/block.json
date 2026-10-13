@@ -1,0 +1,25 @@
+{
+  "name": "acf/module-about",
+  "title": "About",
+  "description": "This is a block that supports image and video on the left, and content, buttons and a cta section on the right",
+  "category": "metapixels-blocks",
+  "icon": "<svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><g clip-path='url(#clip0_813_3251)'><path d='M24 0V8.87088C24 9.70015 23.6708 10.4955 23.0848 11.0822C22.4987 11.669 21.7038 11.999 20.8745 12H12L24 0Z' fill='#FF884B'/><path d='M12 12H20.8709C21.7002 12 22.4955 12.3292 23.0822 12.9152C23.669 13.5013 23.999 14.2962 24 15.1255V24L12 12Z' fill='#FF884B'/><path d='M0 24V15.1291C-5.48816e-07 14.2998 0.329179 13.5045 0.915225 12.9178C1.50127 12.331 2.29625 12.001 3.12552 12H12L0 24Z' fill='#FF884B'/><path d='M12 12H3.12912C2.29985 12 1.50449 11.6708 0.91777 11.0848C0.331049 10.4987 0.000954062 9.70375 0 8.87448L0 0L12 12Z' fill='#FF884B'/></g><defs><clipPath id='clip0_813_3251'><rect width='24' height='24' fill='white'/></clipPath></defs></svg>",
+  "keywords": ["cards"],
+  "supports": {
+    "anchor": true,
+    "customClassName": true
+  },
+  "acf": {
+    "mode": "preview",
+    "renderTemplate": "router-about.php"
+  },
+  "align": "full",
+  "example": {
+    "attributes": {
+      "mode": "preview",
+      "data": {
+        "preview_image_help": "/resources/block-preview-images/about-screenshot.webp"
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "acf/module-gallery",
+  "title": "Gallery",
+  "description": "This is gallery block, where you can add a gallery of images.",
+  "category": "metapixels-blocks",
+  "icon": "<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18' fill='none'><path fill-rule='evenodd' clip-rule='evenodd' d='M1.18787e-07 4L2.38419e-07 -2.55544e-07L4 0L4 4L1.18787e-07 4Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M7 4L7 -2.55544e-07L11 0L11 4L7 4Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M7 11L7 7L11 7L11 11L7 11Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M14 11L14 7L18 7L18 11L14 11Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M1.18787e-07 11L2.38419e-07 7L4 7L4 11L1.18787e-07 11Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M1.18787e-07 18L2.38419e-07 14L4 14L4 18L1.18787e-07 18Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M7 18L7 14L11 14L11 18L7 18Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M14 18L14 14L18 14L18 18L14 18Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M14 4L14 -2.55544e-07L18 0L18 4L14 4Z' fill='#FF884B'/></svg>",
+  "script": ["gallery"],
+  "keywords": ["gallery, slider"],
+  "supports": {
+    "anchor": true,
+    "customClassName": true,
+    "multiple": false,
+    "color": {
+      "text": false
+    }
+  },
+  "acf": {
+    "mode": "preview",
+    "renderTemplate": "router-gallery.php"
+  },
+  "align": "full",
+  "example": {
+    "attributes": {
+      "mode": "preview",
+      "data": {
+        "gallery": {
+          "0": 705,
+          "1": 705,
+          "2": 705,
+          "3": 705,
+          "4": 705,
+          "5": 705,
+          "6": 705,
+          "7": 705,
+          "8": 705,
+          "9": 705,
+          "10": 705,
+          "11": 705,
+          "12": 705
+        },
+        "preview_image_help": "/resources/block-preview-images/gallery-screenshot.webp"
+      }
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "__generated__": "⚠️ This file is generated. Do not edit.",
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 2,
+  "settings": {
+    "color": {
+      "customGradient": false,
+      "defaultPalette": false,
+      "defaultGradients": false,
+      "palette": [
+        {
+          "name": "Primary",
+          "slug": "primary",
+          "color": "#54b66c"
+        },
+        {
+          "name": "Secondary",
+          "slug": "secondary",
+          "color": "#f2f2f2"
+        },
+        {
+          "name": "Dark",
+          "slug": "dark",
+          "color": "#333333"
+        },
+        {
+          "name": "White",
+          "slug": "white",
+          "color": "#ffffff"
+        }
+      ]
+    },
+    "blocks": {
+      "core/button": {
+        "typography": {
+          "fontFamilies": []
+        },
+        "color": {
+          "text": false,
+          "custom": false
+        },
+        "border": {
+          "customRadius": false,
+          "radius": false
+        }
+      },
+      "core/buttons": {
+        "typography": {
+          "fontFamilies": []
+        },
+        "layout": {
+          "custom": false,
+          "contentSize": null,
+          "blockGap": null
+        }
+      },
+      "core/heading": {
+        "typography": {
+          "fontFamilies": []
+        }
+      },
+      "core/paragraph": {
+        "typography": {
+          "fontFamilies": []
+        }
+      }
+    },
+    "spacing": {
+      "blockGap": null,
+      "margin": false,
+      "padding": false,
+      "units": [],
+      "customSpacingSize": false,
+      "spacingScale": []
+    },
+    "border": {
+      "color": false,
+      "radius": false,
+      "style": false,
+      "width": false,
+      "customRadius": false
+    },
+    "appearanceTools": false,
+    "typography": {
+      "fontSizes": [],
+      "customFontSize": false,
+      "lineHeight": false,
+      "fontWeight": false,
+      "fontStyle": false,
+      "textTransform": false,
+      "letterSpacing": false,
+      "dropCap": false,
+      "textDecoration": false
+    },
+    "lightbox": false
+  }
+}

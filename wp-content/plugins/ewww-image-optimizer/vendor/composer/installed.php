@@ -1,0 +1,41 @@
+<?php return array(
+    'root' => array(
+        'name' => '__root__',
+        'pretty_version' => 'dev-master',
+        'version' => 'dev-master',
+        'reference' => 'b87b535602fe2abee8b26bd615c5e1c92a434fba',
+        'type' => 'library',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => true,
+    ),
+    'versions' => array(
+        '__root__' => array(
+            'pretty_version' => 'dev-master',
+            'version' => 'dev-master',
+            'reference' => 'b87b535602fe2abee8b26bd615c5e1c92a434fba',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'lsolesen/pel' => array(
+            'pretty_version' => '0.9.12',
+            'version' => '0.9.12.0',
+            'reference' => 'b95fe29cdacf9d36330da277f10910a13648c84c',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../lsolesen/pel',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'php-stubs/wordpress-tests-stubs' => array(
+            'pretty_version' => 'v7.0.0',
+            'version' => '7.0.0.0',
+            'reference' => '5745979d58aebec7e7e659e9ffaf0a1b94785442',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../php-stubs/wordpress-tests-stubs',
+            'aliases' => array(),
+            'dev_requirement' => true,
+        ),
+    ),
+);

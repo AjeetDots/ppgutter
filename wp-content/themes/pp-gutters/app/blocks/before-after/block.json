@@ -1,0 +1,30 @@
+{
+  "name": "acf/module-before-after",
+  "title": "Before After",
+  "description": "This is a before after block",
+  "category": "metapixels-blocks",
+  "icon": "<svg xmlns='http://www.w3.org/2000/svg' width='25' height='18' viewBox='0 0 25 18' fill='none'><path d='M6 15L1.56457 10.5646C1.14993 10.1499 0.916845 9.58765 0.916507 9.00127C0.916169 8.41489 1.14861 7.85235 1.56277 7.43724L6.00001 3L6 15Z' fill='#FF884B'/><path d='M19 3.00001L23.4354 7.43544C23.8501 7.85008 24.0832 8.41235 24.0835 8.99873C24.0838 9.58511 23.8514 10.1476 23.4372 10.5628L19 15V3.00001Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M7 18L7 -2.53341e-07L12 0L12 18L7 18Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M13 18L13 -2.53341e-07L18 0L18 18L13 18Z' fill='#FF884B'/></svg>",
+  "keywords": ["before-after"],
+  "supports": {
+    "anchor": true,
+    "customClassName": true,
+    "multiple": false
+  },
+  "acf": {
+    "mode": "preview",
+    "renderTemplate": "router-before-after.php"
+  },
+  "align": "full",
+  "example": {
+    "attributes": {
+      "mode": "preview",
+      "data": {
+        "images": {
+          "0": 512,
+          "1": 511
+        },
+        "preview_image_help": "/resources/block-preview-images/before-after-screenshot.webp"
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "acf/module-partial-about-right-side",
+  "title": "Partial About Right Side",
+  "description": "Partial block that can only be included in the module-about block.",
+  "category": "metapixels-partials",
+  "icon": "<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18' fill='none'><path fill-rule='evenodd' clip-rule='evenodd' d='M4.15334e-07 18L9.53674e-07 -6.38859e-07L6 -6.3886e-08L6 4L10 4L10 8L6 8L6 18L4.15334e-07 18Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M7 18L7 9L11 9L11 3L7 3L7 -3.19429e-07L18 0L18 12L18 18L12 18L7 18Z' fill='#FF884B'/></svg>",
+  "keywords": ["cta"],
+  "supports": {
+    "anchor": true,
+    "customClassName": true,
+    "parent": [ "acf/module-about" ]
+  },
+  "acf": {
+    "mode": "preview",
+    "renderTemplate": "router-about-right-side.php"
+  },
+  "align": "full",
+  "example": {
+    "attributes": {
+      "mode": "preview",
+      "data": {
+        "preview_image_help": "/resources/block-preview-images/partial-screenshot.webp"
+      }
+    }
+  }
+}

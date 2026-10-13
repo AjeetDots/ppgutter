@@ -1,0 +1,24 @@
+{
+  "name": "acf/module-form",
+  "title": "Form",
+  "description": "This is a block with form, where you can select a form and add title and text.",
+  "category": "metapixels-blocks",
+  "icon": "<svg xmlns='http://www.w3.org/2000/svg' width='17' height='18' viewBox='0 0 17 18' fill='none'><path fill-rule='evenodd' clip-rule='evenodd' d='M9.07226e-07 5L17 5L17 9L4.76837e-07 9L9.07226e-07 5Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M9.07226e-07 10L17 10L17 14L4.76837e-07 14L9.07226e-07 10Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M9.07226e-07 -1.19038e-07L17 1.13249e-06L17 4L4.76837e-07 4L9.07226e-07 -1.19038e-07Z' fill='#FF884B'/><path fill-rule='evenodd' clip-rule='evenodd' d='M8 15L17 15L17 18L8 18L8 15Z' fill='#FF884B'/></svg>",
+  "keywords": ["form, contact, enquiry"],
+  "supports": {
+    "customClassName": true
+  },
+  "acf": {
+    "mode": "preview",
+    "renderTemplate": "router-form.php"
+  },
+  "align": "full",
+  "example": {
+    "attributes": {
+      "mode": "preview",
+      "data": {
+        "preview_image_help": "/resources/block-preview-images/form-screenshot.webp"
+      }
+    }
+  }
+}

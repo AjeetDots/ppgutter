@@ -1,0 +1,1 @@
+.block-hero figure{margin:0;padding:0}.block-hero img{height:100%!important;object-fit:cover;width:100%}@media only screen and (max-width:767px){.block-hero.bg-ovr-dark:before{background:linear-gradient(180deg,transparent 180px,var(--bs-dark-alpha) 200px,var(--bs-dark) 230px)!important}.block-hero .bg-img-banner{height:250px!important}}

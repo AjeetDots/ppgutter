@@ -1,0 +1,1 @@
+(self.webpackChunksage=self.webpackChunksage||[]).push([[684],{983:()=>{const e=document.querySelectorAll(".slider");e.length>0&&e.forEach((e=>{e.addEventListener("input",(t=>{const s=e.closest(".container-slider");null!==s&&s.style.setProperty("--position","".concat(t.target.value,"%"))}))}))},110:()=>{}},e=>{var t=t=>e(e.s=t);t(983),t(110)}]);

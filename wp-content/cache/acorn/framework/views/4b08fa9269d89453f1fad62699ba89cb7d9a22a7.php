@@ -1,0 +1,1 @@
+<?php if ($__env->exists('components.breadcrumbs')) echo $__env->make('components.breadcrumbs', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /home/u741107087/domains/ppgutters.co.uk/public_html/wp-content/themes/pp-gutters/resources/views/blocks/breadcrumbs/breadcrumbs.blade.php ENDPATH**/ ?>

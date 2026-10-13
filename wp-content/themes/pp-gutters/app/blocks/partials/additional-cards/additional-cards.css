@@ -1,0 +1,4 @@
+#slider-additional-cards .slick-dots { bottom: -10px; }
+#slider-additional-cards .slick-dots li { margin: 0 !important; }
+#slider-additional-cards .slick-dots li button::before { font-size: 10px !important; color: var(--bs-dark); opacity: 0.8; }
+#slider-additional-cards .slick-dots li.slick-active button::before { color: var(--bs-primary) !important; }
