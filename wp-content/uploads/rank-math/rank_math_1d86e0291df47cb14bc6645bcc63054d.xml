@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type="text/xsl" href="//ppgutters.ddev.site:8490/video-sitemap.xsl"?>
+<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd http://www.google.com/schemas/sitemap-video/1.1 http://www.google.com/schemas/sitemap-video/1.1/sitemap-video.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+	<url>
+		<loc>https://ppgutters.ddev.site:8490/</loc>
+		<video:video>
+			<video:title><![CDATA[PP Gutters - The gutter cleaning and maintenance specialists]]></video:title>
+			<video:description><![CDATA[PP Gutters - The gutter cleaning and maintenance specialists for commercial and residential clients across High Wycombe, Watford &amp; London.]]></video:description>
+			<video:thumbnail_loc>https://assets.ppgutters.co.uk/wp-content/uploads/2026/04/pp-gutters-commercial-gutter-cleaning-before-1805-1024x683-1.jpg?strip=all</video:thumbnail_loc>
+			<video:content_loc>https://ppgutters.ddev.site:8490/wp-content/uploads/2023/12/PP-Gutters-Ltd.mp4</video:content_loc>
+			<video:family_friendly>yes</video:family_friendly>
+			<video:uploader info="https://ppgutters.ddev.site:8490/author/darko/">Darko</video:uploader>
+		</video:video>
+		<video:video>
+			<video:title><![CDATA[PP Gutters - The gutter cleaning and maintenance specialists]]></video:title>
+			<video:description><![CDATA[PP Gutters - The gutter cleaning and maintenance specialists for commercial and residential clients across High Wycombe, Watford &amp; London.]]></video:description>
+			<video:thumbnail_loc>https://assets.ppgutters.co.uk/wp-content/uploads/2026/04/pp-gutters-commercial-gutter-cleaning-before-1805-1024x683-1.jpg?strip=all</video:thumbnail_loc>
+			<video:content_loc>https://ppgutters.ddev.site:8490/wp-content/uploads/2023/12/PP-Gutters-Ltd.mp4</video:content_loc>
+			<video:family_friendly>yes</video:family_friendly>
+			<video:uploader info="https://ppgutters.ddev.site:8490/author/darko/">Darko</video:uploader>
+		</video:video>
+	</url>
+	<url>
+		<loc>https://ppgutters.ddev.site:8490/about-us/</loc>
+		<video:video>
+			<video:title><![CDATA[About Us - PP Gutters]]></video:title>
+			<video:description><![CDATA[Blocked gutters, mouldy roofs? Call PP Gutters to sort! Learn about us and our commitment to clients in North London, High Wycombe and Watford.]]></video:description>
+			<video:thumbnail_loc>https://assets.ppgutters.co.uk/wp-content/uploads/2024/01/pp-gutters-sharer.jpg?strip=all</video:thumbnail_loc>
+			<video:content_loc>https://ppgutters.ddev.site:8490/wp-content/uploads/2023/12/PP-Gutters-Ltd.mp4</video:content_loc>
+			<video:family_friendly>yes</video:family_friendly>
+			<video:uploader info="https://ppgutters.ddev.site:8490/author/darko/">Darko</video:uploader>
+		</video:video>
+		<video:video>
+			<video:title><![CDATA[About Us - PP Gutters]]></video:title>
+			<video:description><![CDATA[Blocked gutters, mouldy roofs? Call PP Gutters to sort! Learn about us and our commitment to clients in North London, High Wycombe and Watford.]]></video:description>
+			<video:thumbnail_loc>https://assets.ppgutters.co.uk/wp-content/uploads/2024/01/pp-gutters-sharer.jpg?strip=all</video:thumbnail_loc>
+			<video:content_loc>https://ppgutters.ddev.site:8490/wp-content/uploads/2023/12/PP-Gutters-Ltd.mp4</video:content_loc>
+			<video:family_friendly>yes</video:family_friendly>
+			<video:uploader info="https://ppgutters.ddev.site:8490/author/darko/">Darko</video:uploader>
+		</video:video>
+	</url>
+</urlset>

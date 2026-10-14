@@ -1,5 +1,5 @@
 <?php
-$allowed_blocks = ['core/heading', 'core/paragraph', 'contact-form-7/contact-form-selector', 'fluentfom/guten-block'];
+$allowed_blocks = ['core/heading', 'core/paragraph', 'core/html', 'contact-form-7/contact-form-selector', 'fluentfom/guten-block'];
 $template       = [
   ['core/heading', ["placeholder" => "Block Title Goes Here", "textAlign" => "center"]],
   ['core/paragraph', ["placeholder" => "Some content goes here as the paragraph text.", "className" => "has-text-align-center"]],

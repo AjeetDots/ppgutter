@@ -55,6 +55,7 @@ add_filter( 'allowed_block_types_all', function ( $allowed_blocks, $post ) {
         'core/buttons',
         'core/button',
         'core/pattern',
+        'core/html',
         'trustindex/block-selector',
         'fluentfom/guten-block',
     ];
