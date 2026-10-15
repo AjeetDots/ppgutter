@@ -34,16 +34,16 @@ if ( getenv( 'IS_DDEV_PROJECT' ) === 'true' ) {
 	define( 'WP_ENVIRONMENT_TYPE', 'local' );
 } else {
 /** The name of the database for WordPress */
-define( 'DB_NAME', 'u741107087_o6WLp' );
+define( 'DB_NAME', 'ppgutters' );
 
 /** Database username */
-define( 'DB_USER', 'root' );
+define( 'DB_USER', 'ppgutters' );
 
 /** Database password */
-define( 'DB_PASSWORD', '' );
+define( 'DB_PASSWORD', 'Mv4QmjaRz7yVbPn5tdF' );
 
 /** Database hostname */
-define( 'DB_HOST', '127.0.0.1' );
+define( 'DB_HOST', 'localhost' );
 }
 
 /** Database charset to use in creating database tables. */
