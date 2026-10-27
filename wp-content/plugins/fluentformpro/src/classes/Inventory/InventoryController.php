@@ -289,7 +289,9 @@ class InventoryController
         //@improve handle single payment input
 
         foreach ($inventoryFields as $inventoryFieldName => $field) {
-            if (!empty(ArrayHelper::get($formData, $inventoryFieldName))) {
+            $value = ArrayHelper::get($formData, $inventoryFieldName);
+            // A "0" option (e.g. a free ticket) is a selection and must be booked
+            if (!empty($value) || ('0' === $value && !$inventoryValidation->isSingleInventoryField($field))) {
                 $usedInventoryFields[$inventoryFieldName] = $formData[$inventoryFieldName];
             }
         }

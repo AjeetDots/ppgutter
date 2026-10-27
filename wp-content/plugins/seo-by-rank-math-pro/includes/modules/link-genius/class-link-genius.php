@@ -74,9 +74,12 @@ class Link_Genius {
 		Link_Status_Crawler::get(); // Background link status crawler.
 		Bulk_Link_Modifier::get(); // Consolidated background processor for delete, mark_safe, and restore.
 		new Table_Extension();    // Extend FREE tables with PRO columns.
-		new Admin();
 		new Related_Posts_Shortcode();
 		new Block_Related_Posts();
+
+		if ( Helper::has_cap( 'link_builder' ) ) {
+			new Admin();
+		}
 
 		// Initialize Bulk Update feature.
 		BulkUpdate\Processor::get();
@@ -86,6 +89,19 @@ class Link_Genius {
 		KeywordMaps\Preview_Processor::get();
 		KeywordMaps\Keyword_Map_Processor::get();
 		KeywordMaps\Keyword_Maps::get();
+
+		// Enrich the FREE get-link-report ability with PRO audit data.
+		$this->filter( 'rank_math/abilities/link_report_result', 'enrich_link_report', 10, 2 );
+	}
+
+	/**
+	 * Add PRO Link Genius audit data to the FREE link report.
+	 *
+	 * @param array $result Result from the FREE runner.
+	 * @return array
+	 */
+	public function enrich_link_report( array $result ): array {
+		return ( new Abilities\Link_Report_Enricher() )->enrich( $result );
 	}
 
 	/**
@@ -162,7 +178,7 @@ class Link_Genius {
 	 */
 	public function admin_bar_items( $menu ) {
 		// Early bail if current user doesn't have access to Link Genius.
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! Helper::has_cap( 'link_builder' ) ) {
 			return;
 		}
 

@@ -40,35 +40,11 @@ class Admin {
 			return;
 		}
 
-		$this->filter( 'admin_menu', 'update_links_menu_title' );
 		$this->filter( 'rank_math/admin_pages', 'add_links_page' );
 		$this->filter( 'rank_math/settings/general', 'add_settings' );
 		$this->action( 'rank_math/admin/editor_scripts', 'enqueue' );
 
 		$this->action( 'rank_math/links/admin_page_registered', 'override_links_page_assets' );
-	}
-
-	/**
-	 * Update the Links menu title to Link Genius.
-	 */
-	public function update_links_menu_title() {
-		global $submenu;
-		if ( ! isset( $submenu['rank-math'] ) ) {
-			return;
-		}
-
-		$new_label = '<span class="rank-math-new-label" style="color:#ed5e5e;font-size:10px;font-weight:normal;">' . esc_html__( 'New!', 'rank-math-pro' ) . '</span>';
-		foreach ( $submenu['rank-math'] as &$item ) {
-			if ( ! isset( $item[2] ) || $item[2] !== 'rank-math-links-page' ) {
-				continue;
-			}
-
-			// Translators: placeholder is the new label.
-			$item[0] = sprintf( esc_html__( 'AI Link Genius %s', 'rank-math-pro' ), $new_label );
-			$item[3] = esc_html__( 'AI Link Genius', 'rank-math-pro' );
-
-			break;
-		}
 	}
 
 	/**

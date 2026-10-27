@@ -45,6 +45,55 @@ class Bootstrap extends IntegrationManagerController
         $this->registerAdminHooks();
 
         $this->registerHooks();
+
+        // Both integration_name variants that can persist a processable feed are gated, so a
+        // snake-case save can't skip the cap; registered here to run regardless of isEnabled.
+        add_filter('fluentform/save_integration_value_UserRegistration', [$this, 'capGrantableUserRole'], 11, 1);
+        add_filter('fluentform/save_integration_value_user_registration', [$this, 'capGrantableUserRole'], 11, 1);
+    }
+
+    public function capGrantableUserRole($metaValue)
+    {
+        if (!is_array($metaValue) || empty($metaValue['userRole'])) {
+            return $metaValue;
+        }
+
+        if ('user_update' === Arr::get($metaValue, 'list_id')) {
+            return $metaValue; // user_update changes profile fields, not the role
+        }
+
+        if (current_user_can('manage_options') || current_user_can('fluentform_full_access')) {
+            return $metaValue;
+        }
+
+        if (!$this->currentUserCanGrantRole($metaValue['userRole'])) {
+            $metaValue['userRole'] = 'subscriber';
+        }
+
+        return $metaValue;
+    }
+
+    private function currentUserCanGrantRole($roleKey)
+    {
+        if (!is_string($roleKey) || '' === $roleKey) {
+            return false;
+        }
+
+        $role = get_role($roleKey);
+        if (!$role || empty($role->capabilities)) {
+            return false;
+        }
+
+        // Compare against the saver's own capability set, not current_user_can(): a cap stripped
+        // at runtime (e.g. unfiltered_html on multisite) must not falsely downgrade a real grant.
+        $userCaps = wp_get_current_user()->allcaps;
+        foreach ($role->capabilities as $capability => $granted) {
+            if ($granted && empty($userCaps[$capability])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected function registerHooks()

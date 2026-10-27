@@ -763,6 +763,45 @@ class PaymentHelper
         return intval(round($amount * 100));
     }
 
+    // Sane default per-line quantity cap, filterable per store.
+    const MAX_QUANTITY = 1000000;
+
+    public static function maxQuantity()
+    {
+        $max = apply_filters('fluentform/payment/max_quantity', self::MAX_QUANTITY);
+        return (is_int($max) && $max >= 1) ? $max : self::MAX_QUANTITY;
+    }
+
+    // The largest amount (major units) whose cents, times the maximum quantity, still fit a signed
+    // integer. Bounding each amount here means item_price(cents) * quantity can never overflow the
+    // line_total column -- which non-strict MySQL would otherwise store wrapped toward 0 (a free order).
+    public static function maxAmount()
+    {
+        return (float) PHP_INT_MAX / 100 / self::maxQuantity();
+    }
+
+    // A payable amount must be a finite, positive number below maxAmount(), so INF (1e400), an
+    // overflowing exponential (1e308), and any value that would overflow line_total are all rejected.
+    public static function isValidPaymentAmount($value)
+    {
+        return is_numeric($value)
+            && is_finite((float) $value)
+            && (float) $value > 0
+            && (float) $value < self::maxAmount();
+    }
+
+    // A quantity must be a whole number within [1, maxQuantity]. Zero is handled separately by the
+    // caller (an optional/omitted item). Compared as a float so an out-of-range value never relies on
+    // platform-dependent (int) truncation. INF/overflow and fractional values are rejected.
+    public static function isValidQuantity($value)
+    {
+        if (!is_numeric($value) || !is_finite((float) $value)) {
+            return false;
+        }
+        $number = (float) $value;
+        return $number == floor($number) && $number >= 1 && $number <= (float) self::maxQuantity();
+    }
+
     public static function getCustomerName($submission, $form = false)
     {
         $formSettings = PaymentHelper::getFormSettings($submission->form_id, 'admin');

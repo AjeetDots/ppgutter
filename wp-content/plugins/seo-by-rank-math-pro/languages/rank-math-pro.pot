@@ -8,7 +8,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Language-Team: Rank Math\n"
 "Last-Translator: Rank Math\n"
-"POT-Creation-Date: 2026-04-30 08:01+0000\n"
+"POT-Creation-Date: 2026-10-16 15:06+0000\n"
 "Project-Id-Version: undefined\n"
 "X-Poedit-Basepath: ..\n"
 "X-Poedit-KeywordsList: __;_e;_ex:1,2c;_n:1,2;_n_noop:1,2;_nx:1,2,4c;_nx_noop:1,2,3c;_x:1,2c;esc_attr__;esc_attr_e;esc_attr_x:1,2c;esc_html__;esc_html_e;esc_html_x:1,2c\n"
@@ -57,6 +57,15 @@ msgid "Make your podcasts discoverable via Google Podcasts, Apple Podcasts, and 
 msgstr ""
 
 msgid "Please activate Schema module to use this module."
+msgstr ""
+
+msgid "Marketplace"
+msgstr ""
+
+msgid "Discover handpicked WordPress plugins designed to boost your SEO, improve Core Web Vitals, and accelerate your website's growth."
+msgstr ""
+
+msgid "Please connect your site to Rank Math to use this module."
 msgstr ""
 
 msgid "Random Word"
@@ -1822,6 +1831,9 @@ msgstr ""
 msgid "Sorry, no locations were found."
 msgstr ""
 
+msgid "Rank Math Marketplace"
+msgstr ""
+
 #. translators: News Sitemap KB link
 msgid "News Sitemaps allow you to control which content you submit to Google News. More information: <a href=\"%s\" target=\"_blank\">News Sitemaps overview</a>"
 msgstr ""
@@ -2175,16 +2187,6 @@ msgid "Migrate"
 msgstr ""
 
 msgid "No products found to migrate."
-msgstr ""
-
-msgid "New!"
-msgstr ""
-
-#. translators: placeholder is the new label.
-msgid "AI Link Genius %s"
-msgstr ""
-
-msgid "AI Link Genius"
 msgstr ""
 
 msgid "Filters to apply (is_internal, unchecked_only, etc.)."
@@ -3125,7 +3127,7 @@ msgstr ""
 msgid "Authentication failed. Please check your Rank Math account connection."
 msgstr ""
 
-msgid "Insufficient Content AI credits. Please upgrade your plan."
+msgid "Your Rank Math AI usage limit has been exhausted. Please upgrade your plan to continue."
 msgstr ""
 
 msgid "Unknown API error."
@@ -3292,7 +3294,7 @@ msgstr ""
 msgid "Variation deleted successfully."
 msgstr ""
 
-msgid "This feature is only available for Content AI subscribers."
+msgid "This feature is only available for Rank Math AI subscribers."
 msgstr ""
 
 msgid "Synonyms"

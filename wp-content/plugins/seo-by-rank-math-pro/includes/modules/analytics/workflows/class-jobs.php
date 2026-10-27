@@ -169,7 +169,7 @@ class Jobs {
 			'end_date'   => $date,
 			'dimensions' => [
 				[ 'name' => 'pagePath' ],
-				[ 'name' => 'pageReferrer' ],
+				[ 'name' => 'sessionSourceMedium' ],
 			],
 			'metrics'    => [
 				[ 'name' => 'screenPageViews' ],

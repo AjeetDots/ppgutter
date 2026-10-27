@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Plugins - Fluent Forms – Customizable Contact Forms, Survey, Quiz, &amp; Conversational Form Builder - Stable (latest release) package.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2026-10-03 00:33:24+0000\n"
+"PO-Revision-Date: 2026-10-16 15:38:40+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -10,6 +10,80 @@ msgstr ""
 "X-Generator: GlotPress/4.1.0\n"
 "Language: en_GB\n"
 "Project-Id-Version: Plugins - Fluent Forms – Customizable Contact Forms, Survey, Quiz, &amp; Conversational Form Builder - Stable (latest release)\n"
+
+#. translators: %s is a link to the site name.
+#: app/Views/email/order_claim.php:27
+msgid "This message was sent by %s"
+msgstr "This message was sent by %s"
+
+#: app/Views/email/order_claim.php:22
+msgid "If you did not request this, you can safely ignore this email."
+msgstr "If you did not request this, you can safely ignore this email."
+
+#: app/Views/email/order_claim.php:20
+msgid "Or paste this link into your browser:"
+msgstr "Or paste this link into your browser:"
+
+#: app/Views/email/order_claim.php:18
+#: app/Views/receipt/order_claim_notice.php:14
+msgid "Add my past orders"
+msgstr "Add my past orders"
+
+#: app/Views/email/order_claim.php:16
+msgid "You asked to add your past guest orders to this account. Click below while signed in to that account to add them. The link only works for that account and expires in 24 hours."
+msgstr "You asked to add your past guest orders to this account. Click below while signed in to that account to add them. The link only works for that account and expires in 24 hours."
+
+#: app/Views/email/order_claim.php:15
+msgid "Add your past orders to your account"
+msgstr "Add your past orders to your account"
+
+#: app/Modules/Payments/OrderClaim.php:246
+msgid "This order-claim link is invalid or has already been used. If you still need your past orders linked, please contact the site."
+msgstr "This order-claim link is invalid or has already been used. If you still need your past orders linked, please contact the site."
+
+#: app/Modules/Payments/OrderClaim.php:244
+msgid "Your past orders have been added to your account and now appear on your payments page."
+msgstr "Your past orders have been added to your account and now appear on your payments page."
+
+#: app/Modules/Payments/OrderClaim.php:230
+msgid "This link can't be used"
+msgstr "This link can't be used"
+
+#: app/Modules/Payments/OrderClaim.php:230
+msgid "You're all set"
+msgstr "You're all set"
+
+#: app/Modules/Payments/OrderClaim.php:229
+msgid "Link not valid"
+msgstr "Link not valid"
+
+#: app/Modules/Payments/OrderClaim.php:229
+msgid "Orders linked"
+msgstr "Orders linked"
+
+#: app/Modules/Payments/OrderClaim.php:220
+msgid "This link only works for the account that requested it. Sign in to that account and open the link again."
+msgstr "This link only works for the account that requested it. Sign in to that account and open the link again."
+
+#: app/Modules/Payments/OrderClaim.php:174
+msgid "Add your past orders to your %s account"
+msgstr "Add your past orders to your %s account"
+
+#: app/Modules/Payments/OrderClaim.php:65
+msgid "You have past orders placed as a guest with %s. Add them to this account and we'll email you a secure link to confirm."
+msgstr "You have past orders placed as a guest with %s. Add them to this account and we'll email you a secure link to confirm."
+
+#: app/Modules/Payments/OrderClaim.php:54
+msgid "We could not send the confirmation email. Please try again, or contact the site."
+msgstr "We could not send the confirmation email. Please try again, or contact the site."
+
+#: app/Modules/Payments/OrderClaim.php:53
+msgid "A secure link was just emailed to you. Please check your inbox before requesting another."
+msgstr "A secure link was just emailed to you. Please check your inbox before requesting another."
+
+#: app/Modules/Payments/OrderClaim.php:52
+msgid "We've emailed a secure link to %s. Open it while signed in to this account to add your past orders — check your spam folder if it is not there."
+msgstr "We've emailed a secure link to %s. Open it while signed in to this account to add your past orders — check your spam folder if it is not there."
 
 #: app/Services/FormBuilder/ElementSettingsPlacement.php:133
 msgid "Applies to every input in this field. Address autofill is off unless you choose \"On\", which gives each input the autofill value that matches it. Choose \"off\" to disable browser autofill for the whole field, or \"None\" to add no attribute at all."
@@ -67,11 +141,11 @@ msgstr "Enable Payment Element"
 
 #. translators: 1: number of forms whose custom code was skipped, 2: total
 #. number of imported forms
-#: app/Services/Transfer/TransferService.php:225
+#: app/Services/Transfer/TransferService.php:247
 msgid "Custom JS, CSS and advanced date configuration were not imported for %1$d of %2$d forms because your account cannot add custom code. Ask an administrator to add it."
 msgstr "Custom JS, CSS and advanced date configuration were not imported for %1$d of %2$d forms because your account cannot add custom code. Ask an administrator to add it."
 
-#: app/Services/Transfer/TransferService.php:220
+#: app/Services/Transfer/TransferService.php:242
 msgid "Custom JS, CSS and advanced date configuration were not imported because your account cannot add custom code. Ask an administrator to add it."
 msgstr "Custom JS, CSS and advanced date configuration were not imported because your account cannot add custom code. Ask an administrator to add it."
 
@@ -163,7 +237,7 @@ msgstr "The subscription is already closed, so no renewal actions were fired."
 msgid "Late subscription payment recorded"
 msgstr "Late subscription payment recorded"
 
-#: app/Modules/Payments/Classes/PaymentAction.php:397
+#: app/Modules/Payments/Classes/PaymentAction.php:433
 msgid "This payment is already complete or still processing. Please wait for confirmation."
 msgstr "This payment is already complete or still processing. Please wait for confirmation."
 
@@ -981,7 +1055,7 @@ msgstr "Replace a form's fields from a spec (same shape as create-form: a list o
 msgid "Update Form Fields"
 msgstr "Update Form Fields"
 
-#: app/Modules/MCP/Tools/ContextTools.php:249
+#: app/Modules/MCP/Tools/ContextTools.php:250
 msgid "FluentForm context loaded. Use list-submissions and get-submission for entries, get-form-stats for per-form numbers."
 msgstr "FluentForm context loaded. Use list-submissions and get-submission for entries, get-form-stats for per-form numbers."
 
@@ -1510,7 +1584,7 @@ msgstr "Fluent Forms Pro is not compatible with this version of Fluent Forms. Pl
 msgid "Action Required: "
 msgstr "Action Required: "
 
-#: app/Services/Transfer/TransferService.php:744
+#: app/Services/Transfer/TransferService.php:779
 msgid "Invalid table name for export."
 msgstr "Invalid table name for export."
 
@@ -1549,7 +1623,7 @@ msgstr "Stripe Amount Mismatch"
 msgid "No transaction found for this submission."
 msgstr "No transaction found for this submission."
 
-#: app/Modules/Payments/Classes/PaymentAction.php:890
+#: app/Modules/Payments/Classes/PaymentAction.php:929
 msgid "This subscription plan was expired"
 msgstr "This subscription plan was expired"
 
@@ -1745,78 +1819,78 @@ msgstr "Select the PayPal integration method you want to use for this form. Lega
 msgid "Payment Processor"
 msgstr "Payment Processor"
 
-#: app/Modules/Component/Component.php:1565
+#: app/Modules/Component/Component.php:1585
 msgid "No method found"
 msgstr "No method found"
 
-#: app/Modules/Component/Component.php:1564
+#: app/Modules/Component/Component.php:1584
 msgid "Payment process failed!"
 msgstr "Payment process failed!"
 
-#: app/Modules/Component/Component.php:1563
+#: app/Modules/Component/Component.php:1583
 msgid "Request failed. Please try again"
 msgstr "Request failed. Please try again"
 
-#: app/Modules/Component/Component.php:1545
+#: app/Modules/Component/Component.php:1565
 msgid "Copied"
 msgstr "Copied"
 
-#: app/Modules/Component/Component.php:1542
+#: app/Modules/Component/Component.php:1562
 msgid "Copy"
 msgstr "Copy"
 
-#: app/Modules/Component/Component.php:1535
+#: app/Modules/Component/Component.php:1555
 msgid "Confirming..."
 msgstr "Confirming..."
 
-#: app/Modules/Component/Component.php:1534
-#: app/Modules/Component/Component.php:1566
+#: app/Modules/Component/Component.php:1554
+#: app/Modules/Component/Component.php:1586
 msgid "Processing..."
 msgstr "Processing..."
 
-#: app/Modules/Component/Component.php:1533
+#: app/Modules/Component/Component.php:1553
 msgid "Trial"
 msgstr "Trial"
 
-#: app/Modules/Component/Component.php:1529
+#: app/Modules/Component/Component.php:1549
 msgid "Sub Total"
 msgstr "Sub Total"
 
-#: app/Modules/Component/Component.php:1524
+#: app/Modules/Component/Component.php:1544
 msgid "This Item is Stock Out"
 msgstr "This Item is Stock Out"
 
-#: app/Modules/Component/Component.php:1516
+#: app/Modules/Component/Component.php:1536
 msgid "File upload in progress. Please wait..."
 msgstr "File upload in progress. Please wait..."
 
 #: app/Modules/Component/Component.php:708
-#: app/Modules/Component/Component.php:1556
+#: app/Modules/Component/Component.php:1576
 msgid "Geolocation is not supported by this browser."
 msgstr "Geolocation is not supported by this browser."
 
 #: app/Modules/Component/Component.php:707
-#: app/Modules/Component/Component.php:1555
+#: app/Modules/Component/Component.php:1575
 msgid "Geolocation failed or was denied."
 msgstr "Geolocation failed or was denied."
 
 #: app/Modules/Component/Component.php:697
-#: app/Modules/Component/Component.php:1517
+#: app/Modules/Component/Component.php:1537
 msgid "Javascript handler could not be loaded. Form submission has been failed. Reload the page and try again"
 msgstr "JavaScript handler could not be loaded. Form submission has been failed. Reload the page and try again"
 
 #: app/Modules/Component/Component.php:706
-#: app/Modules/Component/Component.php:1554
+#: app/Modules/Component/Component.php:1574
 msgid "Failed to fetch address from coordinates."
 msgstr "Failed to fetch address from coordinates."
 
 #: app/Modules/Component/Component.php:705
-#: app/Modules/Component/Component.php:1553
+#: app/Modules/Component/Component.php:1573
 msgid "Could not determine address from location."
 msgstr "Could not determine address from location."
 
 #: app/Modules/Component/Component.php:704
-#: app/Modules/Component/Component.php:1552
+#: app/Modules/Component/Component.php:1572
 msgid "Please wait ..."
 msgstr "Please wait ..."
 
@@ -1845,12 +1919,12 @@ msgid "Security verification failed. Invalid nonce."
 msgstr "Security verification failed. Invalid nonce."
 
 #. translators: %d is the maximum allowed number of characters
-#: app/Modules/Ai/AiFormBuilder.php:471
+#: app/Modules/Ai/AiFormBuilder.php:485
 msgid "Additional query is too long. Please limit to %d characters."
 msgstr "Additional query is too long. Please limit to %d characters."
 
 #. translators: %d is the maximum allowed number of characters
-#: app/Modules/Ai/AiFormBuilder.php:459
+#: app/Modules/Ai/AiFormBuilder.php:473
 msgid "Query is too long. Please limit your prompt to %d characters."
 msgstr "Query is too long. Please limit your prompt to %d characters."
 
@@ -2190,7 +2264,7 @@ msgid "<b>Action Required: </b> The payment has been authorized but not captured
 msgstr "<b>Action Required: </b> The payment has been authorised but not captured yet. Please <a target=\"_blank\" rel=\"noopener noreferrer\" href=\"%s\">Click here</a> to capture this payment in stripe.com"
 
 #. translators: 1: new status, 2: old status
-#: app/Modules/Payments/PaymentMethods/BaseProcessor.php:1141
+#: app/Modules/Payments/PaymentMethods/BaseProcessor.php:1129
 msgid "Subscription status has been changed to %1$s from %2$s"
 msgstr "Subscription status has been changed to %1$s from %2$s"
 
@@ -2644,7 +2718,7 @@ msgstr "Only Submitter or Admin Can View"
 msgid "Renewal"
 msgstr "Renewal"
 
-#: app/Modules/Payments/PaymentHandler.php:686
+#: app/Modules/Payments/PaymentHandler.php:638
 #: app/Modules/Registerer/TranslationString.php:2271
 msgid "Transaction"
 msgstr "Transaction"
@@ -2998,7 +3072,7 @@ msgstr "general_error"
 msgid "There was a problem connecting to the Stripe API endpoint."
 msgstr "There was a problem connecting to the Stripe API endpoint."
 
-#: app/Modules/Payments/PaymentMethods/BaseProcessor.php:1172
+#: app/Modules/Payments/PaymentMethods/BaseProcessor.php:1160
 msgid "Subscription Status changed to "
 msgstr "Subscription Status changed to "
 
@@ -3035,55 +3109,55 @@ msgstr "Payment status changed to "
 msgid "Payment Status changed"
 msgstr "Payment Status changed"
 
-#: app/Modules/Payments/PaymentHelper.php:1129
+#: app/Modules/Payments/PaymentHelper.php:1168
 #: app/Modules/Registerer/TranslationString.php:2128
 msgid "failing"
 msgstr "failing"
 
-#: app/Modules/Payments/PaymentHelper.php:1128
+#: app/Modules/Payments/PaymentHelper.php:1167
 #: app/Modules/Registerer/TranslationString.php:2127
 msgid "trialling"
 msgstr "trialling"
 
-#: app/Modules/Payments/PaymentHelper.php:1127
+#: app/Modules/Payments/PaymentHelper.php:1166
 #: app/Modules/Registerer/TranslationString.php:2126
 msgid "active"
 msgstr "active"
 
-#: app/Modules/Payments/PaymentHelper.php:1120
+#: app/Modules/Payments/PaymentHelper.php:1159
 msgid "year"
 msgstr "year"
 
-#: app/Modules/Payments/PaymentHelper.php:1119
+#: app/Modules/Payments/PaymentHelper.php:1158
 msgid "month"
 msgstr "month"
 
-#: app/Modules/Payments/PaymentHelper.php:1118
+#: app/Modules/Payments/PaymentHelper.php:1157
 msgid "week"
 msgstr "week"
 
-#: app/Modules/Payments/PaymentHelper.php:1117
+#: app/Modules/Payments/PaymentHelper.php:1156
 msgid "day"
 msgstr "day"
 
-#: app/Modules/Payments/PaymentHelper.php:1006
+#: app/Modules/Payments/PaymentHelper.php:1045
 msgid "Free for {trial_days} days then {subscription_amount} one time"
 msgstr "Free for {trial_days} days then {subscription_amount} one time"
 
-#: app/Modules/Payments/PaymentHelper.php:1002
+#: app/Modules/Payments/PaymentHelper.php:1041
 msgid "Free for {trial_days} days then {subscription_amount} for each {billing_interval}"
 msgstr "Free for {trial_days} days then {subscription_amount} for each {billing_interval}"
 
-#: app/Modules/Payments/PaymentHelper.php:1001
+#: app/Modules/Payments/PaymentHelper.php:1040
 msgid "{first_interval_total} for first {billing_interval} then {subscription_amount} for each {billing_interval}"
 msgstr "{first_interval_total} for first {billing_interval} then {subscription_amount} for each {billing_interval}"
 
-#: app/Modules/Payments/PaymentHelper.php:963
+#: app/Modules/Payments/PaymentHelper.php:1002
 #: app/Modules/Payments/PaymentMethods/Stripe/PaymentManager.php:56
 msgid "Subscription has been cancelled from "
 msgstr "Subscription has been cancelled from "
 
-#: app/Modules/Payments/PaymentHelper.php:962
+#: app/Modules/Payments/PaymentHelper.php:1001
 msgid "Subscription has been cancelled"
 msgstr "Subscription has been cancelled"
 
@@ -3673,29 +3747,31 @@ msgstr "Afghan Afghani"
 msgid "United Arab Emirates Dirham"
 msgstr "United Arab Emirates Dirham"
 
-#: app/Modules/Payments/PaymentHandler.php:781
+#: app/Modules/Payments/PaymentHandler.php:761
 msgid "This payment method is invalid"
 msgstr "This payment method is invalid"
 
-#: app/Modules/Payments/PaymentHandler.php:754
-#: app/Modules/Payments/PaymentHandler.php:773
+#: app/Modules/Payments/PaymentHandler.php:711
+#: app/Modules/Payments/PaymentHandler.php:719
+#: app/Modules/Payments/PaymentHandler.php:738
+#: app/Modules/Payments/PaymentHandler.php:753
 msgid "This payment item is invalid"
 msgstr "This payment item is invalid"
 
-#: app/Modules/Payments/Classes/PaymentAction.php:1062
-#: app/Modules/Payments/PaymentHandler.php:723
+#: app/Modules/Payments/Classes/PaymentAction.php:1101
+#: app/Modules/Payments/PaymentHandler.php:677
 msgid "This subscription plan value is invalid"
 msgstr "This subscription plan value is invalid"
 
-#: app/Modules/Payments/PaymentHandler.php:715
+#: app/Modules/Payments/PaymentHandler.php:667
 msgid "This subscription plan is invalid"
 msgstr "This subscription plan is invalid"
 
-#: app/Modules/Payments/PaymentHandler.php:700
+#: app/Modules/Payments/PaymentHandler.php:652
 msgid "Please Provide new refund amount only."
 msgstr "Please Provide new refund amount only."
 
-#: app/Modules/Payments/PaymentHandler.php:699
+#: app/Modules/Payments/PaymentHandler.php:651
 msgid "Please note that, Actual Refund needs to be handled in your Payment Service Provider."
 msgstr "Please note that, Actual Refund needs to be handled in your Payment Service Provider."
 
@@ -3793,7 +3869,7 @@ msgstr "Invalid action"
 msgid "Please select entries & action first"
 msgstr "Please select entries & action first"
 
-#: app/Modules/Payments/Classes/PaymentAction.php:387
+#: app/Modules/Payments/Classes/PaymentAction.php:423
 msgid "Sorry, multiple subscription item is not supported"
 msgstr "Sorry, multiple subscription item is not supported"
 
@@ -3821,15 +3897,15 @@ msgstr "Settings successfully updated!"
 msgid "Payment Module successfully enabled!"
 msgstr "Payment Module successfully enabled!"
 
-#: app/Modules/Ai/AiFormBuilder.php:451
+#: app/Modules/Ai/AiFormBuilder.php:465
 msgid "Query is empty!"
 msgstr "Query is empty!"
 
-#: app/Modules/Ai/AiFormBuilder.php:136
+#: app/Modules/Ai/AiFormBuilder.php:137
 msgid "Invalid response: Please try again!"
 msgstr "Invalid response: Please try again!"
 
-#: app/Modules/Ai/AiFormBuilder.php:86
+#: app/Modules/Ai/AiFormBuilder.php:87
 msgid "Empty form. Please try again!"
 msgstr "Empty form. Please try again!"
 
@@ -3885,7 +3961,7 @@ msgstr "Your CleanTalk settings are deleted."
 msgid "History"
 msgstr "History"
 
-#: app/Services/Transfer/TransferService.php:508
+#: app/Services/Transfer/TransferService.php:518
 msgid "Notes"
 msgstr "Notes"
 
@@ -4898,7 +4974,7 @@ msgstr "General SmartCodes"
 msgid "Sorry! You can't submit an empty form."
 msgstr "Sorry! You can't submit an empty form."
 
-#: app/Modules/Component/Component.php:1544
+#: app/Modules/Component/Component.php:1564
 #: app/Services/FluentConversational/Classes/Form.php:1023
 msgid "Your Email Here"
 msgstr "Your Email Here"
@@ -4964,7 +5040,7 @@ msgstr "no"
 msgid "Favorites"
 msgstr "Favourites"
 
-#: app/Modules/Payments/PaymentHelper.php:1005
+#: app/Modules/Payments/PaymentHelper.php:1044
 #: app/Modules/Registerer/TranslationString.php:990
 msgid ", for {bill_times} installments"
 msgstr ", for {bill_times} instalments"
@@ -5293,7 +5369,7 @@ msgstr "Coupon Limit"
 msgid "Time"
 msgstr "Time"
 
-#: app/Modules/Payments/PaymentHelper.php:1130
+#: app/Modules/Payments/PaymentHelper.php:1169
 #: app/Modules/Registerer/TranslationString.php:2123
 msgid "cancelled"
 msgstr "cancelled"
@@ -5428,7 +5504,7 @@ msgstr "Reset Form Analytics"
 msgid "Conditional"
 msgstr "Conditional"
 
-#: app/Modules/Payments/PaymentHandler.php:687
+#: app/Modules/Payments/PaymentHandler.php:639
 #: app/Modules/Registerer/TranslationString.php:1737
 msgid "Refunds"
 msgstr "Refunds"
@@ -5728,12 +5804,12 @@ msgstr "recaptcha-placeholder"
 msgid "hcaptcha-placeholder"
 msgstr "hcaptcha-placeholder"
 
-#: app/Modules/Payments/PaymentHelper.php:1004
+#: app/Modules/Payments/PaymentHelper.php:1043
 #: app/Modules/Registerer/TranslationString.php:989
 msgid "{subscription_amount} for each {billing_interval}"
 msgstr "{subscription_amount} for each {billing_interval}"
 
-#: app/Modules/Payments/PaymentHelper.php:1003
+#: app/Modules/Payments/PaymentHelper.php:1042
 #: app/Modules/Registerer/TranslationString.php:988
 msgid "One time payment of {first_interval_total}"
 msgstr "One time payment of {first_interval_total}"
@@ -7524,7 +7600,7 @@ msgstr "Your Mailchimp API integration is up and running"
 msgid "Fluent Forms Mailchimp module allows you to create Mailchimp newsletter signup forms in WordPress"
 msgstr "Fluent Forms Mailchimp module allows you to create Mailchimp newsletter signup forms in WordPress"
 
-#: app/Modules/Form/Settings/FormCssJs.php:212
+#: app/Modules/Form/Settings/FormCssJs.php:243
 #: app/Services/Settings/Customizer.php:44
 msgid "You need unfiltered_html permission to save Custom CSS & JS"
 msgstr "You need unfiltered_html permission to save Custom CSS & JS"
@@ -7549,7 +7625,7 @@ msgstr "Slack Footer message"
 msgid "in"
 msgstr "in"
 
-#: app/Modules/Payments/PaymentHandler.php:689
+#: app/Modules/Payments/PaymentHandler.php:641
 #: app/Modules/Registerer/TranslationString.php:1671
 msgid "at"
 msgstr "at"
@@ -8487,7 +8563,8 @@ msgstr "Partial Entries"
 msgid "Migrate other plugins forms into Fluent Forms with ease. Please note that previously imported forms and entries will be reset and updated again."
 msgstr "Migrate other plugins forms into Fluent Forms with ease. Please note that previously imported forms and entries will be reset and updated again."
 
-#: app/Modules/Component/Component.php:1497
+#: app/Modules/Component/Component.php:1505
+#: app/Modules/Component/Component.php:1517
 #: app/Modules/Registerer/TranslationString.php:1768
 msgid "No entry found."
 msgstr "No entry found."
@@ -8526,7 +8603,7 @@ msgstr "Related Payments"
 msgid "Subscriptions (Recurring Payments)"
 msgstr "Subscriptions (Recurring Payments)"
 
-#: app/Modules/Payments/PaymentHandler.php:701
+#: app/Modules/Payments/PaymentHandler.php:653
 #: app/Modules/Registerer/TranslationString.php:1747
 msgid "Refund Note"
 msgstr "Refund Note"
@@ -8535,21 +8612,21 @@ msgstr "Refund Note"
 msgid "New Refund Amount"
 msgstr "New Refund Amount"
 
-#: app/Modules/Payments/PaymentHandler.php:698
+#: app/Modules/Payments/PaymentHandler.php:650
 #: app/Modules/Registerer/TranslationString.php:1745
 msgid "Reference ID"
 msgstr "Reference ID"
 
-#: app/Modules/Payments/PaymentHandler.php:692
+#: app/Modules/Payments/PaymentHandler.php:644
 #: app/Services/Integrations/MailChimp/MailChimpIntegration.php:241
 msgid "Note"
 msgstr "Note"
 
-#: app/Modules/Payments/PaymentHandler.php:691
+#: app/Modules/Payments/PaymentHandler.php:643
 msgid "has been refunded via"
 msgstr "has been refunded via"
 
-#: app/Modules/Payments/PaymentHandler.php:690
+#: app/Modules/Payments/PaymentHandler.php:642
 #: app/Modules/Payments/TransactionShortcodes.php:373
 #: app/Modules/Registerer/TranslationString.php:1740
 #: app/Views/email/failedIntegration/body.php:169
@@ -8557,42 +8634,42 @@ msgid "View"
 msgstr "View"
 
 #: app/Modules/Payments/Classes/PaymentEntries.php:281
-#: app/Modules/Payments/PaymentHandler.php:688
+#: app/Modules/Payments/PaymentHandler.php:640
 #: app/Modules/Registerer/TranslationString.php:1966
 msgid "Refund"
 msgstr "Refund"
 
-#: app/Modules/Payments/PaymentHandler.php:693
+#: app/Modules/Payments/PaymentHandler.php:645
 #: app/Modules/Registerer/TranslationString.php:1736
 msgid "Edit Transaction"
 msgstr "Edit Transaction"
 
-#: app/Modules/Payments/PaymentHandler.php:681
+#: app/Modules/Payments/PaymentHandler.php:633
 #: app/Modules/Registerer/TranslationString.php:1733
 msgid "Card Last 4"
 msgstr "Card Last 4"
 
-#: app/Modules/Payments/PaymentHandler.php:684
+#: app/Modules/Payments/PaymentHandler.php:636
 #: app/Modules/Registerer/TranslationString.php:1732
 msgid "Transaction ID"
 msgstr "Transaction ID"
 
-#: app/Modules/Payments/PaymentHandler.php:697
+#: app/Modules/Payments/PaymentHandler.php:649
 #: app/Modules/Registerer/TranslationString.php:1731
 msgid "Shipping Address"
 msgstr "Shipping Address"
 
-#: app/Modules/Payments/PaymentHandler.php:696
+#: app/Modules/Payments/PaymentHandler.php:648
 #: app/Modules/Registerer/TranslationString.php:1730
 msgid "Billing Address"
 msgstr "Billing Address"
 
-#: app/Modules/Payments/PaymentHandler.php:695
+#: app/Modules/Payments/PaymentHandler.php:647
 #: app/Modules/Registerer/TranslationString.php:1729
 msgid "Billing Email"
 msgstr "Billing Email"
 
-#: app/Modules/Payments/PaymentHandler.php:694
+#: app/Modules/Payments/PaymentHandler.php:646
 #: app/Modules/Registerer/TranslationString.php:1728
 msgid "Billing Name"
 msgstr "Billing Name"
@@ -8601,40 +8678,40 @@ msgstr "Billing Name"
 msgid "Transaction #"
 msgstr "Transaction #"
 
-#: app/Modules/Payments/PaymentHandler.php:680
+#: app/Modules/Payments/PaymentHandler.php:632
 #: app/Modules/Registerer/TranslationString.php:1724
 msgid "From Subscriptions"
 msgstr "From Subscriptions"
 
-#: app/Modules/Payments/PaymentHandler.php:679
+#: app/Modules/Payments/PaymentHandler.php:631
 #: app/Modules/Registerer/TranslationString.php:1723
 #: app/Services/FormBuilder/EditorShortCode.php:114
 msgid "Payment Details"
 msgstr "Payment Details"
 
-#: app/Modules/Component/Component.php:1530
-#: app/Modules/Payments/PaymentHandler.php:677
+#: app/Modules/Component/Component.php:1550
+#: app/Modules/Payments/PaymentHandler.php:629
 msgid "Discount"
 msgstr "Discount"
 
-#: app/Modules/Payments/PaymentHandler.php:676
+#: app/Modules/Payments/PaymentHandler.php:628
 #: app/Modules/Registerer/TranslationString.php:1720
 #: app/Views/receipt/order_items_table.php:30
 msgid "Sub-Total"
 msgstr "Sub-Total"
 
-#: app/Modules/Payments/PaymentHandler.php:674
+#: app/Modules/Payments/PaymentHandler.php:626
 #: app/Modules/Registerer/TranslationString.php:1718
 msgid "Unit Price"
 msgstr "Unit Price"
 
-#: app/Modules/Payments/PaymentHandler.php:672
+#: app/Modules/Payments/PaymentHandler.php:624
 #: app/Modules/Registerer/TranslationString.php:1716
 msgid "Product"
 msgstr "Product"
 
 #: app/Modules/Payments/Classes/PaymentReceipt.php:126
-#: app/Modules/Payments/PaymentHandler.php:671
+#: app/Modules/Payments/PaymentHandler.php:623
 #: app/Modules/Registerer/TranslationString.php:1715
 msgid "Order Details"
 msgstr "Order Details"
@@ -9044,7 +9121,7 @@ msgstr "Trial Days"
 msgid "Has Trial Days? (in days)"
 msgstr "Has Trial Days? (in days)"
 
-#: app/Modules/Component/Component.php:1532
+#: app/Modules/Component/Component.php:1552
 #: app/Modules/Registerer/TranslationString.php:1407
 msgid "Signup Fee"
 msgstr "Signup Fee"
@@ -9170,7 +9247,7 @@ msgstr "Photo"
 msgid "Calc Values"
 msgstr "Calc Values"
 
-#: app/Modules/Payments/PaymentHandler.php:703
+#: app/Modules/Payments/PaymentHandler.php:655
 #: app/Modules/Registerer/TranslationString.php:1204
 #: app/Modules/Registerer/TranslationString.php:1370
 #: app/Modules/Registerer/TranslationString.php:1748
@@ -9365,7 +9442,7 @@ msgstr "Rename Form"
 msgid "Convert"
 msgstr "Convert"
 
-#: app/Modules/Payments/PaymentHandler.php:702
+#: app/Modules/Payments/PaymentHandler.php:654
 #: app/Modules/Registerer/TranslationString.php:244
 #: app/Modules/Registerer/TranslationString.php:742
 #: app/Modules/Registerer/TranslationString.php:1075
@@ -13145,9 +13222,9 @@ msgstr "Discount:"
 msgid "No payment item selected yet"
 msgstr "No payment item selected yet"
 
-#: app/Modules/Component/Component.php:1531
+#: app/Modules/Component/Component.php:1551
 #: app/Modules/Payments/PaymentHandler.php:161
-#: app/Modules/Payments/PaymentHandler.php:675
+#: app/Modules/Payments/PaymentHandler.php:627
 #: app/Modules/Registerer/TranslationString.php:1084
 #: app/Modules/Registerer/TranslationString.php:1713
 #: app/Modules/Registerer/TranslationString.php:2211
@@ -13156,24 +13233,24 @@ msgstr "No payment item selected yet"
 msgid "Total"
 msgstr "Total"
 
-#: app/Modules/Component/Component.php:1528
+#: app/Modules/Component/Component.php:1548
 #: app/Modules/Payments/PaymentHandler.php:160
 #: app/Services/FluentConversational/Classes/Form.php:953
 #: app/Views/receipt/order_items_table.php:13
 msgid "Line Total"
 msgstr "Line Total"
 
-#: app/Modules/Component/Component.php:1527
+#: app/Modules/Component/Component.php:1547
 #: app/Modules/Payments/PaymentHandler.php:159
-#: app/Modules/Payments/PaymentHandler.php:673
+#: app/Modules/Payments/PaymentHandler.php:625
 #: app/Modules/Registerer/TranslationString.php:1717
 #: app/Services/FluentConversational/Classes/Form.php:952
 msgid "Qty"
 msgstr "Qty"
 
-#: app/Modules/Component/Component.php:1526
+#: app/Modules/Component/Component.php:1546
 #: app/Modules/Payments/PaymentHandler.php:158
-#: app/Modules/Payments/PaymentHandler.php:678
+#: app/Modules/Payments/PaymentHandler.php:630
 #: app/Modules/Registerer/TranslationString.php:1388
 #: app/Modules/Registerer/TranslationString.php:1719
 #: app/Services/FluentConversational/Classes/Form.php:951
@@ -13181,7 +13258,7 @@ msgstr "Qty"
 msgid "Price"
 msgstr "Price"
 
-#: app/Modules/Component/Component.php:1525
+#: app/Modules/Component/Component.php:1545
 #: app/Modules/Payments/PaymentHandler.php:157
 #: app/Services/FluentConversational/Classes/Form.php:950
 #: app/Views/receipt/order_items_table.php:10
@@ -14250,10 +14327,10 @@ msgid "Custom Payment Amount"
 msgstr "Custom Payment Amount"
 
 #: app/Modules/Entries/EntryViewRenderer.php:43
-#: app/Modules/Payments/PaymentHandler.php:682
+#: app/Modules/Payments/PaymentHandler.php:634
 #: app/Modules/Registerer/TranslationString.php:1734
 #: app/Services/FormBuilder/EditorShortCode.php:120
-#: app/Services/Transfer/TransferService.php:569
+#: app/Services/Transfer/TransferService.php:604
 #: app/Views/email/report/body.php:181
 msgid "Payment Total"
 msgstr "Payment Total"
@@ -14282,15 +14359,15 @@ msgid "Paid Total Amount"
 msgstr "Paid Total Amount"
 
 #: app/Modules/Entries/EntryViewRenderer.php:42
-#: app/Modules/Payments/PaymentHandler.php:683
+#: app/Modules/Payments/PaymentHandler.php:635
 #: app/Modules/Registerer/TranslationString.php:1614
 #: app/Services/FormBuilder/EditorShortCode.php:97
 #: app/Services/FormBuilder/EditorShortCode.php:119
-#: app/Services/Transfer/TransferService.php:565
+#: app/Services/Transfer/TransferService.php:600
 msgid "Payment Status"
 msgstr "Payment Status"
 
-#: app/Modules/Payments/PaymentHandler.php:685
+#: app/Modules/Payments/PaymentHandler.php:637
 #: app/Modules/Registerer/TranslationString.php:1615
 #: app/Modules/Registerer/TranslationString.php:2280
 #: app/Services/FormBuilder/EditorShortCode.php:96
@@ -14301,7 +14378,7 @@ msgstr "Payment Method"
 
 #: app/Modules/Registerer/TranslationString.php:2186
 #: app/Services/FormBuilder/EditorShortCode.php:95
-#: app/Services/Transfer/TransferService.php:573
+#: app/Services/Transfer/TransferService.php:608
 msgid "Currency"
 msgstr "Currency"
 
@@ -14514,12 +14591,12 @@ msgid "Hide Label"
 msgstr "Hide Label"
 
 #: app/Services/FormBuilder/EditorShortCode.php:88
-#: app/Services/Transfer/TransferService.php:554
+#: app/Services/Transfer/TransferService.php:589
 msgid "Submission Create Date"
 msgstr "Submission Create Date"
 
 #: app/Services/FormBuilder/EditorShortCode.php:87
-#: app/Services/Transfer/TransferService.php:558
+#: app/Services/Transfer/TransferService.php:593
 msgid "Submission Status"
 msgstr "Submission Status"
 
@@ -14545,7 +14622,7 @@ msgstr "#Submission Serial Number"
 #: app/Modules/Registerer/TranslationString.php:1646
 #: app/Modules/Registerer/TranslationString.php:2181
 #: app/Services/FormBuilder/EditorShortCode.php:81
-#: app/Services/Transfer/TransferService.php:550
+#: app/Services/Transfer/TransferService.php:585
 msgid "Submission ID"
 msgstr "Submission ID"
 
@@ -15142,7 +15219,7 @@ msgid "This field must contain a valid email"
 msgstr "This field must contain a valid email"
 
 #: app/Helpers/Traits/GlobalDefaultMessages.php:55
-#: app/Modules/Component/Component.php:1543
+#: app/Modules/Component/Component.php:1563
 #: app/Modules/MCP/Tools/FormTools.php:124
 #: app/Modules/Registerer/TranslationString.php:1200
 #: app/Modules/Registerer/TranslationString.php:2291
@@ -15760,7 +15837,7 @@ msgstr "The Page field is required when Confirmation Type is Page."
 msgid "The Confirmation Type field is required."
 msgstr "The Confirmation Type field is required."
 
-#: app/Modules/Form/Settings/FormCssJs.php:225
+#: app/Modules/Form/Settings/FormCssJs.php:256
 msgid "Custom CSS & JS successfully updated"
 msgstr "Custom CSS & JS successfully updated"
 
@@ -16070,13 +16147,13 @@ msgid "Want to make Fluent Forms better with just one click?"
 msgstr "Want to make Fluent Forms better with just one click?"
 
 #: app/Modules/Form/Transfer.php:86 app/Modules/Form/Transfer.php:168
-#: app/Services/Transfer/TransferService.php:250
-#: app/Services/Transfer/TransferService.php:359
+#: app/Services/Transfer/TransferService.php:272
+#: app/Services/Transfer/TransferService.php:382
 msgid "You have a faulty JSON file, please export the Fluent Forms again."
 msgstr "You have a faulty JSON file, please export the Fluent Forms again."
 
 #: app/Modules/Form/Transfer.php:161
-#: app/Services/Transfer/TransferService.php:353
+#: app/Services/Transfer/TransferService.php:376
 msgid "You form has been successfully imported."
 msgstr "You form has been successfully imported."
 
@@ -16235,7 +16312,7 @@ msgid "The form is successfully updated."
 msgstr "The form is successfully updated."
 
 #: app/Http/Controllers/FormController.php:53
-#: app/Modules/Ai/AiFormBuilder.php:40 app/Modules/Form/Form.php:180
+#: app/Modules/Ai/AiFormBuilder.php:41 app/Modules/Form/Form.php:180
 msgid "Successfully created a form."
 msgstr "Successfully created a form."
 

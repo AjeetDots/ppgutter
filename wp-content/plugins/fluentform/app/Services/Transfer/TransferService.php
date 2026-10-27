@@ -46,6 +46,28 @@ class TransferService
         return wp_kses_post($metaValue);
     }
 
+    // Import skips the save path, where a registration feed's role is capped to what the saver can
+    // grant; cap only the snake_case key that submission reads from, whose filter is the API-free
+    // role cap (the CamelCase variant's filter also runs handleValidate, which can abort import).
+    protected static function capImportedUserRegistrationRole($metaKey, $metaValue, $formId)
+    {
+        if ('user_registration_feeds' !== $metaKey || !is_string($metaValue)) {
+            return $metaValue;
+        }
+
+        $feed = json_decode($metaValue, true);
+        if (!is_array($feed)) {
+            return $metaValue;
+        }
+
+        $feed = apply_filters('fluentform/save_integration_value_user_registration', $feed, 0, $formId);
+
+        // Fail closed: on the (decoded-already, so near-impossible) encode failure, drop the feed
+        // rather than write back the un-capped source.
+        $encoded = wp_json_encode($feed);
+        return false !== $encoded ? $encoded : '';
+    }
+
     private static function sanitizeJsonNode(&$node)
     {
         if (is_array($node)) {
@@ -316,6 +338,7 @@ class TransferService
                                 $metaValue = str_replace('ff_conv_app_' . Arr::get($formItem, 'id'), 'ff_conv_app_' . $formId, $metaValue);
                             }
                             $metaValue = static::sanitizeImportedMetaValue($metaKey, $metaValue);
+                            $metaValue = static::capImportedUserRegistrationRole($metaKey, $metaValue, $formId);
                             $settings = [
                                 'form_id'  => $formId,
                                 'meta_key' => $metaKey,
@@ -387,22 +410,9 @@ class TransferService
         }
         $formInputs = FormFieldsParser::getEntryInputs($form, ['admin_label', 'raw']);
         $inputLabels = FormFieldsParser::getAdminLabels($form, $formInputs);
-        $selectedLabels = Arr::get($args, 'fields_to_export');
-        if (is_string($selectedLabels) && Helper::isJson($selectedLabels)) {
-            $selectedLabels = \json_decode($selectedLabels, true);
-        }
-        $selectedLabels = fluentFormSanitizer($selectedLabels);
+        $inputLabels = self::getSelectedExportInputLabels($args, $inputLabels);
 
         $withNotes = isset($args['with_notes']);
-
-        //filter out unselected fields
-        if (!empty($selectedLabels)) {
-            foreach ($inputLabels as $key => $value) {
-                if (!in_array($key, $selectedLabels) && isset($inputLabels[$key])) {
-                    unset($inputLabels[$key]);
-                }
-            }
-        }
 
         $submissions = self::getSubmissions($args);
         $submissions = FormDataParser::parseFormEntries($submissions, $form, $formInputs);
@@ -530,6 +540,31 @@ class TransferService
                 )
             )
         );
+    }
+
+    private static function getSelectedExportInputLabels($args, $inputLabels)
+    {
+        $selectedLabels = Arr::get($args, 'fields_to_export');
+        if (is_string($selectedLabels) && Helper::isJson($selectedLabels)) {
+            $selectedLabels = \json_decode($selectedLabels, true);
+        }
+        $selectedLabels = fluentFormSanitizer($selectedLabels);
+
+        // An empty selection means "all inputs", unless the caller marks it as an explicit choice (none selected)
+        if (Arr::has($args, 'fields_to_export_defined') && !is_array($selectedLabels)) {
+            $selectedLabels = [];
+        }
+
+        //filter out unselected fields
+        if (Arr::has($args, 'fields_to_export_defined') || !empty($selectedLabels)) {
+            foreach ($inputLabels as $key => $value) {
+                if (!in_array($key, $selectedLabels) && isset($inputLabels[$key])) {
+                    unset($inputLabels[$key]);
+                }
+            }
+        }
+
+        return $inputLabels;
     }
 
     private static function getSelectedExportShortcodes($args, $form)

@@ -11,24 +11,24 @@ use RankMath\Helper;
 defined( 'ABSPATH' ) || exit;
 
 ?>
-<table role="presentation" border="0" cellpadding="0" cellspacing="0" class="report-info">
-	<tr>
-		<td>
-			<h1><?php echo esc_html( $this->get_setting( 'heading', 'SEO Report of Your Website' ) ); ?></h1>
-			###TOP_HTML###
-			<h2 class="report-date">###START_DATE### - ###END_DATE###</h2>
-			<a href="###SITE_URL###" target="_blank" class="site-url">###SITE_URL_SIMPLE###</a>
-		</td>
+<div class="report-info">
+	<div class="report-info-row">
+		<h1><?php echo esc_html( $this->get_setting( 'heading', 'SEO Report of Your Website' ) ); ?></h1>
+		<a href="###SITE_URL###" target="_blank" class="site-url">###SITE_URL_SIMPLE###</a>
+	</div>
+	###TOP_HTML###
+	<div class="report-info-row report-meta-row">
+		<h2 class="report-date">###START_DATE### - ###END_DATE###</h2>
 		<?php if ( $this->get_setting( 'link_full_report', true ) ) : ?>
-			<td class="full-report-link">
-				<a href="###REPORT_URL###" target="_blank" class="full-report-link">
+			<div class="full-report-link">
+				<a href="###REPORT_URL###" target="_blank">
 					<?php esc_html_e( 'FULL REPORT', 'rank-math-pro' ); ?>
 					<?php $this->image( 'report-icon-external.png', 12, 12, __( 'External Link Icon', 'rank-math-pro' ) ); ?>
 				</a>
-			</td>
+			</div>
 		<?php endif; ?>
-	</tr>
-</table>
+	</div>
+</div>
 
 <?php if ( $this->get_variable( 'stats_invalid_data' ) ) { ?>
 	<table role="presentation" border="0" cellpadding="0" cellspacing="0" class="report-error">

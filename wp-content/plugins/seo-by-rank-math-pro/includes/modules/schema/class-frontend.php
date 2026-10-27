@@ -54,7 +54,6 @@ class Frontend {
 
 		// Schema Preview.
 		$this->filter( 'query_vars', 'add_query_vars' );
-		$this->filter( 'init', 'add_endpoint' );
 		$this->action( 'template_redirect', 'schema_preview_template' );
 	}
 
@@ -66,13 +65,6 @@ class Frontend {
 	public function add_query_vars( $vars ) {
 		$vars[] = 'schema-preview';
 		return $vars;
-	}
-
-	/**
-	 * Add endpoint
-	 */
-	public function add_endpoint() {
-		add_rewrite_endpoint( 'schema-preview', EP_PERMALINK | EP_PAGES | EP_ROOT );
 	}
 
 	/**
@@ -268,7 +260,7 @@ class Frontend {
 		$count = 1;
 		foreach ( $schemas as $id => $schema ) {
 			unset( $data[ $id ] );
-			$schema['url'] = $jsonld->parts['url'] . '#' . $id;
+			$schema['url'] = ( isset( $jsonld->parts['url'] ) ? $jsonld->parts['url'] : '' ) . '#' . $id;
 
 			if ( isset( $schema['isPrimary'] ) ) {
 				unset( $schema['isPrimary'] );

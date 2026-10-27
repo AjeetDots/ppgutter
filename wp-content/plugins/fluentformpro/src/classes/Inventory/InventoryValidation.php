@@ -93,6 +93,8 @@ class InventoryValidation
     
     public static function getItemFromOptionName($item, $key)
     {
+        // sanitize the key into the consumer's keyspace; a raw markup/whitespace key would miss and skip the check
+        $key = sanitize_text_field($key);
         $isPaymentInput = Arr::get($item, 'settings.is_payment_field') == 'yes';
         if ($isPaymentInput) {
             $options = Arr::get($item, 'settings.pricing_options');
@@ -113,7 +115,8 @@ class InventoryValidation
                 $selectedOption = $option;
             }
         }
-        if (!$selectedOption || empty($selectedOption['value'])) {
+        // treat only a missing/blank value as unmatched; a matched "0" (e.g. a free ticket) must still be stock-checked
+        if (!$selectedOption || !isset($selectedOption['value']) || '' === (string) $selectedOption['value']) {
             return false;
         }
         
@@ -252,10 +255,15 @@ class InventoryValidation
         }
     }
     
-    private function handleRadioSelect($key, $item, $prevSubmissions, $isPaymentInput, $inventoryType = 'simple')
+    private function handleRadioSelect($key, $field, $prevSubmissions, $isPaymentInput, $inventoryType = 'simple')
     {
-        $item = self::getItemFromOptionName($item, $this->formData[$key]);
-        
+        // radio/select is single-valued; a crafted non-scalar misses the matcher and skips the check, so block it
+        $submitted = $this->formData[$key];
+        if (!is_scalar($submitted)) {
+            throw new \Exception("stock-out");
+        }
+
+        $item = self::getItemFromOptionName($field, $submitted);
         if ($item) {
             $availableQuantity = $item['quantity'];
             $usedQuantity = 0;
@@ -270,15 +278,24 @@ class InventoryValidation
                     $usedQuantity = $this->getRegularItemUsedQuantity($prevSubmissions, $item);
                 }
             } elseif ($inventoryType == 'global') {
+                // No inventory item means no stock to limit; skip it, as handleCheckbox does.
+                if (!Arr::get($item, 'global_inventory')) {
+                    return;
+                }
                 if ($isPaymentInput) {
                     $selectedQuantity = $this->getQuantity($item['parent_input_name'], $this->formData);
                 }
                 $availableQuantity = intval(Arr::get($this->globalInventoryItems, $item['global_inventory'] . '.quantity'));
                 $usedQuantity = (int)Arr::get($this->usedGlobalItemsRecords, $item['global_inventory']);
             }
-            
+
             $usedQuantity += $selectedQuantity;
-        
+
+            // advance the per-request running total so a later field on this slug isn't checked against a stale baseline
+            if ($inventoryType == 'global') {
+                $this->usedGlobalItemsRecords[$item['global_inventory']] = $usedQuantity;
+            }
+
             if ($usedQuantity > $availableQuantity) {
                 throw new \Exception("stock-out");
             }
@@ -290,7 +307,8 @@ class InventoryValidation
      */
     private function handleCheckbox($key, $field, $prevSubmissions, $isPaymentInput, $inventoryType = 'simple')
     {
-        $selectedItems = $this->formData[$key];
+        // cast so a crafted scalar is still stock-checked, not skipped by the foreach below
+        $selectedItems = (array) $this->formData[$key];
 
         //Global inventory multiple option can use same slug
         //Store total selected quantity
@@ -299,7 +317,8 @@ class InventoryValidation
         foreach ($selectedItems as $selectedItem) {
             $item = $this->getItemFromOptionName($field, $selectedItem);
             if (!$item) {
-                throw new \Exception("continue");
+                // skip only this unmatched element; aborting the field would leave a sold-out sibling unchecked
+                continue;
             }
             $selectedQuantity = 1;
             if ($inventoryType == 'simple') {
@@ -336,8 +355,9 @@ class InventoryValidation
         }
         //validate global inventory multiple options
         foreach ($totalSelectedQuantity as $slug => $totalSelected) {
-            $usedQuantity = Arr::get($this->usedGlobalItemsRecords, $slug);
+            $usedQuantity = (int) Arr::get($this->usedGlobalItemsRecords, $slug);
             $availableQuantity = intval(Arr::get($this->globalInventoryItems, $slug . '.quantity'));
+            $this->usedGlobalItemsRecords[$slug] = $usedQuantity + $totalSelected;
             $this->validateStockOut($usedQuantity + $totalSelected, $availableQuantity);
         }
     }
@@ -686,9 +706,12 @@ class InventoryValidation
 
                 $this->isEmpty($fieldName);
 
-                if ($inputType == 'radio' || $inputType == 'select') {
+                // A multiselect posts an array like a checkbox, so check it per-option instead
+                // of failing the single-value scalar guard in handleRadioSelect.
+                $isMultiSelect = $inputType == 'select' && Arr::get($field, 'attributes.multiple');
+                if (($inputType == 'radio' || $inputType == 'select') && !$isMultiSelect) {
                     $this->handleRadioSelect($fieldName, $field, $prevSubmissions, $isPaymentInput, $inventoryType);
-                } elseif ($inputType == 'checkbox') {
+                } elseif ($inputType == 'checkbox' || $isMultiSelect) {
                     $this->handleCheckbox($fieldName, $field, $prevSubmissions, $isPaymentInput, $inventoryType);
                 }
             } catch (\Exception $e) {

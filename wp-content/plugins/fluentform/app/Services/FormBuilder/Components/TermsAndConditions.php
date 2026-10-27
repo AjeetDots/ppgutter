@@ -22,7 +22,7 @@ class TermsAndConditions extends BaseComponent
             'fluentform_rendering_field_data_' . $elementName,
             [
                 $data,
-                $form
+                $form,
             ],
             FLUENTFORM_FRAMEWORK_UPGRADE,
             'fluentform/rendering_field_data_' . $elementName,
@@ -63,9 +63,9 @@ class TermsAndConditions extends BaseComponent
         if ($data['settings']['has_checkbox']) {
             $checkbox = "<span class='ff_tc_checkbox'><input {$atts} value='on' aria-invalid='false' aria-required={$ariaRequired}></span>"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $atts is escaped before being passed in.
         }
-    
+
         $link_count = substr_count($data['settings']['tnc_html'], '<a ');
-        if($link_count > 0){
+        if ($link_count > 0) {
             $ariaLabel = sprintf(
                 /* translators: 1: Terms title or HTML label, 2: Number of links in the terms text. */
                 esc_html(_n(
@@ -77,11 +77,10 @@ class TermsAndConditions extends BaseComponent
                 $data['settings']['tnc_html'],
                 $link_count
             );
-        }else{
+        } else {
             $ariaLabel = wp_strip_all_tags($data['settings']['tnc_html']);
         }
-       
-    
+
         $ariaLabel = wp_strip_all_tags($ariaLabel);
         $ariaLabel = esc_attr($ariaLabel);
         $html = "<div class='" . esc_attr($cls) . "'>";
@@ -91,13 +90,13 @@ class TermsAndConditions extends BaseComponent
         $html .= '</label>';
         $html .= '</div>';
         $html .= '</div>';
-    
+
         $html = apply_filters_deprecated(
             'fluentform_rendering_field_html_' . $elementName,
             [
                 $html,
                 $data,
-                $form
+                $form,
             ],
             FLUENTFORM_FRAMEWORK_UPGRADE,
             'fluentform/rendering_field_html_' . $elementName,

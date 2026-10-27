@@ -279,6 +279,7 @@ class Batch_Helper {
 	 * - Automatic post_modified timestamp updates
 	 * - Cache clearing
 	 * - Link tracking reprocessing via Link_Processor
+	 * - Page-builder content sync via extensible hooks (Elementor, etc.)
 	 *
 	 * @param array $posts_to_update Associative array of post_id => new_content.
 	 * @return bool                  True on success, false on failure.
@@ -288,6 +289,23 @@ class Batch_Helper {
 
 		if ( empty( $posts_to_update ) || ! is_array( $posts_to_update ) ) {
 			return false;
+		}
+
+		$page_builder_old_content = [];
+		foreach ( array_keys( $posts_to_update ) as $post_id ) {
+			/**
+			 * Before the SQL UPDATE, allow page-builder integrations to snapshot the
+			 * current post_content so a diff can be computed after the update.
+			 *
+			 * @param false|string $old_content Return the current post_content string to
+			 *                                  opt this post into page-builder syncing, or
+			 *                                  leave as false to skip.
+			 * @param int          $post_id     The post being updated.
+			 */
+			$old = apply_filters( 'rank_math/link_genius/page_builder_old_content', false, $post_id );
+			if ( false !== $old ) {
+				$page_builder_old_content[ $post_id ] = (string) $old;
+			}
 		}
 
 		$now     = current_time( 'mysql' );
@@ -317,12 +335,60 @@ class Batch_Helper {
 
 		// Update link tracking for all updated posts and clear cache.
 		if ( false !== $result ) {
-			foreach ( $posts_to_update as $id => $content ) {
-				Link_Processor::process( $id, $content );
+			foreach ( $posts_to_update as $id => $new_content ) {
+				if ( isset( $page_builder_old_content[ $id ] ) ) {
+					$old_content   = $page_builder_old_content[ $id ];
+					$added_links   = self::diff_links( $old_content, $new_content );
+					$removed_links = self::diff_links( $new_content, $old_content );
+
+					/**
+					 * Fire page-builder sync action for posts that opted in via the filter.
+					 * Provides the pre-computed link diff so integrations don't need to repeat it.
+					 *
+					 * @param int    $id            The updated post ID.
+					 * @param string $old_content   post_content before the update.
+					 * @param string $new_content   post_content after the update.
+					 * @param array  $added_links   Links added (each: 'url', 'text', 'link').
+					 * @param array  $removed_links Links removed (each: 'url', 'text', 'link').
+					 */
+					do_action( 'rank_math/link_genius/sync_page_builder_content', $id, $old_content, $new_content, $added_links, $removed_links );
+				}
+
+				Link_Processor::process( $id, $new_content );
 			}
 			return true;
 		}
 
 		return false;
+	}
+
+	/**
+	 * Return links present in $to but absent in $from.
+	 *
+	 * Each entry contains the full link HTML ('link'), the href 'url', and the
+	 * plain-text anchor 'text'. Public so page-builder integrations can reuse it.
+	 *
+	 * @param string $from Base content.
+	 * @param string $to   Updated content.
+	 * @return array
+	 */
+	public static function diff_links( $from, $to ) {
+		preg_match_all( '/<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $from, $from_matches, PREG_SET_ORDER );
+		preg_match_all( '/<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $to, $to_matches, PREG_SET_ORDER );
+
+		$from_links = array_column( $from_matches, 0 );
+
+		$diff = [];
+		foreach ( $to_matches as $match ) {
+			if ( ! in_array( $match[0], $from_links, true ) ) {
+				$diff[] = [
+					'url'  => $match[1],
+					'text' => wp_strip_all_tags( $match[2] ),
+					'link' => $match[0],
+				];
+			}
+		}
+
+		return $diff;
 	}
 }

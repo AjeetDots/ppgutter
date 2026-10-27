@@ -77,15 +77,16 @@ class Query_Builder {
 
 		// Build ORDER BY clause.
 		$orderby_map = [
-			'id'           => 'l.id',
-			'source_title' => 'sp.post_title',
-			'url'          => 'l.url',
-			'anchor_text'  => 'l.anchor_text',
-			'anchor_type'  => 'l.anchor_type',
-			'type'         => 'l.type',
-			'target_blank' => 'l.target_blank',
-			'created_at'   => 'l.created_at',
-			'status'       => 'ls.status_category',
+			'id'              => 'l.id',
+			'source_title'    => 'sp.post_title',
+			'url'             => 'l.url',
+			'anchor_text'     => 'l.anchor_text',
+			'anchor_type'     => 'l.anchor_type',
+			'type'            => 'l.type',
+			'target_blank'    => 'l.target_blank',
+			'created_at'      => 'l.created_at',
+			'status'          => 'ls.status_category',
+			'last_checked_at' => 'ls.last_checked_at',
 		];
 
 		$order       = self::validate_order( $args['order'], 'DESC' );

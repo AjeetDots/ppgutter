@@ -147,19 +147,16 @@ class AbilitiesRegistrar
                 'execute_callback'    => self::wrapExecuteCallback($name, $definition['execute_callback']),
                 'permission_callback' => $permissionCallback,
                 'meta'                => [
-                    // OFF by default. show_in_rest opts an ability into WP core's
-                    // own surface — POST /wp-json/wp-abilities/v1/abilities/{name}/run
-                    // — which is a second entry path that never runs
-                    // PermissionGate::transport(). It is not a privilege
-                    // escalation (each ability's permission_callback still runs,
-                    // and it is narrower than the transport check), but it means
-                    // enabling MCP would also expose all of these tools to any
-                    // authenticated browser session, which is not what the
-                    // settings card advertises.
-                    //
-                    // The MCP adapter itself reads only the 'mcp' meta below, so
-                    // turning this off costs the MCP endpoint nothing.
-                    'show_in_rest' => (bool) apply_filters('fluentform/mcp_show_in_rest', false),
+                    /**
+                     * Filter whether FluentForm abilities are exposed on the core
+                     * /wp-json/wp-abilities/v1 routes. Those skip PermissionGate::transport();
+                     * each ability's permission_callback is the stricter gate.
+                     *
+                     * @since 6.2.12
+                     *
+                     * @param bool $show Whether to expose abilities on the core REST API. Default true.
+                     */
+                    'show_in_rest' => (bool) apply_filters('fluentform/mcp_show_in_rest', true),
                     'mcp'          => ['public' => true],
                 ],
             ];

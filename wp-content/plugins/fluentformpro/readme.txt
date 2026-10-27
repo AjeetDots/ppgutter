@@ -4,7 +4,7 @@ Tags: contact form, contact forms, wp forms, forms, form builder, contact form b
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 6.2.15
+Stable tag: 6.2.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -361,6 +361,16 @@ The entire source code is <a href="https://github.com/fluentform/fluentform">ava
 12. Asset Loading Comparison with Other Plugins
 
 == Changelog ==
+
+= 6.2.16 (Date: October 16, 2026) =
+- Adds a "Map all form fields" button to Google Sheets feeds
+- Fixes Google Sheets feeds saving unmapped and adding empty rows
+- Fixes "0"-valued inventory options skipping their stock limit
+- Fixes unlinked radio and dropdown options showing out of stock
+- Stops orders from going over Global Inventory stock limits
+- Stops coupon limits being bypassed by case or stacking
+- Tightens security for User Registration roles and PayPal subscriptions
+- Tightens security for guest order linking and confirmation page values
 
 = 6.2.15 (Date: September 30, 2026) =
 - Adds the Autocomplete setting to the Phone field

@@ -417,7 +417,11 @@ class AdminApproval
         }
 
         $landingContent = apply_filters('fluentform/admin_approval_confirmation_message', $landingContent, $submission->status, $form);
+        // Expand trusted admin shortcodes first (no submitter data yet), inject submitter values,
+        // then keep submitter brackets literal for the landing page's final do_shortcode().
+        $landingContent = do_shortcode($landingContent);
         $landingContent = ShortCodeParser::parse($landingContent, $submission->id, $formData);
+        $landingContent = str_replace(['[', ']'], ['&#91;', '&#93;'], $landingContent);
         $sharePage = new SharePage();
         $statusTitle = ucfirst($submission->status);
         $settings = $sharePage->getSettings($form->id);

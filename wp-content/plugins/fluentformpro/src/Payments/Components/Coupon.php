@@ -9,6 +9,7 @@ if (!defined('ABSPATH')) {
 use FluentForm\App\Helpers\Helper;
 use FluentForm\App\Services\FormBuilder\BaseFieldManager;
 use FluentForm\App\Services\FormBuilder\Components\Text;
+use FluentFormPro\Payments\Classes\CouponModel;
 use FluentForm\Framework\Helpers\ArrayHelper;
 
 class Coupon extends BaseFieldManager
@@ -119,10 +120,29 @@ class Coupon extends BaseFieldManager
             $allCoupons = $submissionData['__ff_all_applied_coupons'];
             $allCoupons = \json_decode($allCoupons, true);
             if($allCoupons) {
-                $value = implode(', ', $allCoupons);
+                $matchedCodes = $this->matchedCouponCodes($allCoupons);
+                $value = implode(', ', $matchedCodes ? $matchedCodes : $allCoupons);
             }
         }
         return $value;
+    }
+
+    /**
+     * The use-limit counter compares this stored value in PHP, while the lookup that grants the
+     * discount compares with the `code` column's collation, which also folds accents and width.
+     *
+     * @return array Canonical codes, deduplicated; empty when the submitted codes match none.
+     */
+    private function matchedCouponCodes($submittedCodes)
+    {
+        $coupons = (new CouponModel())->getCouponsByCodes(array_unique((array) $submittedCodes));
+
+        $codes = [];
+        foreach ($coupons as $coupon) {
+            $codes[$coupon->code] = $coupon->code;
+        }
+
+        return array_values($codes);
     }
 
 }

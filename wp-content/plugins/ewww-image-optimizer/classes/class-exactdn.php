@@ -2047,7 +2047,8 @@ class ExactDN extends Page_Parser {
 					}
 				}
 				if ( $style !== $new_style ) {
-					$element = \str_replace( $style, \esc_attr( $new_style ), $element );
+					// Do not run esc_attr here as it the CSS may already have HTML entities and we do not decode it.
+					$element = \str_replace( $style, $new_style, $element );
 				}
 				if ( $skip_autoscale ) {
 					$new_class = 'skip-autoscale';
@@ -3313,7 +3314,7 @@ class ExactDN extends Page_Parser {
 			$this->debug_message( 'no TST plugin' );
 			return $args;
 		}
-		if ( ! $meta || ! \is_array( $meta ) || empty( $meta['sizes'] ) ) {
+		if ( ! $meta || ! \is_array( $meta ) || empty( $meta['file'] ) ) {
 			$meta = \wp_get_attachment_metadata( $attachment_id );
 			if ( ! \is_array( $meta ) || empty( $meta ) ) {
 				$this->debug_message( 'unusable meta retrieved' );

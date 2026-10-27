@@ -438,6 +438,9 @@ class Content_Processor {
 	 * Replaces N individual url_to_postid() calls
 	 * with 1 batch query. Reduces post save time from 30-40s to 2-6s.
 	 *
+	 * Multiple post types can share a slug, so compare each candidate's permalink
+	 * with the requested URL to find the correct post.
+	 *
 	 * @param array $urls Array of URLs to resolve.
 	 * @return array Associative array of url => post_id.
 	 */
@@ -478,17 +481,17 @@ class Content_Processor {
 				)
 			);
 
-			// Map post slugs to IDs.
-			$slug_to_id = [];
+			// Group candidate posts by slug - multiple post types can share a post_name.
+			$slug_to_posts = [];
 			foreach ( $posts as $post ) {
-				$slug_to_id[ $post->post_name ] = (int) $post->ID;
+				$slug_to_posts[ $post->post_name ][] = $post;
 			}
 
 			// Build final URL => post_id mapping.
 			foreach ( $slugs_to_urls as $slug => $url_list ) {
-				$post_id = $slug_to_id[ $slug ] ?? 0;
+				$candidates = $slug_to_posts[ $slug ] ?? [];
 				foreach ( $url_list as $url ) {
-					$results[ untrailingslashit( $url ) ] = $post_id;
+					$results[ untrailingslashit( $url ) ] = $this->resolve_candidate_post_id( $candidates, $url );
 				}
 			}
 		}
@@ -504,6 +507,35 @@ class Content_Processor {
 		}
 
 		return $results;
+	}
+
+	/**
+	 * Pick the right post ID out of same-slug candidates by comparing permalinks.
+	 *
+	 * @param array  $candidates Posts sharing the URL's slug (possibly across post types).
+	 * @param string $url        The original URL being resolved.
+	 * @return int Resolved post ID, or 0 if no candidate's permalink matches.
+	 */
+	private function resolve_candidate_post_id( $candidates, $url ) {
+		if ( empty( $candidates ) ) {
+			return 0;
+		}
+
+		// Common case: slug is unique, no need to verify the permalink.
+		if ( 1 === count( $candidates ) ) {
+			return (int) $candidates[0]->ID;
+		}
+
+		// Multiple post types share this slug - match against the real permalink.
+		$normalized_url = untrailingslashit( $url );
+		foreach ( $candidates as $candidate ) {
+			$permalink = get_permalink( $candidate->ID );
+			if ( $permalink && untrailingslashit( $permalink ) === $normalized_url ) {
+				return (int) $candidate->ID;
+			}
+		}
+
+		return 0;
 	}
 
 	/**

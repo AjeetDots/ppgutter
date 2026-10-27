@@ -11,15 +11,15 @@ class ComposerStaticInitb99e07d253bf4705bf50ef1db90791ef
     );
 
     public static $prefixLengthsPsr4 = array (
-        'W' => 
+        'W' =>
         array (
             'WPFluent\\' => 9,
         ),
-        'O' => 
+        'O' =>
         array (
             'OpenSpout\\' => 10,
         ),
-        'F' => 
+        'F' =>
         array (
             'FluentForm\\Framework\\' => 21,
             'FluentForm\\App\\' => 15,
@@ -27,19 +27,19 @@ class ComposerStaticInitb99e07d253bf4705bf50ef1db90791ef
     );
 
     public static $prefixDirsPsr4 = array (
-        'WPFluent\\' => 
+        'WPFluent\\' =>
         array (
             0 => __DIR__ . '/..' . '/wpfluent/framework/src/WPFluent',
         ),
-        'OpenSpout\\' => 
+        'OpenSpout\\' =>
         array (
             0 => __DIR__ . '/..' . '/openspout/openspout/src',
         ),
-        'FluentForm\\Framework\\' => 
+        'FluentForm\\Framework\\' =>
         array (
             0 => __DIR__ . '/..' . '/wpfluent/framework/src/WPFluent',
         ),
-        'FluentForm\\App\\' => 
+        'FluentForm\\App\\' =>
         array (
             0 => __DIR__ . '/../..' . '/app',
         ),
@@ -178,6 +178,7 @@ class ComposerStaticInitb99e07d253bf4705bf50ef1db90791ef
         'FluentForm\\App\\Modules\\Payments\\Migrations\\OrderItems' => __DIR__ . '/../..' . '/app/Modules/Payments/Migrations/OrderItems.php',
         'FluentForm\\App\\Modules\\Payments\\Migrations\\OrderSubscriptions' => __DIR__ . '/../..' . '/app/Modules/Payments/Migrations/OrderSubscriptions.php',
         'FluentForm\\App\\Modules\\Payments\\Migrations\\Transactions' => __DIR__ . '/../..' . '/app/Modules/Payments/Migrations/Transactions.php',
+        'FluentForm\\App\\Modules\\Payments\\OrderClaim' => __DIR__ . '/../..' . '/app/Modules/Payments/OrderClaim.php',
         'FluentForm\\App\\Modules\\Payments\\Orders\\OrderData' => __DIR__ . '/../..' . '/app/Modules/Payments/Orders/OrderData.php',
         'FluentForm\\App\\Modules\\Payments\\PaymentHandler' => __DIR__ . '/../..' . '/app/Modules/Payments/PaymentHandler.php',
         'FluentForm\\App\\Modules\\Payments\\PaymentHelper' => __DIR__ . '/../..' . '/app/Modules/Payments/PaymentHelper.php',

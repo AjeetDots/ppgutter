@@ -54,9 +54,10 @@ class ContextTools
                 'label'       => __('Get Forms Context', 'fluentform'),
                 'group'       => __('Discovery', 'fluentform'),
                 'description' => __('START HERE — call once per session. Returns who you are and your permissions, the site info, every valid enum value (submission/form statuses), headline counts, a compact list of forms you can access (id, title, status, entries), and usage guidelines. Use this before any other tool so you never guess a status string or a form id.', 'fluentform'),
+                // Core REST validation breaks on stdClass properties; the adapter emits {} for MCP itself
                 'input_schema' => [
-                    'type'       => 'object',
-                    'properties' => new \stdClass(),
+                    'type'    => 'object',
+                    'default' => [],
                 ],
                 'execute_callback'    => [self::class, 'getContext'],
                 'capability'          => PermissionGate::readRoleCaps(),
@@ -65,7 +66,7 @@ class ContextTools
         ];
     }
 
-    public static function getContext($params = [])
+    public static function getContext()
     {
         $userId   = get_current_user_id();
         $cacheKey = self::cacheKey($userId);
@@ -190,7 +191,7 @@ class ContextTools
 
     private static function computeStats()
     {
-        $since = gmdate('Y-m-d H:i:s', strtotime('-30 days', current_time('timestamp')));
+        $since = wp_date('Y-m-d H:i:s', strtotime('-30 days'));
 
         // Both submission figures come from a single scan (COUNT + a conditional
         // SUM), not a scan per figure. Returns [null, null] on failure so buildStats
@@ -213,10 +214,10 @@ class ContextTools
         ];
     }
 
-    private static function safeCount(callable $fn)
+    private static function safeCount(callable $callback)
     {
         try {
-            $val = $fn();
+            $val = $callback();
             return null === $val ? null : (int) $val;
         } catch (\Throwable $e) {
             return null;
@@ -229,10 +230,10 @@ class ContextTools
      *
      * @return array<int, int|null>
      */
-    private static function safeCounts(callable $fn, $count)
+    private static function safeCounts(callable $callback, $count)
     {
         try {
-            $vals = $fn();
+            $vals = $callback();
             $out  = [];
             for ($i = 0; $i < $count; $i++) {
                 $out[] = isset($vals[$i]) ? (int) $vals[$i] : null;

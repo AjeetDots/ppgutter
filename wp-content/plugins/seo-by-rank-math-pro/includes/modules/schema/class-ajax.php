@@ -38,7 +38,7 @@ class Ajax {
 		$this->has_cap_ajax( 'general' );
 
 		$url = Param::post( 'url', false, FILTER_VALIDATE_URL );
-		if ( ! $url || strtolower( substr( $url, 0, 4 ) ) !== 'http' ) {
+		if ( ! $url || strtolower( substr( $url, 0, 4 ) ) !== 'http' || ! wp_http_validate_url( $url ) ) {
 			$this->error( esc_html__( 'No url found.', 'rank-math-pro' ) );
 		}
 

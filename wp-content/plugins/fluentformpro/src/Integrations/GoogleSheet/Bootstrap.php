@@ -194,6 +194,7 @@ class Bootstrap extends IntegrationManagerController
                     'sub_title' => __('Please specify the meta ', 'fluentformpro'),
                     'required' => true,
                     'component' => 'dropdown_label_repeater',
+                    'enable_map_all' => true,
                 ],
                 [
                     'key' => 'conditionals',
@@ -214,11 +215,27 @@ class Bootstrap extends IntegrationManagerController
         ];
     }
 
+    public static function filterMappedRows($rows)
+    {
+        if (!is_array($rows)) {
+            return [];
+        }
+
+        return array_values(array_filter($rows, function ($row) {
+            $row = (array)$row;
+            $label = trim((string)ArrayHelper::get($row, 'label', ''));
+            $value = trim((string)ArrayHelper::get($row, 'item_value', ''));
+            return '' !== $label || '' !== $value;
+        }));
+    }
+
     public function checkColumnSlugs($settings, $integrationId)
     {
         $message = 'Validation Failed';
         // Validate First
         $errors = [];
+        $settings['meta_fields'] = self::filterMappedRows(ArrayHelper::get($settings, 'meta_fields', []));
+
         if (empty($settings['spreadsheet_id'])) {
             $errors['spreadsheet_id'] = [__('Please Provide spreadsheet ID', 'fluentformpro')];
         }
@@ -226,7 +243,7 @@ class Bootstrap extends IntegrationManagerController
             $errors['work_sheet_id'] = [__('Please Provide Worksheet Name', 'fluentformpro')];
         }
         if (empty($settings['meta_fields'])) {
-            $errors['meta_fields'] = [__('Please Provide Meta Fields Values', 'fluentformpro')];
+            $errors['meta_fields'] = [__('Please map at least one Spreadsheet Field', 'fluentformpro')];
         }
 
         if (count($settings['meta_fields']) > 208) {
@@ -291,6 +308,7 @@ class Bootstrap extends IntegrationManagerController
 
         if (!$metaFields) {
             do_action('fluentform/integration_action_result', $feed, 'failed', __('No meta fields found', 'fluentformpro'));
+            return;
         }
 
         $inputs = FormFieldsParser::getEntryInputs($form, ['raw']);

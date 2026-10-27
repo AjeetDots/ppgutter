@@ -57,6 +57,8 @@ class PaymentHandler
 
         add_action('fluentform/handle_payment_ajax_endpoint', [$this, 'handleAjaxEndpointsNew']);
 
+        add_action('fluentform/render_order_claim_result', [$this, 'renderOrderClaimResult'], 10, 2);
+
         if (!$this->isEnabled()) {
             return;
         }
@@ -79,6 +81,44 @@ class PaymentHandler
             }
             wp_enqueue_script('fluentformpro-payment-handler', FLUENTFORMPRO_DIR_URL . 'public/js/payment_handler_pro.js', array('jquery'), FLUENTFORMPRO_VERSION, true);
         });
+    }
+
+    /**
+     * Render the guest-order claim result (success/invalid) on a branded FluentForm
+     * landing page, matching the Double Opt-in confirmation experience. Fired by free's
+     * handleOrderClaimRequest(); loadPublicView() echoes the page and exits.
+     */
+    public function renderOrderClaimResult($ok, $message)
+    {
+        $sharePage = new \FluentFormPro\classes\SharePage\SharePage();
+        $settings = $sharePage->getSettings(0);
+
+        $heading = $ok
+            ? __('You\'re all set', 'fluentformpro')
+            : __('This link can\'t be used', 'fluentformpro');
+        $title = $ok
+            ? __('Orders linked', 'fluentformpro')
+            : __('Link not valid', 'fluentformpro');
+
+        $content = '<div style="text-align:center;max-width:520px;margin:0 auto;">'
+            . '<h1 style="font-size:24px;margin:0 0 12px;">' . esc_html($heading) . '</h1>'
+            . '<p style="font-size:16px;line-height:1.6;opacity:.85;">' . esc_html($message) . '</p>'
+            . '</div>';
+
+        $landingVars = [
+            'settings'        => $settings,
+            'title'           => $title,
+            'form_id'         => 0,
+            'entry'           => null,
+            'form'            => null,
+            'bg_color'        => $settings['custom_color'],
+            'landing_content' => $content,
+            'has_header'      => false,
+            'isEmbeded'       => false,
+        ];
+        $landingVars = apply_filters('fluentform/submission_vars', $landingVars, 0);
+
+        $sharePage->loadPublicView($landingVars);
     }
 
     // Deprecated in 6.2.14; remove in 6.2.15 with the legacy Pro payment stack.
@@ -312,8 +352,6 @@ class PaymentHandler
         add_filter('fluentform/admin_i18n', array($this, 'paymentTranslations'), 10, 1);
 
         add_filter('fluentform/payment_smartcode', array($this, 'paymentReceiptView'), 10, 3);
-
-        add_action('user_register', array($this, 'maybeAssignTransactions'), 99, 1);
 
         (new PaymentEntries())->init();
 
@@ -675,53 +713,6 @@ class PaymentHandler
         if ($originalUid != $uid) {
             die(__('Transaction UID is invalid', 'fluentformpro')); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         }
-
-        return true;
-    }
-
-    public function maybeAssignTransactions($userId)
-    {
-        $user = get_user_by('ID', $userId);
-        if (!$user) {
-            return false;
-        }
-        $userEmail = $user->user_email;
-
-        $transactions = wpFluent()->table('fluentform_transactions')
-            ->where('payer_email', $userEmail)
-            ->where(function ($query) {
-                $query->whereNull('user_id')
-                    ->orWhere('user_id', '');
-            })
-            ->get();
-
-        if (!count($transactions)) {
-            return false;
-        }
-
-        $submissionIds = [];
-        $transactionIds = [];
-        foreach ($transactions as $transaction) {
-            $submissionIds[] = $transaction->submission_id;
-            $transactionIds[] = $transaction->id;
-        }
-
-        $submissionIds = array_unique($submissionIds);
-        $transactionIds = array_unique($transactionIds);
-
-        wpFluent()->table('fluentform_submissions')
-            ->whereIn('id', $submissionIds)
-            ->update([
-                'user_id'    => $userId,
-                'updated_at' => current_time('mysql')
-            ]);
-
-        wpFluent()->table('fluentform_transactions')
-            ->whereIn('id', $transactionIds)
-            ->update([
-                'user_id'    => $userId,
-                'updated_at' => current_time('mysql')
-            ]);
 
         return true;
     }

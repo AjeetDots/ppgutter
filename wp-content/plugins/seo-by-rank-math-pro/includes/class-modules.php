@@ -86,6 +86,18 @@ class Modules {
 			'disabled_text' => esc_html__( 'Please activate Schema module to use this module.', 'rank-math-pro' ),
 		];
 
+		$registered             = \RankMath\Admin\Admin_Helper::get_registration_data();
+		$is_connected           = $registered && ! empty( $registered['username'] ) && ! empty( $registered['api_key'] );
+		$modules['marketplace'] = [
+			'title'         => esc_html__( 'Marketplace', 'rank-math-pro' ),
+			'desc'          => esc_html__( 'Discover handpicked WordPress plugins designed to boost your SEO, improve Core Web Vitals, and accelerate your website\'s growth.', 'rank-math-pro' ),
+			'class'         => 'RankMathPro\Marketplace\Marketplace',
+			'icon'          => 'cart',
+			'probadge'      => defined( 'RANK_MATH_PRO_FILE' ),
+			'disabled'      => ! $is_connected,
+			'disabled_text' => esc_html__( 'Please connect your site to Rank Math to use this module.', 'rank-math-pro' ),
+		];
+
 		// Replace Schema Loader.
 		$modules['rich-snippet']['class'] = '\RankMathPro\Schema\Schema';
 

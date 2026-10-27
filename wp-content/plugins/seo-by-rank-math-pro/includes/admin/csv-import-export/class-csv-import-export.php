@@ -390,7 +390,7 @@ class CSV_Import_Export {
 	 */
 	public static function get_import_complete_message() {
 		$status              = (array) get_option( 'rank_math_csv_import_status', [] );
-		$imported_rows_count = count( $status['imported_rows'] );
+		$imported_rows_count = ! empty( $status['imported_rows'] ) ? count( $status['imported_rows'] ) : 0;
 		$message             = '<p class="csv-import-error">' . __( 'Nothing to import! The CSV file didn’t contain any valid rows. Please review the file and try again.', 'rank-math-pro' ) . '</p>';
 
 		if ( $imported_rows_count ) {

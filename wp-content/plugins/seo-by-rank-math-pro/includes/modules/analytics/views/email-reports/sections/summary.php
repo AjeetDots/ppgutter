@@ -109,6 +109,7 @@ $is_analytics_connected = ! empty( $analytics ) && ! empty( $analytics['view_id'
 					'graph_data'     => $this->get_graph_data( 'position' ),
 					'graph_modifier' => -100,
 					'human_number'   => false,
+					'invert'         => true,
 				]
 			);
 			?>

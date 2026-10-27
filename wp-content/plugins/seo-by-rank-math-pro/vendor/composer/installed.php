@@ -10,6 +10,15 @@
         'dev' => false,
     ),
     'versions' => array(
+        'groupone/marketplace' => array(
+            'pretty_version' => '2.0.8',
+            'version' => '2.0.8.0',
+            'reference' => '3d2c68eb3714ed12b4ad6eb94543ec862af5df71',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../groupone/marketplace',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'rankmath/seo-by-rank-math-pro' => array(
             'pretty_version' => '1.0.0+no-version-set',
             'version' => '1.0.0.0',
@@ -29,9 +38,9 @@
             'dev_requirement' => false,
         ),
         'wp-media/plugin-family' => array(
-            'pretty_version' => 'v1.0.8',
-            'version' => '1.0.8.0',
-            'reference' => 'b763b3338e19ca672c407213da4cd8739e9327c2',
+            'pretty_version' => 'v1.0.9',
+            'version' => '1.0.9.0',
+            'reference' => 'ed341931a4baa22cdf95bcd9109c71112fb5a18e',
             'type' => 'library',
             'install_path' => __DIR__ . '/../wp-media/plugin-family',
             'aliases' => array(),

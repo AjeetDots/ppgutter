@@ -29,7 +29,6 @@ class Taxonomy extends Admin {
 	 * The Constructor.
 	 */
 	public function __construct() {
-		$this->action( 'init', 'init', 9999 );
 		$this->action( 'rank_math/json_ld', 'add_schema', 11, 2 );
 
 		if (
@@ -41,24 +40,6 @@ class Taxonomy extends Admin {
 		}
 
 		$this->action( 'rank_math/admin/editor_scripts', 'enqueue' );
-	}
-
-	/**
-	 * Add schema-preview rewrite rule for taxonomies.
-	 */
-	public function init() {
-		$taxonomies = Helper::get_accessible_taxonomies();
-		foreach ( $taxonomies as $slug => $taxonomy ) {
-			if ( empty( $taxonomy->rewrite['slug'] ) || ! $this->can_add( $slug ) ) {
-				continue;
-			}
-
-			add_rewrite_rule(
-				$taxonomy->rewrite['slug'] . '/(.+?)/schema-preview/?$',
-				'index.php?' . $slug . '=$matches[1]&schema-preview=$matches[3]',
-				'top'
-			);
-		}
 	}
 
 	/**

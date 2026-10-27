@@ -1025,20 +1025,8 @@ abstract class BaseProcessor
             $data['user_id'] = $user->ID;
         }
 
-        if (!$submission->user_id && !empty($data['payer_email'])) {
-            $email = $data['payer_email'];
-            $maybeUser = get_user_by('email', $email);
-            if ($maybeUser) {
-
-                $this->updateSubmission($submission->id, [
-                    'user_id' => $maybeUser->ID
-                ]);
-
-                if (empty($data['user_id'])) {
-                    $data['user_id'] = $maybeUser->ID;
-                }
-            }
-        }
+        // Never link a guest order to an account by unverified payer_email (attacker-typed):
+        // ownership comes only from a logged-in buyer (above) or the verified order-claim flow.
 
         $address = PaymentHelper::getCustomerAddress($submission);
         if (!$address) {

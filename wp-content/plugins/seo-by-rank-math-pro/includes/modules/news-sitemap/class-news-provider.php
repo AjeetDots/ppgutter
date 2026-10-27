@@ -75,6 +75,7 @@ class News_Provider extends Post_Type {
 				'lastmod' => get_lastpostdate( 'gmt' ),
 			],
 			'news',
+			$this->sitemap_slug,
 		);
 
 		if ( $item ) {
@@ -82,6 +83,16 @@ class News_Provider extends Post_Type {
 		}
 
 		return $index;
+	}
+
+	/**
+	 * Get count of posts eligible for the news sitemap.
+	 *
+	 * @param string $post_types Sitemap type slug — unused, news post types come from settings.
+	 * @return int
+	 */
+	public function get_post_type_count( $post_types ) { // phpcs:ignore
+		return count( $this->get_posts( Helper::get_settings( 'sitemap.news_sitemap_post_type' ), 1000, 0 ) );
 	}
 
 	/**
@@ -190,17 +201,32 @@ class News_Provider extends Post_Type {
 						FROM {$wpdb->term_relationships}
 						WHERE term_taxonomy_id IN ($placeholders)
 					)";
-					// Check mutiple category selected.
-					$terms_or_sql = "
-					OR {$wpdb->posts}.ID IN (
-						SELECT DISTINCT object_id
-						FROM {$wpdb->term_relationships}
-						WHERE term_taxonomy_id NOT IN ($placeholders)
-					))
-					AND";
+
+					/**
+					 * Filter whether to use strict term exclusion for the news sitemap.
+					 *
+					 * @param bool   $strict Whether to use strict exclusion. Default true.
+					 * @param string $key    Taxonomy key being processed.
+					 * @param array  $terms  Excluded terms grouped by taxonomy.
+					 */
+					$use_all_terms_for_exclude_check = $this->do_filter( 'sitemap/news/use_all_terms_for_exclude_check', true, $key, $terms );
+					if ( $use_all_terms_for_exclude_check ) {
+						// Check mutiple category selected.
+						$terms_or_sql = "
+						OR {$wpdb->posts}.ID IN (
+							SELECT DISTINCT object_id
+							FROM {$wpdb->term_relationships}
+							WHERE term_taxonomy_id NOT IN ($placeholders)
+						))
+						AND";
+					}
 
 					$terms_query .= $wpdb->prepare( $terms_sql, $terms[ $key ] ); // phpcs:ignore
-					$terms_query .= $wpdb->prepare( $terms_or_sql, $terms[ $key ] ); // phpcs:ignore
+					if ( $use_all_terms_for_exclude_check ) {
+						$terms_query .= $wpdb->prepare( $terms_or_sql, $terms[ $key ] ); // phpcs:ignore
+					} else {
+						$terms_query .= ') AND';
+					}
 				},
 				array_keys( $terms )
 			);

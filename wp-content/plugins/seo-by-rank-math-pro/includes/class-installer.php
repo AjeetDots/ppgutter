@@ -197,5 +197,14 @@ class Installer {
 		}
 
 		Helper::update_all_settings( $general, null, $sitemap );
+
+		$this->enable_default_modules();
+	}
+
+	/**
+	 * Enable PRO modules that should be active by default on fresh installs.
+	 */
+	private function enable_default_modules() {
+		Helper::update_modules( [ 'marketplace' => 'on' ] );
 	}
 }

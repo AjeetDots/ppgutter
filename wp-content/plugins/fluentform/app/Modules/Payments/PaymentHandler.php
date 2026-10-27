@@ -301,9 +301,9 @@ class PaymentHandler
         add_filter('fluentform/admin_i18n', array($this, 'paymentTranslations'), 10, 1);
         
         add_filter('fluentform/payment_smartcode', array($this, 'paymentReceiptView'), 10, 3);
-        
-        add_action('user_register', array($this, 'maybeAssignTransactions'), 99, 1);
-        
+
+        (new OrderClaim())->init();
+
         (new PaymentEntries())->init();
         
         /*
@@ -326,7 +326,7 @@ class PaymentHandler
         );
 
         add_filter('fluentform/validate_input_item_custom_payment_component', [$this, 'validatePaymentNumber'], 10, 3);
-        add_filter('fluentform/validate_input_item_item_quantity_component', [$this, 'validatePaymentNumber'], 10, 3);
+        add_filter('fluentform/validate_input_item_item_quantity_component', [$this, 'validatePaymentQuantity'], 10, 3);
 
         add_filter(
             'fluentform/validate_input_item_payment_method',
@@ -616,55 +616,7 @@ class PaymentHandler
         return true;
     }
     
-    public function maybeAssignTransactions($userId)
-    {
-        $user = get_user_by('ID', $userId);
-        if (!$user) {
-            return false;
-        }
-        $userEmail = $user->user_email;
-        
-        $transactions = \FluentForm\App\Models\Transaction::where('payer_email', $userEmail)
-            ->where(function ($query) {
-                $query->whereNull('user_id')
-                    ->orWhere('user_id', '');
-            })
-            ->get();
-        
-        if (count($transactions) === 0) {
-            return false;
-        }
-        
-        $submissionIds = [];
-        $transactionIds = [];
-        foreach ($transactions as $transaction) {
-            $submissionIds[] = $transaction->submission_id;
-            $transactionIds[] = $transaction->id;
-        }
-        
-        $submissionIds = array_unique($submissionIds);
-        $transactionIds = array_unique($transactionIds);
-        
-        // Claim only unowned submissions; payer_email is unverified and may match a registered owner.
-        \FluentForm\App\Models\Submission::whereIn('id', $submissionIds)
-            ->where(function ($query) {
-                $query->whereNull('user_id')
-                    ->orWhere('user_id', '');
-            })
-            ->update([
-                'user_id'    => $userId,
-                'updated_at' => current_time('mysql')
-            ]);
 
-        \FluentForm\App\Models\Transaction::whereIn('id', $transactionIds)
-            ->update([
-                'user_id'    => $userId,
-                'updated_at' => current_time('mysql')
-            ]);
-        
-        return true;
-    }
-    
     public function paymentTranslations($i18n)
     {
         $paymentI18n = array(
@@ -719,7 +671,9 @@ class PaymentHandler
                 $userGivenValue = ArrayHelper::get($formData, "{$field['name']}_custom_$selectedPlanIndex");
                 $userGivenValue = $userGivenValue ?: 0;
                 $planMinValue = ArrayHelper::get($selectedPlan, 'user_input_min_value');
-                if (!is_numeric($userGivenValue) || $userGivenValue < 0 || ($planMinValue && $userGivenValue < $planMinValue)) {
+                if (!is_numeric($userGivenValue) || !is_finite((float) $userGivenValue)
+                    || (float) $userGivenValue < 0 || (float) $userGivenValue >= PaymentHelper::maxAmount()
+                    || ($planMinValue && $userGivenValue < $planMinValue)) {
                     $error = __('This subscription plan value is invalid', 'fluentform');
                 }
             }
@@ -745,17 +699,28 @@ class PaymentHandler
                 if (in_array($fieldType, ['radio', 'select'])) {
                     $acceptedPaymentPlan = in_array($formData[$field['name']], $pricingOptions);
                 } else {
-                    $acceptedPaymentPlan = array_diff((array) $formData[$field['name']], $pricingOptions);
-                    
-                    $acceptedPaymentPlan = empty($acceptedPaymentPlan);
+                    // reject non-flat shapes; the order builder prices a flat list and would drop a laundered scalar
+                    $value = $formData[$field['name']];
+                    $isFlatList = is_array($value)
+                        && array_keys($value) === range(0, count($value) - 1)
+                        && $value === array_filter($value, 'is_scalar');
+                    $acceptedPaymentPlan = $isFlatList && !array_diff($value, $pricingOptions);
                 }
                 
                 if (!$acceptedPaymentPlan) {
                     $error = __('This payment item is invalid', 'fluentform');
                 }
+            } elseif (in_array($fieldType, ['single', 'number'], true)) {
+                // single+dynamic_default and number take the price from the request, so an INF/overflow
+                // amount reaches pushItem and is stored as 0 (free order) unless rejected here. A plain
+                // numeric 0 stays valid: the order builder skips a zero-priced single, as before.
+                $inputValue = ArrayHelper::get($formData, $field['name']);
+                if (!PaymentHelper::isValidPaymentAmount($inputValue) && !(is_numeric($inputValue) && 0 == $inputValue)) {
+                    $error = __('This payment item is invalid', 'fluentform');
+                }
             }
         }
-        
+
         return $error;
     }
 
@@ -763,7 +728,22 @@ class PaymentHandler
     public function validatePaymentNumber($error, $field, $formData)
     {
         $value = ArrayHelper::get($formData, $field['name']);
-        if ($error || in_array($value, [null, ''], true) || (is_numeric($value) && $value > 0)) {
+        if ($error || in_array($value, [null, ''], true) || PaymentHelper::isValidPaymentAmount($value)) {
+            return $error;
+        }
+
+        $isOptionalZero = is_numeric($value) && 0 == $value
+            && !ArrayHelper::get($field, 'raw.settings.validation_rules.required.value');
+
+        return $isOptionalZero ? $error : __('This payment item is invalid', 'fluentform');
+    }
+
+    // A quantity must be a whole number within [1, maxQuantity]; INF/overflow (which else wraps the
+    // line total to 0) and fractional values are rejected. An omitted/zero optional item still passes.
+    public function validatePaymentQuantity($error, $field, $formData)
+    {
+        $value = ArrayHelper::get($formData, $field['name']);
+        if ($error || in_array($value, [null, ''], true) || PaymentHelper::isValidQuantity($value)) {
             return $error;
         }
 

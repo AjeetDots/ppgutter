@@ -108,7 +108,7 @@ class CustomSubmitButton extends BaseFieldManager
         $hideSubmit = apply_filters_deprecated(
             'fluentform_is_hide_submit_btn_' . $form->id,
             [
-                '__return_true'
+                '__return_true',
             ],
             FLUENTFORM_FRAMEWORK_UPGRADE,
             'fluentform/is_hide_submit_btn_' . $form->id,
@@ -118,12 +118,12 @@ class CustomSubmitButton extends BaseFieldManager
         add_filter('fluentform/is_hide_submit_btn_' . $form->id, $hideSubmit);
 
         $elementName = $data['element'];
-    
+
         $data = apply_filters_deprecated(
             'fluentform_rendering_field_data_' . $elementName,
             [
                 $data,
-                $form
+                $form,
             ],
             FLUENTFORM_FRAMEWORK_UPGRADE,
             'fluentform/rendering_field_data_' . $elementName,
@@ -215,11 +215,7 @@ class CustomSubmitButton extends BaseFieldManager
             $html .= '<button ' . $atts . ' aria-label="' . esc_attr($this->removeShortcode($buttonText)) . '">' . fluentform_sanitize_html($buttonText) . '</button>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $atts is escaped before being passed in.
         }
 
-        // SECURITY (FINDING-12): neutralize any </style> breakout in the user-built custom-button CSS.
-        $styles = fluentformSanitizeCSS($styles);
-        if ($styles) {
-            $html .= '<style>' . $styles . '</style>';
-        }
+        $html = $this->buildInlineStyleContainer($styles) . $html;
 
         $html .= '</div>';
 
@@ -228,7 +224,7 @@ class CustomSubmitButton extends BaseFieldManager
             [
                 $html,
                 $data,
-                $form
+                $form,
             ],
             FLUENTFORM_FRAMEWORK_UPGRADE,
             'fluentform/rendering_field_html_' . $elementName,

@@ -776,7 +776,7 @@ class SubmissionService
 
             if (is_array($dataValue) || is_object($dataValue)) {
                 foreach ($dataValue as $subKey => $subValue) {
-                    if (empty($subValue)) {
+                    if ($subValue === '' || $subValue === null || $subValue === [] || $subValue === false) {
                         continue;
                     }
                     $entryItems[] = [

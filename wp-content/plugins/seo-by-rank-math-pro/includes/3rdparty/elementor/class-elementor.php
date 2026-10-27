@@ -27,6 +27,8 @@ class Elementor {
 	 * Class constructor.
 	 */
 	public function __construct() {
+		new Elementor_Link_Genius();
+
 		$this->action( 'elementor/editor/before_enqueue_scripts', 'editor_scripts' );
 		$this->action( 'elementor/widgets/register', 'add_breadcrumb_widget' );
 		$this->action( 'elementor/element/nested-accordion/section_items/before_section_end', 'add_faq_setting', 99 );

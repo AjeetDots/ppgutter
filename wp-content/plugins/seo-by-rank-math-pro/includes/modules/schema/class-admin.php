@@ -281,7 +281,7 @@ class Admin {
 		$schema    = json_decode( $schema, true );
 		$schema    = $sanitizer->sanitize( 'rank_math_schema', $schema );
 
-		$meta_key = 'rank_math_schema_' . $schema['@type'];
+		$meta_key = 'rank_math_schema_' . Utils::get_primary_type( $schema['@type'] );
 		update_post_meta( $post_id, $meta_key, $schema );
 
 		// Publish Schema Template post.
@@ -312,7 +312,7 @@ class Admin {
 			$template_id = absint( \str_replace( 'rank_math_exclude_template_', '', $meta_key ) );
 			$schema_data = DB::get_schemas( $template_id );
 			$meta_id     = key( $schema_data );
-			$meta_key    = 'rank_math_schema_' . $schema_data[ $meta_id ]['@type'];
+			$meta_key    = 'rank_math_schema_' . Utils::get_primary_type( $schema_data[ $meta_id ]['@type'] );
 			$object_id   = $request->get_param( 'objectID' );
 
 			$schema_data[ $meta_id ]['metadata']['displayConditions'][] = [

@@ -138,6 +138,7 @@ return array(
     'FluentForm\\App\\Modules\\Payments\\Migrations\\OrderItems' => $baseDir . '/app/Modules/Payments/Migrations/OrderItems.php',
     'FluentForm\\App\\Modules\\Payments\\Migrations\\OrderSubscriptions' => $baseDir . '/app/Modules/Payments/Migrations/OrderSubscriptions.php',
     'FluentForm\\App\\Modules\\Payments\\Migrations\\Transactions' => $baseDir . '/app/Modules/Payments/Migrations/Transactions.php',
+    'FluentForm\\App\\Modules\\Payments\\OrderClaim' => $baseDir . '/app/Modules/Payments/OrderClaim.php',
     'FluentForm\\App\\Modules\\Payments\\Orders\\OrderData' => $baseDir . '/app/Modules/Payments/Orders/OrderData.php',
     'FluentForm\\App\\Modules\\Payments\\PaymentHandler' => $baseDir . '/app/Modules/Payments/PaymentHandler.php',
     'FluentForm\\App\\Modules\\Payments\\PaymentHelper' => $baseDir . '/app/Modules/Payments/PaymentHelper.php',

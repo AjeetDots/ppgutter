@@ -876,8 +876,8 @@ class PaddleProcessor extends BaseProcessor
      *
      * Deliberately not PaymentHelper::getCustomerEmail(), which prefers the
      * logged-in user's account email over the form's fields. payer_email is an
-     * ownership key that maybeAssignTransactions() matches on at user_register,
-     * so a visitor who happens to be logged in would claim someone else's order.
+     * ownership key that BaseProcessor::getTransactionDefaults() matches on to set
+     * user_id, so a visitor who happens to be logged in would claim someone else's order.
      *
      * @param array  $vendorTransaction Verified GET /transactions/{id} envelope
      * @param object $submission

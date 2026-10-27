@@ -39,6 +39,13 @@ class Import_Background_Process extends \WP_Background_Process {
 	protected $action = 'csv_import';
 
 	/**
+	 * Process lock duration, in seconds. Kept above the 1-minute cron health-check interval.
+	 *
+	 * @var int
+	 */
+	protected $queue_lock_time = 300;
+
+	/**
 	 * Importer instance.
 	 *
 	 * @var Importer
@@ -69,6 +76,14 @@ class Import_Background_Process extends \WP_Background_Process {
 	 * @return void
 	 */
 	public function start( $line_indices ) {
+		// Purge any leftover batch so it can't run alongside this one.
+		// Uses get_batch() (not get_batches()) and checks ->key (not empty()) — see commit message for why.
+		$stale_batch = $this->get_batch();
+		while ( is_object( $stale_batch ) && ! empty( $stale_batch->key ) ) {
+			$this->delete( $stale_batch->key );
+			$stale_batch = $this->get_batch();
+		}
+
 		$chunk_size = apply_filters( 'rank_math/admin/csv_import_chunk_size', 100 );
 		$chunks     = array_chunk( $line_indices, $chunk_size );
 

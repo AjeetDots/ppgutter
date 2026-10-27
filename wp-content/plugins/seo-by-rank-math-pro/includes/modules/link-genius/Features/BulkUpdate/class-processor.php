@@ -593,6 +593,19 @@ class Processor extends \WP_Background_Process {
 			[ '%s' ]
 		);
 
+		// Clear the cron event.
+		$this->clear_scheduled_event();
+
+		// Delete all queued batches.
+		$this->delete_batches_from_db();
+
+		// Unlock the parent process lock.
+		$this->unlock_process();
+
+		// Release coordination locks.
+		Process_Coordinator::mark_write_complete( 'bulk_update' );
+		Process_Coordinator::release_lock( 'bulk_update' );
+
 		// Clean up progress state.
 		$this->clear_state();
 

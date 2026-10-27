@@ -16,6 +16,8 @@ class FormCssJs
      */
     protected $request;
 
+    protected $registeredPresets;
+
     public function __construct()
     {
         $this->request = wpFluentForm('request');
@@ -55,12 +57,9 @@ class FormCssJs
 
     public function addStylerCSS($formId, $styles = [])
     {
-        $metaKeys = array_merge(
-            ['_ff_form_styler_css', '_ff_selected_style'],
-            $styles
-        );
+        $metas = (new \FluentForm\App\Services\Settings\Customizer())->get($formId, ['_ff_form_styler_css', '_ff_selected_style']);
 
-        $metas = (new \FluentForm\App\Services\Settings\Customizer())->get($formId, $metaKeys);
+        $allMeta = Helper::getFormMeta($formId, null, []);
 
         foreach ($styles as $style) {
             if (!$style) {
@@ -71,7 +70,10 @@ class FormCssJs
                 continue;
             }
 
-            $loadCss = ArrayHelper::get($metas, $style);
+            // Exact key only: getFormMeta() would resolve a dotted theme= as a path into other meta (W12).
+            $savedCss = $allMeta[$style] ?? '';
+
+            $loadCss = $this->canPrintSavedCss($formId, $style, $savedCss, $allMeta) ? $savedCss : '';
 
             if (!$loadCss) {
                 $loadCss = apply_filters('fluentform/build_style_from_theme', '', $formId, $style);
@@ -93,6 +95,35 @@ class FormCssJs
                 do_action('fluent_form/loaded_styler_' . $formId . '_' . $style);
             }
         }
+    }
+
+    // A post author's theme= may only print meta of a built-in, selected or registered style (W12).
+    protected function canPrintSavedCss($formId, $style, $css, $allMeta)
+    {
+        if (!$css || !is_string($css)) {
+            return false;
+        }
+
+        if (0 === strpos($style, 'ffs_') || ($allMeta['_ff_selected_style'] ?? '') === $style) {
+            return true;
+        }
+
+        // Pro's Styler CSS always opens with this form's own wrapper selector, even after its preset is unregistered.
+        if (0 === strpos(ltrim($css), '.fluentform_wrapper_' . $formId . '.' . $style . '_wrap')) {
+            return true;
+        }
+
+        // Checked last: Pro's getPresets() runs third-party and deprecated preset filters.
+        return isset($this->registeredPresets($formId)[$style]);
+    }
+
+    protected function registeredPresets($formId)
+    {
+        if (null === $this->registeredPresets) {
+            $this->registeredPresets = (array) ArrayHelper::get((new \FluentForm\App\Services\Settings\SettingsService())->getPreset($formId), 'presets', []);
+        }
+
+        return $this->registeredPresets;
     }
 
     public function getCss($formId)

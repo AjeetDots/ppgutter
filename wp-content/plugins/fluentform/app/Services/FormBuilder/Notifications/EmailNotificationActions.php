@@ -5,6 +5,7 @@ namespace FluentForm\App\Services\FormBuilder\Notifications;
 defined('ABSPATH') or die;
 
 use FluentForm\App\Helpers\Helper;
+use FluentForm\App\Modules\Form\FormFieldsParser;
 use FluentForm\App\Services\FormBuilder\ShortCodeParser;
 use FluentForm\Framework\Foundation\Application;
 use FluentForm\Framework\Helpers\ArrayHelper;
@@ -35,6 +36,11 @@ class EmailNotificationActions
 
     public function notifyOnSubmitPaymentForm($submissionId, $submissionData, $form)
     {
+        // Without has_payment the global notifier sends payment_form_submit feeds itself.
+        if (empty($form->has_payment)) {
+            return;
+        }
+
         $emailFeeds = wpFluent()->table('fluentform_form_meta')
             ->where('form_id', $form->id)
             ->where('meta_key', 'notifications')
@@ -84,10 +90,16 @@ class EmailNotificationActions
 
     public function notify($feed, $formData, $entry, $form)
     {
-        // A payment_success email asserts a settled charge, so gate it on the payment status
-        // for every payment form -- not only those with a Payment Method field.
+        // A payment_success email asserts a settled charge, so gate it on the payment status.
+        // Only a form with a Payment Method field can settle one; without it every entry stays
+        // pending and the editor hides the trigger, so its notifications go out on submit.
         $isTriggerOnPaymentSuccess = ArrayHelper::get($feed, 'processedValues.feed_trigger_event') === 'payment_success';
-        if (!empty($form->has_payment) && $isTriggerOnPaymentSuccess && !$this->paymentSucceeded($entry, $form)) {
+        if (
+            !empty($form->has_payment)
+            && $isTriggerOnPaymentSuccess
+            && FormFieldsParser::hasElement($form, 'payment_method')
+            && !$this->paymentSucceeded($entry, $form)
+        ) {
             return;
         }
 

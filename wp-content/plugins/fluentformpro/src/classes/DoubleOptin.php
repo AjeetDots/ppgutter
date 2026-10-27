@@ -198,10 +198,18 @@ class DoubleOptin
         }
 
         if ($confirmationMessage = ArrayHelper::get($data, 'confirmation_message')) {
-            $data['confirmation_message'] = apply_filters('fluentform/submission_message_parse', $confirmationMessage, $insertId, $formData, $form);
+            $confirmationMessage = apply_filters('fluentform/submission_message_parse', $confirmationMessage, $insertId, $formData, $form);
+            // Expand trusted shortcodes after submission-aware filters initialize their context.
+            $data['confirmation_message'] = do_shortcode($confirmationMessage);
         }
 
         $data = ShortCodeParser::parse($data, $insertId, $formData);
+
+        // Keep submitter-supplied shortcode brackets literal for the final do_shortcode() call.
+        if (isset($data['confirmation_message'])) {
+            $data['confirmation_message'] = str_replace(['[', ']'], ['&#91;', '&#93;'], $data['confirmation_message']);
+        }
+
         $emailBody = $data['email_body'];
 
         $confirmationToken = Helper::getSubmissionMeta($insertId, '_double_optin_hash');
@@ -404,6 +412,9 @@ class DoubleOptin
         $settings = $sharePage->getSettings($formId);
 
         $message = ShortCodeParser::parse($result['message'], $insertId, $submissionData);
+        // Trusted shortcodes already expanded upstream (getReturnData); keep submitter-supplied
+        // brackets literal for the landing page's final do_shortcode() call.
+        $message = str_replace(['[', ']'], ['&#91;', '&#93;'], $message);
 
         $submissionVars = [
             'settings'        => $settings,

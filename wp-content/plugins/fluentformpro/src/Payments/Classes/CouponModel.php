@@ -124,6 +124,7 @@ class CouponModel
         }
 
         $otherCouponCodes = [];
+        $hasNonStackableAccepted = false;
         foreach ($coupons as $coupon) {
             if ($coupon->status != 'active') {
                 continue;
@@ -162,7 +163,9 @@ class CouponModel
                 }
             }
 
-            if ($otherCouponCodes && $coupon->stackable != 'yes') {
+            // A non-stackable coupon must not combine with any other, whether it is
+            // the one being evaluated or one already accepted earlier in the loop.
+            if ($otherCouponCodes && ($coupon->stackable != 'yes' || $hasNonStackableAccepted)) {
                 continue;
             }
 
@@ -173,6 +176,9 @@ class CouponModel
 
             $amountTotal = $amountTotal - $discountAmount;
             $otherCouponCodes[] = $coupon->code;
+            if ($coupon->stackable != 'yes') {
+                $hasNonStackableAccepted = true;
+            }
 
             $validCoupons[] = $coupon;
         }
@@ -299,6 +305,25 @@ class CouponModel
         return isset($counts[$couponCode]) ? $counts[$couponCode] : 0;
     }
 
+    // field_value stores the raw submitted string but the SQL match folds case
+    // (and multibyte case), so credit each row back to the canonical code.
+    protected function addUsageToMatchingCoupon(array &$counts, $value, $increment)
+    {
+        $value = $this->normalizeCouponCode($value);
+        foreach ($counts as $code => $ignored) {
+            if ($value === $this->normalizeCouponCode($code)) {
+                $counts[$code] += $increment;
+                return;
+            }
+        }
+    }
+
+    protected function normalizeCouponCode($code)
+    {
+        $code = trim((string) $code);
+        return function_exists('mb_strtolower') ? mb_strtolower($code, 'UTF-8') : strtolower($code);
+    }
+
     protected function batchCouponGlobalUsedCounts(array $couponCodes)
     {
         $counts = array_fill_keys($couponCodes, 0);
@@ -312,7 +337,7 @@ class CouponModel
             ->groupBy('field_value')
             ->get();
         foreach ($exact as $row) {
-            $counts[$row->field_value] += (int) $row->usage_count;
+            $this->addUsageToMatchingCoupon($counts, $row->field_value, (int) $row->usage_count);
         }
 
         $this->addStackedCouponCounts($counts, null);
@@ -336,7 +361,7 @@ class CouponModel
             ->groupBy('fluentform_entry_details.field_value')
             ->get();
         foreach ($exact as $row) {
-            $counts[$row->field_value] += (int) $row->usage_count;
+            $this->addUsageToMatchingCoupon($counts, $row->field_value, (int) $row->usage_count);
         }
 
         $this->addStackedCouponCounts($counts, $userId);
@@ -379,10 +404,8 @@ class CouponModel
             });
         }
         foreach ($query->get() as $row) {
-            foreach (array_map('trim', explode(', ', $row->field_value)) as $code) {
-                if (isset($counts[$code])) {
-                    $counts[$code]++;
-                }
+            foreach (explode(', ', $row->field_value) as $token) {
+                $this->addUsageToMatchingCoupon($counts, $token, 1);
             }
         }
     }

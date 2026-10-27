@@ -133,7 +133,7 @@ class AI_Client {
 		if ( 402 === $status_code ) {
 			return new WP_Error(
 				'insufficient_credits',
-				__( 'Insufficient Content AI credits. Please upgrade your plan.', 'rank-math-pro' )
+				__( 'Your Rank Math AI usage limit has been exhausted. Please upgrade your plan to continue.', 'rank-math-pro' )
 			);
 		}
 

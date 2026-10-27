@@ -21,6 +21,7 @@ class Utils {
 	 * Returns true ONLY when user is manually saving a post from:
 	 * - Classic Editor (post.php with proper nonce and editpost action)
 	 * - Block Editor / Gutenberg (REST API from admin edit screen)
+	 * - Page builders that hook into rank_math/link_genius/is_manual_ajax_save (e.g. Elementor)
 	 *
 	 * Returns false for:
 	 * - Quick Edit (inline edit from post list)
@@ -45,8 +46,18 @@ class Utils {
 			return false;
 		}
 
-		// Exclude AJAX requests (Quick Edit uses admin-ajax.php).
 		if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+			/**
+			 * Allow page-builder integrations to declare that the current AJAX request
+			 * is a manual user save (e.g. Elementor save_builder). Third-party plugins
+			 * can hook here instead of modifying this class.
+			 *
+			 * @param bool $is_manual Whether this AJAX request is a manual save. Default false.
+			 */
+			if ( apply_filters( 'rank_math/link_genius/is_manual_ajax_save', false ) ) {
+				return true;
+			}
+
 			return false;
 		}
 

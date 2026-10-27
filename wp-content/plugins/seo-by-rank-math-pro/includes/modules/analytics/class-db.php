@@ -340,7 +340,7 @@ class DB {
 			$pages = array_column( $grouped_rows, 'page' );
 			$pages = array_unique( $pages );
 
-			$records        = DB_Helper::get_results(
+			$records       = DB_Helper::get_results(
 				$wpdb->prepare(
 					"SELECT *
 					FROM {$wpdb->prefix}rank_math_analytics_ga
@@ -348,36 +348,32 @@ class DB {
 					$date
 				)
 			);
-			$update         = 0;
-			$existing_pages = [];
+			$update        = 0;
+			$existing_rows = [];
 			foreach ( $records as $exists ) {
-				$existing_pages[ $exists->page ] = $exists;
+				$key                   = $exists->page . '|' . $exists->referrer;
+				$existing_rows[ $key ] = $exists;
 			}
 
-			if ( $existing_pages ) {
-				$keys = array_keys( $existing_pages );
-
+			if ( $existing_rows ) {
 				foreach ( $grouped_rows as $index => $row ) {
-					$page           = $row['page'];
-					$created        = isset( $existing_pages[ $page ]->created ) ? $existing_pages[ $page ]->created : '';
-					$referrer       = $row['referrer'];
-					$exist_referrer = isset( $existing_pages[ $page ]->referrer ) ? $existing_pages[ $page ]->referrer : '';
-					if (
-						in_array( $page, $keys, true ) &&
-						strpos( $date, $created ) !== false &&
-						$referrer === $exist_referrer
-					) {
-						$pageviews = (int) $existing_pages[ $page ]->pageviews + (int) $row['pageviews'];
-						$query     = $wpdb->prepare(
-							"UPDATE `{$wpdb->prefix}rank_math_analytics_ga` SET `pageviews` = %d WHERE `id` = %d",
-							$pageviews,
-							$existing_pages[ $page ]->id
-						);
-						DB_Helper::query( $query );
+					$key = $row['page'] . '|' . $row['referrer'];
 
-						unset( $grouped_rows[ $index ] ); // Remove the processed row.
-						++$update;
+					if ( ! isset( $existing_rows[ $key ] ) ) {
+						continue;
 					}
+
+					$existing  = $existing_rows[ $key ];
+					$pageviews = (int) $existing->pageviews + (int) $row['pageviews'];
+					$query     = $wpdb->prepare(
+						"UPDATE `{$wpdb->prefix}rank_math_analytics_ga` SET `pageviews` = %d WHERE `id` = %d",
+						$pageviews,
+						$existing->id
+					);
+					DB_Helper::query( $query );
+
+					unset( $grouped_rows[ $index ] );
+					++$update;
 				}
 			}
 
@@ -449,6 +445,18 @@ class DB {
 		$rows = [];
 
 		foreach ( $data as $row ) {
+			$ssm      = $row['sessionSourceMedium'] ?? '';
+			$referrer = self::get_referrer( $ssm );
+
+			// Keep only AI traffic and organic traffic. Skip everything else
+			// (direct, CPC, Plugin internal links, non-AI referrals, etc.).
+			$is_ai      = '' !== $referrer;
+			$is_organic = str_ends_with( strtolower( $ssm ), '/ organic' );
+
+			if ( ! $is_ai && ! $is_organic ) {
+				continue;
+			}
+
 			$page = $row['pagePath'] ?? '';
 
 			try {
@@ -456,8 +464,6 @@ class DB {
 			} catch ( Exception $e ) {
 				continue;
 			}
-
-			$referrer = self::get_referrer( $row['pageReferrer'] ?? '' );
 
 			$rows[] = [
 				'page'      => $page,
@@ -496,14 +502,18 @@ class DB {
 	/**
 	 * Group referrer.
 	 *
-	 * @param string $url The URL to group.
+	 * Identifies the AI source from GA4's sessionSourceMedium dimension.
+	 * Returns empty string for direct traffic or when no AI domain is matched.
+	 *
+	 * @param string $session_source_medium The sessionSourceMedium value (e.g. "chatgpt.com / referral").
 	 */
-	public static function get_referrer( $url ) {
-		if ( empty( $url ) || $url === '""' || $url === 'value: ""' ) {
+	public static function get_referrer( $session_source_medium ) {
+		if ( empty( $session_source_medium ) || '(direct) / (none)' === $session_source_medium ) {
 			return '';
 		}
 
-		$host = self::get_host( $url );
+		$parts  = explode( ' / ', $session_source_medium );
+		$source = strtolower( trim( $parts[0] ) );
 
 		$groups = [
 			'gemini'     => [ 'gemini.google.com' ],
@@ -519,28 +529,13 @@ class DB {
 
 		foreach ( $groups as $group => $domains ) {
 			foreach ( $domains as $pattern ) {
-				if ( stripos( $host, $pattern ) !== false ) {
+				if ( stripos( $source, $pattern ) !== false ) {
 					return $group;
 				}
 			}
 		}
 
 		return '';
-	}
-
-	/**
-	 * Extract host from URL.
-	 *
-	 * @param string $url The URL to extract the host from.
-	 */
-	public static function get_host( $url ) {
-		// Remove scheme and www.
-		$url = preg_replace( '#^https?://(www\.)?#i', '', $url );
-
-		// Get string before first "/".
-		$parts = explode( '/', $url );
-
-		return strtolower( $parts[0] ); // Normalize to lowercase.
 	}
 
 	/**

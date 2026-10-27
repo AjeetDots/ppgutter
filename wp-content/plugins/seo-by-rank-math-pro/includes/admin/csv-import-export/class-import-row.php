@@ -52,7 +52,9 @@ class Import_Row {
 	 *
 	 * @var array
 	 */
-	private $redirection = [];
+	private $redirection = [
+		'id' => '',
+	];
 
 	/**
 	 * Object URI.
@@ -60,13 +62,6 @@ class Import_Row {
 	 * @var string
 	 */
 	private $object_uri = '';
-
-	/**
-	 * Facebook and Twitter thumbnail.
-	 *
-	 * @var array
-	 */
-	private $thumbnail = [];
 
 	/**
 	 * The meta data to be updated or deleted.
@@ -362,6 +357,11 @@ class Import_Row {
 	public function import_slug( $value ) {
 		switch ( $this->object_type ) {
 			case 'post':
+				// Skip unchanged slugs to avoid needlessly re-triggering save_post.
+				if ( get_post_field( 'post_name', $this->id ) === $value ) {
+					break;
+				}
+
 				wp_update_post(
 					[
 						'ID'        => $this->id,
@@ -857,6 +857,13 @@ class Import_Row {
 	}
 
 	/**
+	 * URL => attachment details cache, shared across rows in this batch.
+	 *
+	 * @var array
+	 */
+	private static $thumbnail_cache = [];
+
+	/**
 	 * Gets the file details while downloading and saving the image file if it doesn't exist on current server.
 	 *
 	 * @param string $url The URL string to the file.
@@ -864,17 +871,33 @@ class Import_Row {
 	 * @returns array The attachment id and URL.
 	 */
 	private function thumbnail_attachment_details( $url ) {
-		if ( isset( $this->thumbnail[ $url ] ) ) {
-			return $this->thumbnail[ $url ];
+		if ( isset( self::$thumbnail_cache[ $url ] ) ) {
+			return self::$thumbnail_cache[ $url ];
+		}
+
+		// Skip values that aren't a real URL (e.g. a title in this column) instead of passing them to download_url().
+		if ( ! preg_match( '#^https?://#i', $url ) || ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
+			self::$thumbnail_cache[ $url ] = [];
+			return self::$thumbnail_cache[ $url ];
 		}
 
 		$dir = wp_get_upload_dir();
 		if ( Helper::starts_with( $dir['baseurl'], $url ) ) {
-			$this->thumbnail[ $url ] = [
+			self::$thumbnail_cache[ $url ] = [
 				'id'  => attachment_url_to_postid( $url ),
 				'url' => $url,
 			];
-			return $this->thumbnail[ $url ];
+			return self::$thumbnail_cache[ $url ];
+		}
+
+		// Reuse an attachment already imported from this URL.
+		$existing_id = $this->get_attachment_id_by_source_url( $url );
+		if ( $existing_id ) {
+			self::$thumbnail_cache[ $url ] = [
+				'id'  => $existing_id,
+				'url' => wp_get_attachment_url( $existing_id ),
+			];
+			return self::$thumbnail_cache[ $url ];
 		}
 
 		// Attempt and download the remote file!
@@ -904,6 +927,7 @@ class Import_Row {
 		];
 
 		$attachment_id = wp_insert_attachment( $attachment );
+		update_post_meta( $attachment_id, '_rank_math_csv_import_source_url', $url );
 
 		// Make sure that this file is included, as wp_generate_attachment_metadata() depends on it.
 		require_once ABSPATH . 'wp-admin/includes/image.php'; // @phpstan-ignore-line
@@ -911,10 +935,27 @@ class Import_Row {
 		$attach_data = wp_generate_attachment_metadata( $attachment_id, $uploads_file_path );
 		update_post_meta( $attachment_id, '_wp_attached_file', $attach_data['file'] );
 		wp_update_attachment_metadata( $attachment_id, $attach_data );
-		$this->thumbnail[ $url ] = [
+		self::$thumbnail_cache[ $url ] = [
 			'id'  => $attachment_id,
 			'url' => $attachment['guid'],
 		];
-		return $this->thumbnail[ $url ];
+		return self::$thumbnail_cache[ $url ];
+	}
+
+	/**
+	 * Find an attachment previously imported from the given source URL.
+	 *
+	 * @param string $url Source URL the attachment was downloaded from.
+	 * @return int Attachment ID, or 0 if none found.
+	 */
+	private function get_attachment_id_by_source_url( $url ) {
+		global $wpdb;
+
+		return (int) DB_Helper::get_var(
+			$wpdb->prepare(
+				"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_rank_math_csv_import_source_url' AND meta_value = %s LIMIT 1",
+				$url
+			)
+		);
 	}
 }

@@ -63,6 +63,35 @@ class Preview_Processor extends \WP_Background_Process {
 	}
 
 	/**
+	 * Check whether a stuck 'processing' lock is older than the staleness threshold.
+	 *
+	 * @param array $progress Existing progress data.
+	 * @return bool True if the lock should be reclaimed.
+	 */
+	private function is_progress_stale( $progress ) {
+		if ( empty( $progress['started_at'] ) ) {
+			return false;
+		}
+
+		$started_at = strtotime( $progress['started_at'] );
+		if ( false === $started_at ) {
+			return false;
+		}
+
+		/**
+		 * Filter: Age (in seconds) after which a stuck preview lock is considered stale.
+		 *
+		 * @param int $threshold Staleness threshold in seconds. Default 30 minutes.
+		 */
+		$threshold = (int) apply_filters( 'rank_math/link_genius/preview_stale_threshold', 30 * MINUTE_IN_SECONDS );
+
+		// Compare against site-local "now" since started_at is site-local too.
+		$now = (int) current_time( 'U' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+
+		return ( $now - $started_at ) > $threshold;
+	}
+
+	/**
 	 * Start preview generation process.
 	 *
 	 * Site-wide single preview - uses fixed 'current' identifier.
@@ -77,11 +106,16 @@ class Preview_Processor extends \WP_Background_Process {
 		// Check if another preview is already running.
 		$existing_progress = get_option( 'rank_math_preview_current' );
 		if ( $existing_progress && 'processing' === $existing_progress['status'] ) {
-			return new WP_Error(
-				'preview_in_progress',
-				__( 'A preview generation is already in progress. Please wait for it to complete or cancel it first.', 'rank-math-pro' ),
-				[ 'status' => 409 ]
-			);
+			if ( $this->is_progress_stale( $existing_progress ) ) {
+				// Reclaim a stale lock instead of locking out every future preview.
+				self::cleanup();
+			} else {
+				return new WP_Error(
+					'preview_in_progress',
+					__( 'A preview generation is already in progress. Please wait for it to complete or cancel it first.', 'rank-math-pro' ),
+					[ 'status' => 409 ]
+				);
+			}
 		}
 
 		// Get total count without loading all links into memory.
@@ -431,9 +465,11 @@ class Preview_Processor extends \WP_Background_Process {
 	public static function cleanup() {
 		global $wpdb;
 
-		// Cancel the background process.
+		// Cancel synchronously (avoids the deprecated cancel_process() alias, which relies on an async loopback request).
 		$processor = self::get();
-		$processor->cancel_process();
+		$processor->clear_scheduled_event();
+		$processor->delete_batches_from_db();
+		$processor->unlock_process();
 
 		// Delete preview results transient.
 		delete_transient( 'rank_math_preview_results_current' );
@@ -456,5 +492,19 @@ class Preview_Processor extends \WP_Background_Process {
 		delete_option( 'rank_math_preview_current' );
 
 		return true;
+	}
+
+	/**
+	 * Delete all queued batches directly from the database (mirrors Progress_Helper::delete_batches_from_db()).
+	 */
+	private function delete_batches_from_db() {
+		global $wpdb;
+
+		\RankMath\Helpers\DB::query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+				$wpdb->esc_like( $this->identifier . '_batch_' ) . '%'
+			)
+		);
 	}
 }

@@ -222,9 +222,13 @@ class FrontEndEntryView
     
     protected function parseSubmissionContent($submission, $formData, $userContent)
     {
+        // Expand trusted shortcodes first; escaped brackets keep submitter values literal.
+        $userContent = do_shortcode($userContent);
         $userContent = ShortCodeParser::parse($userContent, $submission->id, $formData);
+        $userContent = str_replace(['[', ']'], ['&#91;', '&#93;'], $userContent);
+
         $template    = '<div class="ff_frontend_entry_view_wrapper">' . $userContent . '</div>';
-        
+
         return apply_filters('fluentform/landing_content_wrapper', $template, $submission);
     }
     

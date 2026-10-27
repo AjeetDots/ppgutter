@@ -458,13 +458,15 @@ class Link_Updater {
 	 * Handles cases where the anchor text in content is wrapped in inline
 	 * formatting tags (e.g., <strong>, <em>, <span>) while the database
 	 * stores only the plain text (HTML stripped via wp_strip_all_tags).
+	 * Also handles void elements (e.g., <br>, <br/>) adjacent to the text.
 	 *
 	 * @param string $anchor_safe Escaped anchor text pattern.
 	 * @return string Capturing group pattern that matches anchor text with optional inline HTML wrapping.
 	 */
 	private function wrap_anchor_pattern( $anchor_safe ) {
-		$open_tags  = '(?:<[a-z][a-z0-9]*\b[^>]*>\s*)*';
-		$close_tags = '(?:<\/[a-z][a-z0-9]*>\s*)*';
+		$open_tags = '(?:<[a-z][a-z0-9]*\b[^>]*>\s*)*';
+		// Match either a standard closing tag (</foo>) or a void/self-closing element (<br>, <br/>, <img .../>).
+		$close_tags = '(?:(?:<\/[a-z][a-z0-9]*>|<(?:br|hr|img|input|link|meta|area|base|col|embed|param|source|track|wbr)\b[^>]*\/?>)\s*)*';
 		return '(\s*' . $open_tags . $anchor_safe . '\s*' . $close_tags . ')';
 	}
 

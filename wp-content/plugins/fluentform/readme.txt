@@ -4,7 +4,7 @@ Tags: contact form, wp forms, forms, form builder, custom form
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 6.2.15
+Stable tag: 6.2.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -439,6 +439,21 @@ You can get support from our official support thread at <a href="https://wpmanag
 12. Asset Loading Comparison with Other Plugins
 
 == Changelog ==
+
+= 6.2.16 (Date: October 16, 2026) =
+- Adds "Add my past orders" to claim guest orders by email
+- Adds a smart code picker to the Custom HTML field
+- Adds MCP tools to the WordPress Abilities REST API
+- Fixes missing emails on payment forms without a Payment Method field
+- Fixes a fatal error in the [ff_entry] shortcode
+- Fixes entry export including all fields when none are selected
+- Fixes a redundant aria-label on field labels
+- Fixes wrong field types for Dropdown and Simple Text from AI and MCP
+- Restricts [ff_entry] to entry viewers and the submitter
+- Links guest orders only after email confirmation
+- Rejects invalid payment amounts, quantities, and checkbox values
+- Tightens permission checks on theme settings in shortcodes and blocks
+- Stops form import from granting a higher user role than the importer has
 
 = 6.2.15 (Date: September 30, 2026) =
 - Adds a Stripe Payment Element option to the inline Stripe field, with Apple Pay and Google Pay

@@ -83,7 +83,7 @@ class WooCommerce {
 	 * @param string $post_type Post type.
 	 */
 	public function join_clause( $join, $post_type ) {
-		if ( 'product' !== $post_type ) {
+		if ( 'product' !== $post_type || empty( $this->exclude_stock_status ) ) {
 			return $join;
 		}
 

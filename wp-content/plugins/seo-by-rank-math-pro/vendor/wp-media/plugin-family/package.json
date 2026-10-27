@@ -1,6 +1,6 @@
 {
   "name": "plugin-family",
-  "version": "1.0.5",
+  "version": "1.0.9",
   "description": "Organizes and displays WP Media plugin family across other members.",
   "main": "src/assets/js/index.js",
   "directories": {

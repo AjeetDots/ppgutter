@@ -13,6 +13,7 @@ use FluentForm\App\Modules\Form\FormFieldsParser;
 use FluentForm\App\Modules\Payments\PaymentHelper;
 use FluentForm\App\Services\FluentConversational\Classes\Converter\Converter;
 use FluentForm\App\Services\Form\FormService;
+use FluentForm\App\Services\FormBuilder\Components;
 use FluentForm\Framework\Helpers\ArrayHelper as Arr;
 use FluentForm\Framework\Support\Sanitizer;
 
@@ -143,16 +144,12 @@ class AiFormBuilder extends FormService
         if ($this->allDefaultFields) {
             return $this->allDefaultFields;
         }
-        $components = $this->app->make('components');
+        // Fresh set, not the shared singleton: sort() renumbers its palette keys, and element names aren't unique.
+        $components = new Components(fluentformLoadFile('Services/FormBuilder/DefaultElements.php'));
         $this->app->doAction('fluentform/editor_init', $components);
         $editorComponents = $components->toArray();
-        // Re-key by element name. The palette groups are keyed by element in
-        // DefaultElements.php, but Components::sort() renumbers them 0..n for
-        // the editor's JSON contract - so whether these arrive keyed or as a
-        // list depends on whether anything rendered the palette earlier in the
-        // request. resolveInput() matches on the key, so normalise here.
-        $general = array_column(Arr::get($editorComponents, 'general', []), null, 'element');
-        $advanced = array_column(Arr::get($editorComponents, 'advanced', []), null, 'element');
+        $general = Arr::get($editorComponents, 'general', []);
+        $advanced = Arr::get($editorComponents, 'advanced', []);
         $container = Arr::get($editorComponents, 'container', []);
 
         // Apply filter to get additional components
@@ -241,6 +238,23 @@ class AiFormBuilder extends FormService
     }
 
     protected function resolveInput($field)
+    {
+        $element = $this->matchElement($field);
+
+        if ('select' === $element && $this->wantsMultipleValues($field)) {
+            return 'multi_select';
+        }
+
+        return $element;
+    }
+
+    private function wantsMultipleValues(array $field)
+    {
+        return filter_var(Arr::get($field, 'attributes.multiple'), FILTER_VALIDATE_BOOLEAN)
+            || in_array(Arr::get($field, 'type'), ['multiselect', 'multi_select'], true);
+    }
+
+    private function matchElement($field)
     {
         if (!is_array($field)) {
             return false;
@@ -383,7 +397,7 @@ class AiFormBuilder extends FormService
             $fields = Arr::get($column, 'fields', []);
             $columnWidth = Arr::get($column, 'width', $columnWidth);
             foreach ($fields as $colField) {
-                $element = Arr::get($colField, 'element');
+                $element = $this->resolveInput($colField);
                 if ($columnField = $this->processField($element, $colField, $allFields)) {
                     $formatedFields[] = $columnField;
                 }

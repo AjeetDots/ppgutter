@@ -13,7 +13,9 @@ defined('WPINC') || exit();
 
 abstract class Root {
 
-	const CONF_FILE = '.litespeed_conf.dat';
+	const CONF_FILE        = '.litespeed_conf.php';
+	const CONF_FILE_LEGACY = '.litespeed_conf.dat';
+	const CONF_FILE_GUARD  = "<?php exit; // LiteSpeed Cache runtime configuration. Do not edit. ?>\n";
 	// Instance set
 	private static $_instances;
 
@@ -40,7 +42,7 @@ abstract class Root {
 	 * @access protected
 	 */
 	protected function _separate_mobile() {
-		return (wp_is_mobile() || apply_filters('litespeed_is_mobile', false)) && $this->conf(Base::O_CACHE_MOBILE);
+		return (Control::is_mobile() || apply_filters('litespeed_is_mobile', false)) && $this->conf(Base::O_CACHE_MOBILE);
 	}
 
 	/**
@@ -212,6 +214,55 @@ abstract class Root {
 	}
 
 	/**
+	 * Encode runtime configuration into the guarded file format.
+	 *
+	 * @since 7.9.2
+	 */
+	public static function encode_conf_file( $data ) {
+		$json = \json_encode((object) $data, JSON_HEX_TAG);
+		return is_string($json) ? self::CONF_FILE_GUARD . $json : false;
+	}
+
+	/**
+	 * Parse a runtime configuration file: the guard followed by a JSON object, or (legacy) a bare JSON object.
+	 *
+	 * @since 7.9.2
+	 */
+	public static function parse_conf_file( $raw, $legacy = false ) {
+		if (!is_string($raw)) {
+			return false;
+		}
+		if (!$legacy) {
+			if (0 !== strncmp($raw, self::CONF_FILE_GUARD, strlen(self::CONF_FILE_GUARD))) {
+				return false;
+			}
+			$raw = substr($raw, strlen(self::CONF_FILE_GUARD));
+		}
+		$data = \json_decode($raw, true);
+		return is_array($data) ? $data : false;
+	}
+
+	/**
+	 * Read the runtime configuration: the guarded file first, the legacy plaintext file as fallback.
+	 *
+	 * @since 7.9.2
+	 */
+	public static function read_conf_file( $dir ) {
+		foreach ([ self::CONF_FILE => false, self::CONF_FILE_LEGACY => true ] as $name => $legacy) {
+			if (!is_file($dir . '/' . $name)) {
+				continue;
+			}
+			$data = self::parse_conf_file(file_get_contents($dir . '/' . $name), $legacy);
+			if (false !== $data) {
+				return $data;
+			}
+			// An existing but unreadable file usually means a root-owned 0600 copy (e.g. written by `wp --allow-root`); no-op unless debug logging is active.
+			self::debug('[Conf] Failed to read runtime configuration file: ' . $name);
+		}
+		return [];
+	}
+
+	/**
 	 * Load an instance or create it if not existed
 	 *
 	 * @since  4.0
@@ -350,7 +401,8 @@ abstract class Root {
 			return null;
 		}
 
-		$val_setting = $this->conf($id, true);
+		// Missing-size rendering uses this legacy filter only as an enabled gate, with true as its input.
+		$val_setting = Base::O_MEDIA_ADD_MISSING_SIZES === $id ? true : $this->conf($id, true);
 		// if setting not found
 		if( null === $val_setting ){
 			$val_setting = '';
@@ -567,18 +619,30 @@ abstract class Root {
 	 * Dropin with prefix for WP's update_option
 	 *
 	 * @since 3.0
+	 * @return bool Whether the requested value can be read back.
 	 */
 	public static function update_option( $id, $v ) {
-		update_option(self::name($id), self::_maybe_encode($v));
+		$name    = self::name( $id );
+		$encoded = self::_maybe_encode( $v );
+		update_option( $name, $encoded );
+		$missing = new \stdClass();
+		$stored  = get_option( $name, $missing );
+		return $stored === $encoded || ( is_scalar( $stored ) && is_scalar( $encoded ) && (string) $stored === (string) $encoded );
 	}
 
 	/**
 	 * Dropin with prefix for WP's update_site_option
 	 *
 	 * @since 3.0
+	 * @return bool Whether the requested value can be read back.
 	 */
 	public static function update_site_option( $id, $v ) {
-		update_site_option(self::name($id), self::_maybe_encode($v));
+		$name    = self::name( $id );
+		$encoded = self::_maybe_encode( $v );
+		update_site_option( $name, $encoded );
+		$missing = new \stdClass();
+		$stored  = get_site_option( $name, $missing );
+		return $stored === $encoded || ( is_scalar( $stored ) && is_scalar( $encoded ) && (string) $stored === (string) $encoded );
 	}
 
 	/**

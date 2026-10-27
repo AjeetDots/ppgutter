@@ -24,7 +24,10 @@ use lsolesen\pel\PelTag;
 add_action( 'init', 'ewww_image_optimizer_parser_init', 99 );
 // Check the current screen ID to see if temp debugging should still be enabled.
 add_action( 'current_screen', 'ewww_image_optimizer_current_screen', 10, 1 );
-
+// Add a checkbox to the classic media uploader to bypass resizing for this upload.
+add_action( 'load-media-new.php', 'ewww_image_optimizer_add_disable_resize_checkbox' );
+// Adds a checkbox to the sidebar of block image upload to bypass resizing.
+add_action( 'add_meta_boxes', 'ewww_image_optimizer_add_disable_resize_metabox' );
 // Ensures we update the filesize data in the meta.
 // add_filter( 'wp_update_attachment_metadata', 'ewww_image_optimizer_update_filesize_metadata', 9, 2 );
 // Skips resizing for images with 'noresize' in the filename.
@@ -272,6 +275,79 @@ function ewww_image_optimizer_buffer_start() {
 function ewww_image_optimizer_filter_page_output( $buffer ) {
 	ewwwio_debug_message( '<b>' . __FUNCTION__ . '()</b>' );
 	return apply_filters( 'ewww_image_optimizer_filter_page_output', $buffer );
+}
+
+/**
+ * Registers the "Disable Resizing by EWWW IO" checkbox on the media upload page.
+ */
+function ewww_image_optimizer_add_disable_resize_checkbox() {
+	add_action( 'post-upload-ui', 'ewww_image_optimizer_disable_resize_checkbox_html' );
+}
+
+/**
+ * Outputs the "Disable Resizing by EWWW IO" checkbox HTML.
+ */
+function ewww_image_optimizer_disable_resize_checkbox_html() {
+	?>
+	<p class="ewww-disable-resize-wrap"><label>
+		<input type="checkbox" id="ewww-disable-resize" />
+		<?php esc_html_e( 'Disable Resizing by EWWW IO', 'ewww-image-optimizer' ); ?>
+	</label></p>
+	<script>
+	jQuery( function( $ ) {
+		if ( typeof uploader === 'undefined' || ! uploader.bind ) {
+			return;
+		}
+		uploader.bind( 'BeforeUpload', function( up ) {
+			up.settings.multipart_params.ewww_disable_resize =
+				$( '#ewww-disable-resize' ).is( ':checked' ) ? 1 : 0;
+		});
+	});
+	</script>
+	<?php
+}
+
+/**
+ * Registers the "Disable Resizing by EWWW IO" meta box in the post editor sidebar.
+ */
+function ewww_image_optimizer_add_disable_resize_metabox() {
+	add_meta_box(
+		'ewww-disable-resize-metabox',
+		esc_html__( 'EWWW Image Optimizer', 'ewww-image-optimizer' ),
+		'ewww_image_optimizer_disable_resize_metabox_html',
+		array( 'post', 'page' ),
+		'side',
+		'default'
+	);
+}
+
+/**
+ * Puts a checkbox on the sidebar for block-editor uploads of media to disable the resizing.
+ */
+function ewww_image_optimizer_disable_resize_metabox_html() {
+	?>
+	<p><label>
+		<input type="checkbox" id="ewww-disable-resize" />
+		<?php esc_html_e( 'Disable Resizing by EWWW IO', 'ewww-image-optimizer' ); ?>
+	</label></p>
+	<script>
+	( function() {
+		if ( typeof wp === 'undefined' || ! wp.apiFetch || ! wp.apiFetch.use ) {
+			return;
+		}
+		wp.apiFetch.use( function( options, next ) {
+			var path = options.path || options.url || '';
+			var checkbox = document.getElementById( 'ewww-disable-resize' );
+			if ( checkbox && checkbox.checked && path.indexOf( '/wp/v2/media' ) !== -1 ) {
+				if ( typeof options.body === 'object' && typeof options.body.append === 'function' ) {
+					options.body.append( 'ewww_disable_resize', '1' );
+				}
+			}
+			return next( options );
+		});
+	})();
+	</script>
+	<?php
 }
 
 /**
@@ -7489,7 +7565,7 @@ function ewww_image_optimizer_autoconvert( $file ) {
  * @return array The new dimensions for resizing.
  */
 function ewww_image_optimizer_noresize( $dimensions, $filename ) {
-	if ( strpos( $filename, 'noresize' ) !== false ) {
+	if ( strpos( $filename, 'noresize' ) !== false || ! empty( $_REQUEST['ewww_disable_resize'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- boolean flag only
 		add_filter( 'big_image_size_threshold', '__return_false' );
 		return array( 0, 0 );
 	}
@@ -8329,6 +8405,31 @@ function ewwwio_remove_original_image( $id, $meta = null ) {
 }
 
 /**
+ * Checks if attachment meta is ready for optimization.
+ *
+ * @param array $meta The attachment metadata.
+ * @return bool True if the meta is ready, false if not.
+ */
+function ewww_image_optimizer_attachment_meta_ready( $meta ) {
+	ewwwio_debug_message( '<b>' . __FUNCTION__ . '()</b>' );
+	if ( ! is_array( $meta ) || empty( $meta ) ) {
+		ewwwio_debug_message( 'attachment meta is not a usable array' );
+		return false;
+	}
+	$thumb_w = get_option( 'thumbnail_size_w' );
+	$thumb_h = get_option( 'thumbnail_size_h' );
+	if ( ! empty( $meta['width'] ) && $meta['width'] > $thumb_w && empty( $meta['sizes'] ) ) {
+		ewwwio_debug_message( "image width ({$meta['width']}) is larger than thumbnail width ($thumb_w), but meta is missing sizes" );
+		return false;
+	}
+	if ( ! empty( $meta['height'] ) && $meta['height'] > $thumb_h && empty( $meta['sizes'] ) ) {
+		ewwwio_debug_message( "image height ({$meta['height']}) is larger than thumbnail height ($thumb_h), but meta is missing sizes" );
+		return false;
+	}
+	return true;
+}
+
+/**
  * Queues an image attachment for async processing.
  *
  * @param int  $id The attachment ID number.
@@ -8390,6 +8491,9 @@ function ewww_image_optimizer_resize_from_meta_data( $meta, $id = null, $log = t
 	} elseif ( ! is_array( $meta ) ) {
 		ewwwio_debug_message( 'attachment meta is not a usable array' );
 		return $meta;
+	}
+	if ( ! empty( $_REQUEST['ewww_disable_resize'] ) && empty( $meta['ewww_noresize'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- boolean flag only
+		$meta['ewww_noresize'] = 1;
 	}
 	ewwwio_debug_message( 'request URI: ' . EWWW\Base::$request_uri );
 	if ( empty( $meta['sizes'] ) && wp_is_rest_endpoint() && str_contains( EWWW\Base::$request_uri, 'wp/v2/media' ) && isset( $_REQUEST['generate_sub_sizes'] ) && 'false' === $_REQUEST['generate_sub_sizes'] ) { // phpcs:ignore WordPress.Security.NonceVerification
@@ -8458,7 +8562,7 @@ function ewww_image_optimizer_resize_from_meta_data( $meta, $id = null, $log = t
 	$ewww_image->resize = 'full';
 
 	// Resize here so long as this is not a new image AND resize existing is enabled, and imsanity isn't enabled with a max size.
-	if ( ( empty( $new_image ) && ewww_image_optimizer_get_option( 'ewww_image_optimizer_resize_existing' ) ) && ! function_exists( 'imsanity_get_max_width_height' ) ) {
+	if ( empty( $meta['ewww_noresize'] ) && empty( $new_image ) && ewww_image_optimizer_get_option( 'ewww_image_optimizer_resize_existing' ) && ! function_exists( 'imsanity_get_max_width_height' ) ) {
 		ewwwio_debug_message( 'not a new image, resize existing enabled, and Imsanity not detected' );
 		$new_dimensions = ewww_image_optimizer_resize_upload( $file_path );
 		if ( is_array( $new_dimensions ) ) {
@@ -8478,7 +8582,7 @@ function ewww_image_optimizer_resize_from_meta_data( $meta, $id = null, $log = t
 	}
 
 	// Resize here if the user has used the filter to defer resizing, we have a new image OR resize existing is enabled, and imsanity isn't enabled with a max size.
-	if ( apply_filters( 'ewww_image_optimizer_defer_resizing', false ) && ( ! empty( $new_image ) || ewww_image_optimizer_get_option( 'ewww_image_optimizer_resize_existing' ) ) && ! function_exists( 'imsanity_get_max_width_height' ) ) {
+	if ( empty( $meta['ewww_noresize'] ) && apply_filters( 'ewww_image_optimizer_defer_resizing', false ) && ( ! empty( $new_image ) || ewww_image_optimizer_get_option( 'ewww_image_optimizer_resize_existing' ) ) && ! function_exists( 'imsanity_get_max_width_height' ) ) {
 		ewwwio_debug_message( 'resizing defered and ( new image or resize existing enabled ) and Imsanity not detected' );
 		$new_dimensions = ewww_image_optimizer_resize_upload( $file_path );
 		if ( is_array( $new_dimensions ) ) {
@@ -10635,6 +10739,7 @@ function ewww_image_optimizer_settings_script( $hook ) {
 			'exactdn_network_success'   => esc_html__( 'Easy IO setup and verification is complete.', 'ewww-image-optimizer' ),
 			'should_retest_async'       => ewww_image_optimizer_should_retest_async(),
 			'webp_cloud_warning'        => esc_html__( 'If you have not run the Bulk Optimizer on existing images, you will likely encounter broken image URLs. Are you ready to continue?', 'ewww-image-optimizer' ),
+			'webp_test_image'           => esc_url( plugins_url( '/images/test.png', EWWW_IMAGE_OPTIMIZER_PLUGIN_FILE ) ),
 			'network_blog_ids'          => $blog_ids,
 			'blog_id'                   => (int) get_current_blog_id(),
 			'easy_autoreg'              => ewww_image_optimizer_get_option( 'ewww_image_optimizer_cloud_key' ) ? true : false,
@@ -10754,63 +10859,78 @@ function ewww_image_optimizer_savings( $network = false ) {
  */
 function ewww_image_optimizer_test_webp_mime_error() {
 	ewwwio_debug_message( '<b>' . __FUNCTION__ . '()</b>' );
-	$positive_test = false;
-	$negative_test = false;
-	$test_url      = plugins_url( '/images/test.png', EWWW_IMAGE_OPTIMIZER_PLUGIN_FILE ) . '?m=' . time();
+	global $ewwwio_webp_mime_error;
+	if ( isset( $ewwwio_webp_mime_error ) ) {
+		return $ewwwio_webp_mime_error;
+	}
+	$ewwwio_webp_mime_error = '';
+	$positive_test          = false;
+	$negative_test          = false;
+	$test_url               = plugins_url( '/images/test.png', EWWW_IMAGE_OPTIMIZER_PLUGIN_FILE ) . '?m=' . time();
 	add_filter( 'http_headers_useragent', 'ewww_image_optimizer_cloud_useragent', PHP_INT_MAX );
 
 	// Run the "positive" test, which should receive a WebP in a .png wrapper.
 	$test_result = wp_remote_get( $test_url, array( 'headers' => 'Accept: image/webp' ) );
 	if ( is_wp_error( $test_result ) ) {
-		$error_message = $test_result->get_error_message();
-		ewwwio_debug_message( "webp verification request failed: $error_message" );
-		return $error_message;
+		$ewwwio_webp_mime_error = $test_result->get_error_message();
+		ewwwio_debug_message( "webp verification request failed: $ewwwio_webp_mime_error" );
+		return $ewwwio_webp_mime_error;
 	} elseif ( empty( $test_result['body'] ) ) {
 		ewwwio_debug_message( 'webp verification response empty' );
-		return __( 'WebP response was empty', 'ewww-image-optimizer' );
+		$ewwwio_webp_mime_error = __( 'WebP response was empty', 'ewww-image-optimizer' );
+		return $ewwwio_webp_mime_error;
 	} elseif ( strlen( $test_result['body'] ) < 300 ) {
 		ewwwio_debug_message( 'webp verification response too small: ' . strlen( $test_result['body'] ) );
-		return __( 'WebP response was too small', 'ewww-image-optimizer' );
+		$ewwwio_webp_mime_error = __( 'WebP response was too small', 'ewww-image-optimizer' );
+		return $ewwwio_webp_mime_error;
 	} elseif ( empty( $test_result['response']['code'] ) ) {
 		ewwwio_debug_message( 'webp test received unknown response code' );
-		return __( 'WebP response status code missing', 'ewww-image-optimizer' );
+		$ewwwio_webp_mime_error = __( 'WebP response status code missing', 'ewww-image-optimizer' );
+		return $ewwwio_webp_mime_error;
 	} elseif ( 200 !== (int) $test_result['response']['code'] ) {
 		ewwwio_debug_message( 'webp test received response code: ' . $test_result['response']['code'] );
 		/* translators: %d: the HTTP status code */
-		return sprintf( __( 'WebP response received status %d', 'ewww-image-optimizer' ), $test_result['response']['code'] );
+		$ewwwio_webp_mime_error = sprintf( __( 'WebP response received status %d', 'ewww-image-optimizer' ), $test_result['response']['code'] );
+		return $ewwwio_webp_mime_error;
 	} elseif ( '52494646' === bin2hex( substr( $test_result['body'], 0, 4 ) ) ) {
 		ewwwio_debug_message( 'webp (real-world) verification succeeded' );
 		$positive_test = true;
 	} else {
 		ewwwio_debug_message( 'webp mime check failed: ' . bin2hex( substr( $test_result['body'], 0, 3 ) ) );
-		return __( 'WebP response failed mime-type test. Purge all caches and try again.', 'ewww-image-optimizer' );
+		$ewwwio_webp_mime_error = __( 'WebP response failed mime-type test. Purge all caches and try again.', 'ewww-image-optimizer' );
+		return $ewwwio_webp_mime_error;
 	}
 	$test_url .= '1';
 	// Run the "negative" test, which should receive the original PNG image.
 	$test_result = wp_remote_get( $test_url );
 	if ( is_wp_error( $test_result ) ) {
-		$error_message = $test_result->get_error_message();
-		ewwwio_debug_message( "png verification request failed: $error_message" );
-		return $error_message;
+		$ewwwio_webp_mime_error = $test_result->get_error_message();
+		ewwwio_debug_message( "png verification request failed: $ewwwio_webp_mime_error" );
+		return $ewwwio_webp_mime_error;
 	} elseif ( empty( $test_result['body'] ) ) {
 		ewwwio_debug_message( 'png verification response empty' );
-		return __( 'PNG response was empty', 'ewww-image-optimizer' );
+		$ewwwio_webp_mime_error = __( 'PNG response was empty', 'ewww-image-optimizer' );
+		return $ewwwio_webp_mime_error;
 	} elseif ( strlen( $test_result['body'] ) < 300 ) {
 		ewwwio_debug_message( 'png verification response too small: ' . strlen( $test_result['body'] ) );
-		return __( 'PNG response was too small', 'ewww-image-optimizer' );
+		$ewwwio_webp_mime_error = __( 'PNG response was too small', 'ewww-image-optimizer' );
+		return $ewwwio_webp_mime_error;
 	} elseif ( empty( $test_result['response']['code'] ) ) {
 		ewwwio_debug_message( 'png test received unknown response code' );
-		return __( 'PNG response status code missing', 'ewww-image-optimizer' );
+		$ewwwio_webp_mime_error = __( 'PNG response status code missing', 'ewww-image-optimizer' );
+		return $ewwwio_webp_mime_error;
 	} elseif ( 200 !== (int) $test_result['response']['code'] ) {
 		ewwwio_debug_message( 'png test received response code: ' . $test_result['response']['code'] );
 		/* translators: %d: the HTTP status code */
-		return sprintf( __( 'PNG response received status %d', 'ewww-image-optimizer' ), $test_result['response']['code'] );
+		$ewwwio_webp_mime_error = sprintf( __( 'PNG response received status %d', 'ewww-image-optimizer' ), $test_result['response']['code'] );
+		return $ewwwio_webp_mime_error;
 	} elseif ( '89504e470d0a1a0a' === bin2hex( substr( $test_result['body'], 0, 8 ) ) ) {
 		ewwwio_debug_message( 'png (real-world) verification succeeded' );
 		$negative_test = true;
 	} else {
 		ewwwio_debug_message( 'png mime check failed: ' . bin2hex( substr( $test_result['body'], 0, 3 ) ) );
-		return __( 'PNG response failed mime-type test', 'ewww-image-optimizer' );
+		$ewwwio_webp_mime_error = __( 'PNG response failed mime-type test', 'ewww-image-optimizer' );
+		return $ewwwio_webp_mime_error;
 	}
 	if ( ! $positive_test || ! $negative_test ) {
 		ewwwio_debug_message( 'no idea what happened' );
@@ -13631,7 +13751,7 @@ function ewww_image_optimizer_options( $network = 'singlesite' ) {
 				elseif ( $nginx_server ) :
 					$header_error = '';
 				else :
-					if ( defined( 'PHP_SAPI' ) && false === strpos( PHP_SAPI, 'apache' ) && false === strpos( PHP_SAPI, 'litespeed' ) ) {
+					if ( defined( 'PHP_SAPI' ) && ! str_contains( PHP_SAPI, 'apache' ) && ! str_contains( PHP_SAPI, 'litespeed' ) ) {
 						$false_positive_headers = esc_html__( 'This may be a false positive. If so, the warning should go away once you implement the rewrite rules.', 'ewww-image-optimizer' );
 					}
 					if ( ! apache_mod_loaded( 'mod_rewrite' ) ) {
@@ -13656,22 +13776,22 @@ function ewww_image_optimizer_options( $network = 'singlesite' ) {
 				);
 			elseif ( ewww_image_optimizer_get_option( 'ewww_image_optimizer_webp' ) && ( ! $webp_mime_error || $webp_rewrite_verify ) ) :
 				?>
-							<div id='ewww-webp-rewrite'>
+							<div id="ewww-webp-rewrite">
 								<div class="ewwwio-flex-space-between">
 									<div class="ewww-webp-rewrite-left-wrapper">
-										<p id='ewww-webp-rewrite-status'>
+										<p id="ewww-webp-rewrite-status">
 											<?php esc_html_e( 'WebP Rules verified successfully', 'ewww-image-optimizer' ); ?>
 										</p>
 				<?php if ( $webp_rewrite_verify ) : ?>
-										<div id='ewww-webp-rewrite-result'></div>
-										<button type='button' id='ewww-webp-remove' class='button-secondary action'><?php esc_html_e( 'Remove Rewrite Rules', 'ewww-image-optimizer' ); ?></button>
+										<div id="ewww-webp-rewrite-result"></div>
+										<button type="button" id="ewww-webp-remove" class="button-secondary action"><?php esc_html_e( 'Remove Rewrite Rules', 'ewww-image-optimizer' ); ?></button>
 				<?php endif; ?>
 									</div>
-									<img id='ewww-webp-image' src='<?php echo esc_url( $test_png_image . '?m=' . time() ); ?>'>
+									<img id="ewww-webp-image" height="70" width="100" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
 								</div>
 							</div>
 			<?php else : ?>
-							<p class='ewww-webp-rewrite-info'>
+							<p class="ewww-webp-rewrite-info">
 				<?php if ( $nginx_server ) : ?>
 								<?php
 								printf(
@@ -13690,9 +13810,9 @@ function ewww_image_optimizer_options( $network = 'singlesite' ) {
 								?>
 				<?php endif; ?>
 							</p>
-							<div id='ewww-webp-rewrite'>
+							<div id="ewww-webp-rewrite">
 				<?php if ( ! $nginx_server && 'append' === ewww_image_optimizer_get_option( 'ewww_image_optimizer_webp_naming_mode', 'append' ) ) : ?>
-<pre id='webp-rewrite-rules'>&lt;IfModule mod_rewrite.c&gt;
+<pre id="webp-rewrite-rules">&lt;IfModule mod_rewrite.c&gt;
 	RewriteEngine On
 	RewriteCond %{HTTP_ACCEPT} image/webp
 	RewriteCond %{REQUEST_FILENAME} (.*)\.(jpe?g|png|gif)$
@@ -13707,7 +13827,7 @@ function ewww_image_optimizer_options( $network = 'singlesite' ) {
 &lt;/IfModule&gt;
 AddType image/webp .webp</pre>
 				<?php elseif ( ! $nginx_server && 'replace' === ewww_image_optimizer_get_option( 'ewww_image_optimizer_webp_naming_mode', 'append' ) ) : ?>
-<pre id='webp-rewrite-rules'>&lt;IfModule mod_rewrite.c&gt;
+<pre id="webp-rewrite-rules">&lt;IfModule mod_rewrite.c&gt;
 	RewriteEngine On
 	RewriteCond %{HTTP_ACCEPT} image/webp
 	RewriteCond %{REQUEST_FILENAME} (.*)\.(jpe?g|png|gif)$
@@ -13724,20 +13844,20 @@ AddType image/webp .webp</pre>
 				<?php endif; ?>
 								<div class="ewwwio-flex-space-between">
 									<div class="ewww-webp-rewrite-left-wrapper">
-										<p id='ewww-webp-rewrite-status'>
+										<p id="ewww-webp-rewrite-status">
 											<?php esc_html_e( 'The image to the right will display a WebP image with WEBP in white text, if your site is serving WebP images and your browser supports WebP.', 'ewww-image-optimizer' ); ?>
 										</p>
 				<?php if ( ! $nginx_server ) : ?>
-										<div id='ewww-webp-rewrite-result'></div>
-										<button type='button' id='ewww-webp-insert' class='button-secondary action'><?php esc_html_e( 'Insert Rewrite Rules', 'ewww-image-optimizer' ); ?></button>
-										<div id='ewww-webp-rewrite-save-settings' style='display:none;'>
-											<p class='description'>
+										<div id="ewww-webp-rewrite-result"></div>
+										<button type="button" id="ewww-webp-insert" class="button-secondary action"><?php esc_html_e( 'Insert Rewrite Rules', 'ewww-image-optimizer' ); ?></button>
+										<div id="ewww-webp-rewrite-save-settings" style="display:none;">
+											<p class="description">
 												<?php esc_html_e( 'Please save your settings before inserting rewrite rules.', 'ewww-image-optimizer' ); ?>
 											</p>
 										</div>
 				<?php endif; ?>
 									</div>
-									<img id='ewww-webp-image' src='<?php echo esc_url( $test_png_image . '?m=' . time() ); ?>'>
+									<img id="ewww-webp-image" height="70" width="100" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
 								</div>
 							</div>
 			<?php endif; ?>

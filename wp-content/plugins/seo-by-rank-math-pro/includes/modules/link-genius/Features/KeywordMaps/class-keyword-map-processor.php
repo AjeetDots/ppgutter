@@ -12,6 +12,7 @@ namespace RankMathPro\Link_Genius\Features\KeywordMaps;
 
 use WP_Error;
 use RankMath\Helper;
+use RankMathPro\Link_Genius\Background\Process_Coordinator;
 use RankMathPro\Link_Genius\Background\Processor_Utils;
 use RankMathPro\Link_Genius\Services\Batch_Helper;
 
@@ -25,6 +26,7 @@ defined( 'ABSPATH' ) || exit;
 class Keyword_Map_Processor extends \WP_Background_Process {
 
 	use \RankMathPro\Link_Genius\Background\Progress_Helper;
+	use \RankMathPro\Link_Genius\Background\Coordinated_Processor;
 
 	/**
 	 * Action.
@@ -40,6 +42,15 @@ class Keyword_Map_Processor extends \WP_Background_Process {
 	 */
 	protected function get_state_option_name() {
 		return 'rank_math_keyword_map_current';
+	}
+
+	/**
+	 * Get the operation name for lock coordination.
+	 *
+	 * @return string
+	 */
+	protected function get_operation_name() {
+		return 'keyword_map';
 	}
 
 	/**
@@ -254,6 +265,13 @@ class Keyword_Map_Processor extends \WP_Background_Process {
 	}
 
 	/**
+	 * Passthrough — Coordinated_Processor is used only for cancel(), not lock coordination on handle().
+	 */
+	protected function handle() { // @phpcs:ignore Generic.CodeAnalysis.UselessOverridingMethod.Found
+		parent::handle();
+	}
+
+	/**
 	 * Task handler for processing a single post.
 	 *
 	 * @param array $item Task item containing post_id and batch_id.
@@ -289,8 +307,20 @@ class Keyword_Map_Processor extends \WP_Background_Process {
 				return false; // No snapshot found.
 			}
 
-			// Restore original content.
-			Batch_Helper::update_post_content( [ $post_id => $snapshot->original_content ] );
+			// Allow page-builder integrations (e.g. Elementor) to handle content
+			// restore directly (e.g. writing back to _elementor_data instead of
+			// post_content). Returns true when the restore was handled.
+			$restore_handled = apply_filters(
+				'rank_math/link_genius/keyword_map_restore_post',
+				false,
+				$post_id,
+				$snapshot->original_content
+			);
+
+			if ( ! $restore_handled ) {
+				// Restore original content via normal path.
+				Batch_Helper::update_post_content( [ $post_id => $snapshot->original_content ] );
+			}
 
 			// Count the number of links being rolled back.
 			$link_changes      = json_decode( $snapshot->link_changes, true );
@@ -316,6 +346,31 @@ class Keyword_Map_Processor extends \WP_Background_Process {
 		// Skip if no changes for this post.
 		if ( empty( $post_changes ) ) {
 			return false;
+		}
+
+		// Allow page-builder integrations (e.g. Elementor) to fully handle execution
+		// for this post — writing links directly into their own data store (e.g.
+		// _elementor_data) and creating the rollback snapshot. Returns false when the
+		// integration does not handle the post, or an array with 'links_added' when it does.
+		$page_builder_result = apply_filters(
+			'rank_math/link_genius/keyword_map_process_post',
+			false,
+			$post_id,
+			$post_changes,
+			$batch_id,
+			$target_url,
+			$max_per_post
+		);
+
+		if ( false !== $page_builder_result ) {
+			$links_added = is_array( $page_builder_result ) ? ( $page_builder_result['links_added'] ?? 0 ) : 0;
+
+			++$progress['processed_posts'];
+			$progress['processed_links'] += $links_added;
+			$progress['percent']          = self::calculate_percent( $progress['processed_posts'], $progress['total_posts'] );
+			$this->set_state( $progress );
+
+			return false; // Remove from queue.
 		}
 
 		// Get post content using Batch_Helper.
@@ -538,11 +593,21 @@ class Keyword_Map_Processor extends \WP_Background_Process {
 			);
 		}
 
-		// Cancel the background process.
-		$instance = self::get();
-		$instance->cancel_process();
+		// Clear the cron event.
+		$this->clear_scheduled_event();
+
+		// Delete all queued batches (avoids the deprecated cancel_process() alias, which relies on an async loopback request).
+		$this->delete_batches_from_db();
+
+		// Unlock the parent process lock.
+		$this->unlock_process();
+
+		// Release coordination locks.
+		$operation = $this->get_operation_name();
+		Process_Coordinator::mark_write_complete( $operation );
+		Process_Coordinator::release_lock( $operation );
 
 		// Clear progress state.
-		$instance->clear_state();
+		$this->clear_state();
 	}
 }

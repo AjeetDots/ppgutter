@@ -42,6 +42,7 @@ class Updates {
 		'3.0.94'  => 'updates/update-3.0.94.php',
 		'3.0.97'  => 'updates/update-3.0.97.php',
 		'3.0.108' => 'updates/update-3.0.108.php',
+		'3.0.114' => 'updates/update-3.0.114.php',
 	];
 
 	/**

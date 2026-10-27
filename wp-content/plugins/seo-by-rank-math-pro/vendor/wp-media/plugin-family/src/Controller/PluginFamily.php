@@ -12,7 +12,7 @@ class PluginFamily implements PluginFamilyInterface {
 	 *
 	 * @var string
 	 */
-	private $version = '1.0.8';
+	private $version = '1.0.9';
 
 	/**
 	 * Error transient.

@@ -134,6 +134,42 @@ class PaymentAction
         }
 
         $this->applyDiscountCodes();
+
+        add_action('fluentform/notify_on_form_submit', [$this, 'recordAcceptedCouponUsage'], 10, 1);
+    }
+
+    // The use-limit counts `payment-coupon` rows the normal recorder writes only when
+    // that field is posted; record accepted codes when it was omitted so the limit holds.
+    public function recordAcceptedCouponUsage($insertId)
+    {
+        if (empty($this->discountCodes)) {
+            return;
+        }
+
+        $couponName = ArrayHelper::get($this->couponField, 'attributes.name', 'payment-coupon');
+        if (array_key_exists($couponName, (array) $this->data)) {
+            return; // field present: the normal recorder stores it, don't duplicate
+        }
+
+        $alreadyRecorded = wpFluent()->table('fluentform_entry_details')
+            ->where('submission_id', $insertId)
+            ->where('field_name', 'payment-coupon')
+            ->first();
+        if ($alreadyRecorded) {
+            return;
+        }
+
+        $codes = implode(', ', array_map(function ($coupon) {
+            return $coupon->code;
+        }, $this->discountCodes));
+
+        wpFluent()->table('fluentform_entry_details')->insert([
+            'form_id'        => $this->form->id,
+            'submission_id'  => $insertId,
+            'field_name'     => 'payment-coupon',
+            'sub_field_name' => '',
+            'field_value'    => $codes,
+        ]);
     }
 
     public function isConditionPass()
@@ -574,7 +610,8 @@ class PaymentAction
                 }
                 continue;
             } else if (ArrayHelper::get($paymentInput, 'attributes.type') == 'checkbox') {
-                $selectedItems = $data[$name];
+                // cast to the validator's flat-list shape so a scalar still prices as one line
+                $selectedItems = (array) $data[$name];
                 foreach ($selectedItems as $selectedItem) {
                     $item = $this->getItemFromVariables($paymentInput, $selectedItem);
                     if ($item) {
@@ -654,8 +691,10 @@ class PaymentAction
             return 0;
         }
         // SECURITY (FINDING-22): clamp a user-supplied quantity to a non-negative integer so a
-        // negative quantity cannot flip a line total and subtract from the order.
-        return max(0, intval($quantity));
+        // negative quantity cannot flip a line total and subtract from the order. Also cap it so an
+        // oversized value (e.g. a rangeslider quantity, which has no input validator) cannot overflow
+        // item_price * quantity; item_quantity fields are already rejected at validation.
+        return min(PaymentHelper::maxQuantity(), max(0, intval($quantity)));
     }
 
     private function pushItem($data)

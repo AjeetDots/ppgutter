@@ -389,6 +389,15 @@ class IPN
             return false; // maybe the submission has been deleted
         }
 
+        if ($this->isSubscriptionVendorMismatched($subscription, $vendorData)) {
+            PaymentHelper::log([
+                'status'      => 'error',
+                'title'       => __('PayPal subscription id mismatch. Payment ignored.', 'fluentformpro'),
+                'description' => json_encode($vendorData)
+            ], $submission);
+            return false;
+        }
+
         if ($subscription->status == 'pending') {
             $vendorData['from_subscr_signup'] = 'yes';
             // somehow the subscr_signup hook could not be fired yet. So let's make it active manually
@@ -653,6 +662,15 @@ class IPN
             return;
         }
 
+        if ($this->isSubscriptionVendorMismatched($subscription, $vendorData)) {
+            PaymentHelper::log([
+                'status'      => 'error',
+                'title'       => __('PayPal subscription id mismatch. Status change ignored.', 'fluentformpro'),
+                'description' => json_encode($vendorData)
+            ], $submission);
+            return false;
+        }
+
         $paypalProcess = new PayPalProcessor();
         $paypalProcess->setSubmissionId($submissionId);
         $paypalProcess->updateSubscriptionStatus($subscription, 'cancelled');
@@ -675,6 +693,15 @@ class IPN
             return;
         }
 
+        if ($this->isSubscriptionVendorMismatched($subscription, $vendorData)) {
+            PaymentHelper::log([
+                'status'      => 'error',
+                'title'       => __('PayPal subscription id mismatch. Status change ignored.', 'fluentformpro'),
+                'description' => json_encode($vendorData)
+            ], $submission);
+            return false;
+        }
+
         $paypalProcess = new PayPalProcessor();
         $paypalProcess->setSubmissionId($submissionId);
         $paypalProcess->updateSubscriptionStatus($subscription, 'completed');
@@ -695,6 +722,15 @@ class IPN
 
         if (!$subscription) {
             return;
+        }
+
+        if ($this->isSubscriptionVendorMismatched($subscription, $vendorData)) {
+            PaymentHelper::log([
+                'status'      => 'error',
+                'title'       => __('PayPal subscription id mismatch. Status change ignored.', 'fluentformpro'),
+                'description' => json_encode($vendorData)
+            ], $submission);
+            return false;
         }
 
         $paypalProcess = new PayPalProcessor();
@@ -740,6 +776,23 @@ class IPN
         ]);
 
         return true;
+    }
+
+    // Bind the event to the subscription's stored vendor id so a verified message about the
+    // sender's OWN subscription cannot change a row picked by the unsigned URL submission_id.
+    private function isSubscriptionVendorMismatched($subscription, $data)
+    {
+        $stored = $subscription ? (string) $subscription->vendor_subscription_id : '';
+        if ('' === $stored) {
+            return false;
+        }
+
+        $incoming = ArrayHelper::get($data, 'subscr_id');
+        if (!is_string($incoming) || '' === $incoming) {
+            return false;
+        }
+
+        return !hash_equals($stored, $incoming);
     }
 
     private function findSubscriptionBySubmissionId($submissionId)

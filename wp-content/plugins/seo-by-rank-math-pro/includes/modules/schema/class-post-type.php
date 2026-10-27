@@ -48,7 +48,7 @@ class Post_Type {
 		}
 
 		$schema_meta['metadata']['title'] = $post->post_title;
-		update_post_meta( $post_id, "rank_math_schema_{$schema_meta['@type']}", $schema_meta );
+		update_post_meta( $post_id, 'rank_math_schema_' . Utils::get_primary_type( $schema_meta['@type'] ), $schema_meta );
 	}
 
 	/**

@@ -141,8 +141,11 @@ class Importer {
 		$line_number = 0;
 
 		while ( ! $spl->eof() ) {
+			// Read every line so the pointer always advances, even on the skipped header.
+			$line = $spl->fgets();
+
 			// Skip header (line 0) and empty lines.
-			if ( $line_number > 0 && trim( $spl->fgets() ) !== '' ) {
+			if ( $line_number > 0 && trim( $line ) !== '' ) {
 				$indices[] = $line_number;
 			}
 			++$line_number;
@@ -305,32 +308,37 @@ class Importer {
 	 */
 	private function update_existing_metas( $meta_updates, $object_type ) {
 		global $wpdb;
-		$table_name = $this->get_table_name( $object_type );
-
+		$table_name     = $this->get_table_name( $object_type );
 		$id_column_name = "{$object_type}_id";
-		$values_sql     = [];
-		foreach ( $meta_updates as $i => $row ) {
-			$post_id    = (int) $row[ $id_column_name ];
-			$meta_key   = addslashes( $row['meta_key'] );
-			$meta_value = addslashes( $row['meta_value'] );
 
-			if ( $i === 0 ) {
-				$values_sql[] = "SELECT {$post_id} AS $id_column_name, '{$meta_key}' AS meta_key, '{$meta_value}' AS meta_value";
-			} else {
-				$values_sql[] = "SELECT {$post_id}, '{$meta_key}', '{$meta_value}'";
+		// Chunk the UNION ALL query to avoid exceeding MySQL's thread_stack on large batches.
+		$chunk_size = apply_filters( 'rank_math/admin/csv_import_meta_update_chunk_size', 25 );
+
+		foreach ( array_chunk( $meta_updates, $chunk_size ) as $chunk ) {
+			$values_sql = [];
+			foreach ( $chunk as $i => $row ) {
+				$post_id    = (int) $row[ $id_column_name ];
+				$meta_key   = addslashes( $row['meta_key'] );
+				$meta_value = addslashes( $row['meta_value'] );
+
+				if ( $i === 0 ) {
+					$values_sql[] = "SELECT {$post_id} AS $id_column_name, '{$meta_key}' AS meta_key, '{$meta_value}' AS meta_value";
+				} else {
+					$values_sql[] = "SELECT {$post_id}, '{$meta_key}', '{$meta_value}'";
+				}
 			}
-		}
-		$values_union_sql = implode( " UNION ALL\n", $values_sql );
+			$values_union_sql = implode( " UNION ALL\n", $values_sql );
 
-		//phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$wpdb->query(
-			"
-				UPDATE $table_name pm JOIN ( {$values_union_sql} ) AS new_values
-				ON pm.$id_column_name = new_values.$id_column_name AND pm.meta_key = new_values.meta_key
-				SET pm.meta_value = new_values.meta_value;
-			"
-		);
-		//phpcs:enable
+			//phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->query(
+				"
+					UPDATE $table_name pm JOIN ( {$values_union_sql} ) AS new_values
+					ON pm.$id_column_name = new_values.$id_column_name AND pm.meta_key = new_values.meta_key
+					SET pm.meta_value = new_values.meta_value;
+				"
+			);
+			//phpcs:enable
+		}
 	}
 
 	/**

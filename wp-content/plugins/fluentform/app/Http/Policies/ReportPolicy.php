@@ -168,11 +168,12 @@ class ReportPolicy extends Policy
     private function resolveFormId(Request $request)
     {
         $route = $request->route();
-        $routeFormId = $route ? Arr::get($route->getParameter(), 'form_id') : null;
-        $routeFormId = Acl::normalizeFormId($routeFormId);
+        $params = $route ? (array) $route->getParameter() : [];
 
-        if ($routeFormId) {
-            return $routeFormId;
+        // Authorize against the exact id in the URL; a non-digit suffix must not collapse to
+        // null and skip the per-form scope check while the controller casts it back to a real id.
+        if (array_key_exists('form_id', $params)) {
+            return Acl::normalizeFormId($params['form_id']) ?: $params['form_id'];
         }
 
         return Acl::normalizeFormId($request->get('form_id'));

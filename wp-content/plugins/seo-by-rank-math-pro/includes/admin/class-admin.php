@@ -141,7 +141,7 @@ class Admin {
 
 		$settings_file = Helper::is_react_enabled() ? 'settings' : 'general-options';
 
-		wp_enqueue_script( 'rank-math-pro-general-options', RANK_MATH_PRO_URL . "assets/admin/js/{$settings_file}.js", [ 'wp-hooks' , 'lodash', 'jquery', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'rank-math-components' ], rank_math_pro()->version, true );
+		wp_enqueue_script( 'rank-math-pro-general-options', RANK_MATH_PRO_URL . "assets/admin/js/{$settings_file}.js", [ 'wp-hooks' , 'lodash', 'jquery', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'rank-math-components', 'wp-core-data' ], rank_math_pro()->version, true );
 
 		Helper::add_json( 'isAdsenseConnected', Adsense::is_adsense_connected() );
 		Helper::add_json( 'choicesPhoneTypes', Helper::choices_phone_types() );

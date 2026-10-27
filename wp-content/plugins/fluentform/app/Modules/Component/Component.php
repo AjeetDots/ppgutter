@@ -1492,8 +1492,28 @@ class Component
                 return __('Form not found.', 'fluentform');
             }
             $isHtml = $atts['is_html'] === 'true' ? true : false;
-            $submission = (new \FluentForm\App\Services\Submission\SubmissionService())->findBySerialID($formId, $atts['serial_number'],$isHtml);
-            if (!$submission) {
+
+            // Any post author can place this shortcode, so only the form's entry viewers or the submitter may read the entry.
+            if (!Acl::hasPermission('fluentform_entries_viewer', $formId)) {
+                $entryOwnerId = (int) wpFluent()->table('fluentform_submissions')
+                    ->where('form_id', $formId)
+                    ->where('serial_number', $atts['serial_number'])
+                    ->value('user_id');
+
+                if (!$entryOwnerId || $entryOwnerId !== get_current_user_id()) {
+                    ob_end_clean();
+                    return __('No entry found.', 'fluentform');
+                }
+            }
+
+            try {
+                $submission = (new \FluentForm\App\Services\Submission\SubmissionService())->findByParams([
+                    'formId'       => $formId,
+                    'serialNumber' => $atts['serial_number'],
+                    'isHtml'       => $isHtml,
+                ]);
+            } catch (\Exception $e) {
+                ob_end_clean();
                 return __('No entry found.', 'fluentform');
             }
     

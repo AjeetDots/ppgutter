@@ -52,8 +52,129 @@ class Keywords {
 	public function setup() {
 		$this->filter( 'rank_math/analytics/keywords', 'add_keyword_position_graph' );
 		$this->filter( 'rank_math/analytics/keywords_overview', 'add_winning_losing_data' );
+		$this->filter( 'rank_math/analytics/ability/top_keywords', 'enrich_top_keywords_ability', 10, 2 );
 		$this->action( 'save_post', 'add_post_focus_keyword' );
 		$this->action( 'init', 'get_post_type_list', 99 );
+	}
+
+	/**
+	 * Annotate ability top-keywords entries with ranking posts and position trend.
+	 *
+	 * Every entry receives a ranking_posts array (pages that rank for the keyword).
+	 * Entries whose keyword is in the Rank Tracker also receive trend / is_tracked.
+	 * Trend is derived from position.difference: < 0 = winning, > 0 = losing, 0 = stable.
+	 *
+	 * @param array $keywords Flat keyword objects from the rank-math/get-top-keywords ability.
+	 * @return array
+	 */
+	public function enrich_top_keywords_ability( array $keywords ): array {
+		if ( empty( $keywords ) ) {
+			return $keywords;
+		}
+
+		$keyword_strings  = array_column( $keywords, 'keyword' );
+		$pages_by_keyword = $this->get_pages_for_keywords( $keyword_strings );
+		$tracked          = $this->get_tracked_keywords_data( [ 'limit' => 'LIMIT 10000' ] );
+
+		foreach ( $keywords as &$item ) {
+			$key = strtolower( (string) $item['keyword'] );
+
+			$item['ranking_posts'] = $pages_by_keyword[ $key ] ?? [];
+
+			if ( ! empty( $tracked ) && isset( $tracked[ $key ] ) ) {
+				$diff               = (float) ( $tracked[ $key ]['position']['difference'] ?? 0 );
+				$item['trend']      = $diff < 0 ? 'winning' : ( $diff > 0 ? 'losing' : 'stable' );
+				$item['is_tracked'] = true;
+			}
+		}
+		unset( $item );
+
+		return $keywords;
+	}
+
+	/**
+	 * Batch-fetch the ranking pages for a list of keywords.
+	 *
+	 * Returns an array keyed by lowercased keyword string. Each value is an
+	 * array of ranking-post objects: [ 'post_id' => int, 'title' => string, 'slug' => string ].
+	 *
+	 * @param array $keyword_strings List of keyword strings.
+	 * @return array
+	 */
+	protected function get_pages_for_keywords( array $keyword_strings ): array {
+		if ( empty( $keyword_strings ) ) {
+			return [];
+		}
+
+		$lower_keywords   = array_map( 'strtolower', $keyword_strings );
+		$pages_by_keyword = $this->fetch_gsc_pages_by_keywords( $lower_keywords );
+
+		if ( empty( $pages_by_keyword ) ) {
+			return [];
+		}
+
+		$all_pages = array_unique( array_merge( ...array_values( $pages_by_keyword ) ) );
+		$objects   = Stats::get()->get_objects( $all_pages );
+
+		$result = [];
+		foreach ( $pages_by_keyword as $keyword => $pages ) {
+			$result[ $keyword ] = [];
+			foreach ( $pages as $page ) {
+				if ( ! isset( $objects[ $page ] ) ) {
+					continue;
+				}
+				$obj                  = $objects[ $page ];
+				$result[ $keyword ][] = [
+					'post_id' => (int) ( $obj['object_id'] ?? 0 ),
+					'title'   => (string) ( $obj['title'] ?? '' ),
+					'slug'    => (string) $page,
+				];
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Query Google Search Console data for the page URLs ranking for the given keywords.
+	 *
+	 * Returns an array keyed by lowercased keyword; each value is a flat list of distinct
+	 * page URL strings from the GSC table within the active date range. Shared by
+	 * get_pages_for_keywords() (ability output) and get_keyword_pages() (REST endpoint)
+	 * so that the GSC query lives in one place.
+	 *
+	 * @param array $keyword_strings Keyword strings.
+	 * @return array
+	 */
+	protected function fetch_gsc_pages_by_keywords( array $keyword_strings ): array {
+		global $wpdb;
+
+		if ( empty( $keyword_strings ) ) {
+			return [];
+		}
+
+		$escaped_keywords = "'" . implode( "', '", array_map( 'esc_sql', $keyword_strings ) ) . "'";
+
+		$results = DB_Helper::get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- raw GSC query; callers are responsible for caching.
+			$wpdb->prepare(
+				"SELECT DISTINCT g.query, g.page
+				FROM {$wpdb->prefix}rank_math_analytics_gsc AS g
+				WHERE g.query IN ({$escaped_keywords})
+				  AND g.created BETWEEN %s AND %s
+				ORDER BY g.query, g.created DESC",
+				Stats::get()->start_date,
+				Stats::get()->end_date
+			),
+			ARRAY_A
+		);
+
+		$pages_by_keyword = [];
+		foreach ( $results as $row ) {
+			$key                        = strtolower( (string) $row['query'] );
+			$pages_by_keyword[ $key ][] = (string) $row['page'];
+		}
+
+		return $pages_by_keyword;
 	}
 
 	/**
@@ -755,29 +876,17 @@ class Keywords {
 	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_keyword_pages( WP_REST_Request $request ) {
-		global $wpdb;
+		$keyword     = $request->get_param( 'query' );
+		$pages_by_kw = $this->fetch_gsc_pages_by_keywords( [ $keyword ] );
+		$pages       = ! empty( $pages_by_kw ) ? array_merge( ...array_values( $pages_by_kw ) ) : [];
 
-		$keyword = esc_sql( $request->get_param( 'query' ) );
-		$data    = DB_Helper::get_results( // phpcs:ignore -- Direct DB query required.
-			$wpdb->prepare(
-				"SELECT DISTINCT g.page
-			FROM {$wpdb->prefix}rank_math_analytics_gsc as g
-			WHERE g.query = %s AND g.created BETWEEN %s AND %s
-			ORDER BY g.created DESC",
-				$keyword,
-				Stats::get()->start_date,
-				Stats::get()->end_date
-			)
-		);
-
-		$pages   = wp_list_pluck( $data, 'page' );
 		$console = Stats::get()->get_analytics_data(
 			[
 				'action'    => 'get_keyword_pages',
-				'keyword'   => $keyword,
+				'keyword'   => esc_sql( $keyword ),
 				'objects'   => true,
 				'pageview'  => true,
-				'sub_where' => " AND page IN ('" . join( "', '", $pages ) . "') AND query = '" . $keyword . "'",
+				'sub_where' => " AND page IN ('" . join( "', '", $pages ) . "') AND query = '" . esc_sql( $keyword ) . "'",
 			]
 		);
 		return $console;

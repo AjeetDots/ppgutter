@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit4f7f4500aad6b71259ea792b00183583
+class ComposerStaticInitf37363a7de4063851ad85ba31bf03a3c
 {
     public static $files = array (
         '6c592737b91137905268e9a0eb968869' => __DIR__ . '/..' . '/wp-media/apply-filters-typed/functions.php',
@@ -65,13 +65,22 @@ class ComposerStaticInit4f7f4500aad6b71259ea792b00183583
         'RankMathPro\\BBPress' => __DIR__ . '/../..' . '/includes/modules/bbPress/class-bbpress.php',
         'RankMathPro\\Common' => __DIR__ . '/../..' . '/includes/class-common.php',
         'RankMathPro\\Content_AI' => __DIR__ . '/../..' . '/includes/modules/content-ai/class-content-ai.php',
+        'RankMathPro\\Dependencies\\Groupone\\Marketplace\\Abilities\\MarketplaceAbilities' => __DIR__ . '/../..' . '/includes/vendor/Dependencies/Groupone/Marketplace/Abilities/MarketplaceAbilities.php',
+        'RankMathPro\\Dependencies\\Groupone\\Marketplace\\Abilities\\MarketplaceAbilitiesTracking' => __DIR__ . '/../..' . '/includes/vendor/Dependencies/Groupone/Marketplace/Abilities/MarketplaceAbilitiesTracking.php',
+        'RankMathPro\\Dependencies\\Groupone\\Marketplace\\Controllers\\MarketplaceController' => __DIR__ . '/../..' . '/includes/vendor/Dependencies/Groupone/Marketplace/Controllers/MarketplaceController.php',
+        'RankMathPro\\Dependencies\\Groupone\\Marketplace\\Marketplace' => __DIR__ . '/../..' . '/includes/vendor/Dependencies/Groupone/Marketplace/marketplace.php',
+        'RankMathPro\\Dependencies\\Groupone\\Marketplace\\Models\\MarketplaceModel' => __DIR__ . '/../..' . '/includes/vendor/Dependencies/Groupone/Marketplace/Models/MarketplaceModel.php',
+        'RankMathPro\\Dependencies\\Groupone\\Marketplace\\Services\\PluginService' => __DIR__ . '/../..' . '/includes/vendor/Dependencies/Groupone/Marketplace/Services/PluginService.php',
+        'RankMathPro\\Dependencies\\Groupone\\Marketplace\\Utils\\MixpanelClient' => __DIR__ . '/../..' . '/includes/vendor/Dependencies/Groupone/Marketplace/Utils/MixpanelClient.php',
         'RankMathPro\\Divi\\Divi' => __DIR__ . '/../..' . '/includes/3rdparty/divi/class-divi.php',
         'RankMathPro\\Elementor\\Elementor' => __DIR__ . '/../..' . '/includes/3rdparty/elementor/class-elementor.php',
+        'RankMathPro\\Elementor\\Elementor_Link_Genius' => __DIR__ . '/../..' . '/includes/3rdparty/elementor/class-elementor-link-genius.php',
         'RankMathPro\\Elementor\\Widget_Breadcrumbs' => __DIR__ . '/../..' . '/includes/3rdparty/elementor/class-widget-breadcrumbs.php',
         'RankMathPro\\Google\\Adsense' => __DIR__ . '/../..' . '/includes/modules/analytics/google/class-adsense.php',
         'RankMathPro\\Google\\PageSpeed' => __DIR__ . '/../..' . '/includes/modules/analytics/google/class-pagespeed.php',
         'RankMathPro\\Image_Seo_Pro' => __DIR__ . '/../..' . '/includes/modules/image-seo/class-image-seo-pro.php',
         'RankMathPro\\Installer' => __DIR__ . '/../..' . '/includes/class-installer.php',
+        'RankMathPro\\Link_Genius\\Abilities\\Link_Report_Enricher' => __DIR__ . '/../..' . '/includes/abilities/link-genius/class-link-report-enricher.php',
         'RankMathPro\\Link_Genius\\Admin\\Admin' => __DIR__ . '/../..' . '/includes/modules/link-genius/Admin/class-admin.php',
         'RankMathPro\\Link_Genius\\Api\\Audit_Controller' => __DIR__ . '/../..' . '/includes/modules/link-genius/Api/class-audit-controller.php',
         'RankMathPro\\Link_Genius\\Api\\Base_Controller' => __DIR__ . '/../..' . '/includes/modules/link-genius/Api/class-base-controller.php',
@@ -111,15 +120,15 @@ class ComposerStaticInit4f7f4500aad6b71259ea792b00183583
         'RankMathPro\\Link_Genius\\Features\\KeywordMaps\\Utils\\Variation_Expander' => __DIR__ . '/../..' . '/includes/modules/link-genius/Features/KeywordMaps/Utils/class-variation-expander.php',
         'RankMathPro\\Link_Genius\\Link_Genius' => __DIR__ . '/../..' . '/includes/modules/link-genius/class-link-genius.php',
         'RankMathPro\\Link_Genius\\Rest' => __DIR__ . '/../..' . '/includes/modules/link-genius/class-rest.php',
-        'RankMathPro\\Link_Genius\\Services\\Batch_Helper' => __DIR__ . '/../..' . '/includes/modules/link-genius/services/class-batch-helper.php',
-        'RankMathPro\\Link_Genius\\Services\\Content_Processor' => __DIR__ . '/../..' . '/includes/modules/link-genius/services/class-content-processor.php',
-        'RankMathPro\\Link_Genius\\Services\\Content_Similarity' => __DIR__ . '/../..' . '/includes/modules/link-genius/services/class-content-similarity.php',
-        'RankMathPro\\Link_Genius\\Services\\History_Service' => __DIR__ . '/../..' . '/includes/modules/link-genius/services/class-history-service.php',
-        'RankMathPro\\Link_Genius\\Services\\Link_Processor' => __DIR__ . '/../..' . '/includes/modules/link-genius/services/class-link-processor.php',
-        'RankMathPro\\Link_Genius\\Services\\Related_Posts' => __DIR__ . '/../..' . '/includes/modules/link-genius/services/class-related-posts.php',
-        'RankMathPro\\Link_Genius\\Services\\Robots_Checker' => __DIR__ . '/../..' . '/includes/modules/link-genius/services/class-robots-checker.php',
-        'RankMathPro\\Link_Genius\\Services\\Rollback_Service' => __DIR__ . '/../..' . '/includes/modules/link-genius/services/class-rollback-service.php',
-        'RankMathPro\\Link_Genius\\Services\\Utils' => __DIR__ . '/../..' . '/includes/modules/link-genius/services/class-utils.php',
+        'RankMathPro\\Link_Genius\\Services\\Batch_Helper' => __DIR__ . '/../..' . '/includes/modules/link-genius/Services/class-batch-helper.php',
+        'RankMathPro\\Link_Genius\\Services\\Content_Processor' => __DIR__ . '/../..' . '/includes/modules/link-genius/Services/class-content-processor.php',
+        'RankMathPro\\Link_Genius\\Services\\Content_Similarity' => __DIR__ . '/../..' . '/includes/modules/link-genius/Services/class-content-similarity.php',
+        'RankMathPro\\Link_Genius\\Services\\History_Service' => __DIR__ . '/../..' . '/includes/modules/link-genius/Services/class-history-service.php',
+        'RankMathPro\\Link_Genius\\Services\\Link_Processor' => __DIR__ . '/../..' . '/includes/modules/link-genius/Services/class-link-processor.php',
+        'RankMathPro\\Link_Genius\\Services\\Related_Posts' => __DIR__ . '/../..' . '/includes/modules/link-genius/Services/class-related-posts.php',
+        'RankMathPro\\Link_Genius\\Services\\Robots_Checker' => __DIR__ . '/../..' . '/includes/modules/link-genius/Services/class-robots-checker.php',
+        'RankMathPro\\Link_Genius\\Services\\Rollback_Service' => __DIR__ . '/../..' . '/includes/modules/link-genius/Services/class-rollback-service.php',
+        'RankMathPro\\Link_Genius\\Services\\Utils' => __DIR__ . '/../..' . '/includes/modules/link-genius/Services/class-utils.php',
         'RankMathPro\\Link_Genius\\Shortcodes\\Related_Posts_Shortcode' => __DIR__ . '/../..' . '/includes/modules/link-genius/Shortcodes/class-related-posts-shortcode.php',
         'RankMathPro\\Local_Seo\\Address' => __DIR__ . '/../..' . '/includes/modules/local-seo/shortcodes/class-address.php',
         'RankMathPro\\Local_Seo\\Admin' => __DIR__ . '/../..' . '/includes/modules/local-seo/class-admin.php',
@@ -133,6 +142,7 @@ class ComposerStaticInit4f7f4500aad6b71259ea792b00183583
         'RankMathPro\\Local_Seo\\RM_Pointers' => __DIR__ . '/../..' . '/includes/modules/local-seo/class-rm-pointers.php',
         'RankMathPro\\Local_Seo\\Search' => __DIR__ . '/../..' . '/includes/modules/local-seo/class-search.php',
         'RankMathPro\\Local_Seo\\Store_Locator' => __DIR__ . '/../..' . '/includes/modules/local-seo/shortcodes/class-store-locator.php',
+        'RankMathPro\\Marketplace\\Marketplace' => __DIR__ . '/../..' . '/includes/modules/marketplace/class-marketplace.php',
         'RankMathPro\\Modules' => __DIR__ . '/../..' . '/includes/class-modules.php',
         'RankMathPro\\Monitor_Pro' => __DIR__ . '/../..' . '/includes/modules/404-monitor/class-monitor-pro.php',
         'RankMathPro\\Plugin_Update\\Plugin_Update' => __DIR__ . '/../..' . '/includes/plugin-update/class-plugin-update.php',
@@ -163,6 +173,7 @@ class ComposerStaticInit4f7f4500aad6b71259ea792b00183583
         'RankMathPro\\Schema\\Schema' => __DIR__ . '/../..' . '/includes/modules/schema/class-schema.php',
         'RankMathPro\\Schema\\Snippet_Pro_Shortcode' => __DIR__ . '/../..' . '/includes/modules/schema/class-snippet-pro-shortcode.php',
         'RankMathPro\\Schema\\Taxonomy' => __DIR__ . '/../..' . '/includes/modules/schema/class-taxonomy.php',
+        'RankMathPro\\Schema\\Utils' => __DIR__ . '/../..' . '/includes/modules/schema/class-utils.php',
         'RankMathPro\\Schema\\Video' => __DIR__ . '/../..' . '/includes/modules/schema/class-video.php',
         'RankMathPro\\Schema\\Video\\DailyMotion' => __DIR__ . '/../..' . '/includes/modules/schema/video/class-dailymotion.php',
         'RankMathPro\\Schema\\Video\\Parser' => __DIR__ . '/../..' . '/includes/modules/schema/video/class-parser.php',
@@ -197,9 +208,9 @@ class ComposerStaticInit4f7f4500aad6b71259ea792b00183583
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit4f7f4500aad6b71259ea792b00183583::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit4f7f4500aad6b71259ea792b00183583::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit4f7f4500aad6b71259ea792b00183583::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitf37363a7de4063851ad85ba31bf03a3c::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitf37363a7de4063851ad85ba31bf03a3c::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInitf37363a7de4063851ad85ba31bf03a3c::$classMap;
 
         }, null, ClassLoader::class);
     }

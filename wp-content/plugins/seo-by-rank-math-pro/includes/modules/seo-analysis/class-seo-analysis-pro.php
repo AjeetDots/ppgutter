@@ -12,7 +12,6 @@ namespace RankMathPro\SEO_Analysis;
 
 use RankMath\Helper;
 use RankMath\Traits\Hooker;
-use RankMath\Helpers\Param;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -56,6 +55,11 @@ class SEO_Analysis_Pro {
 		$module   = Helper::get_module( 'seo-analysis' );
 		$analyzer = $module->admin->analyzer;
 		$results  = $analyzer->get_results_from_storage( 'rank_math_seo_analysis_competitor' );
+
+		if ( ! empty( $results['serpData'] ) ) {
+			$competitor_url                 = get_option( 'rank_math_seo_analysis_competitor_url', '' );
+			$results['serpData']['favicon'] = 'https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=' . rawurlencode( $competitor_url ) . '&size=128';
+		}
 
 		Helper::add_json( 'competitorResults', $results );
 		Helper::add_json( 'competitorUrl', get_option( 'rank_math_seo_analysis_competitor_url', '' ) );

@@ -92,7 +92,7 @@ class Video_Provider extends Post_Type {
 					'lastmod' => $video['post_modified_gmt'],
 				],
 				'video',
-				$video,
+				$sitemap_slug,
 			);
 
 			if ( ! $item ) {
@@ -103,6 +103,32 @@ class Video_Provider extends Post_Type {
 		}
 
 		return $index;
+	}
+
+	/**
+	 * Get count of posts eligible for the video sitemap.
+	 *
+	 * Mirrors get_index_links()'s own VideoObject meta requirement instead of
+	 * the generic Post_Type::get_post_type_count().
+	 *
+	 * @param string $post_types Sitemap type slug — unused, video post types come from settings.
+	 * @return int
+	 */
+	public function get_post_type_count( $post_types ) { // phpcs:ignore
+		$video_post_types = (array) Helper::get_settings( 'sitemap.video_sitemap_post_type', [] );
+		if ( empty( $video_post_types ) ) {
+			return 0;
+		}
+
+		global $wpdb;
+
+		$sql = "SELECT COUNT( DISTINCT p.ID ) FROM {$wpdb->postmeta} as pm
+						INNER JOIN {$wpdb->posts} as p ON pm.post_id = p.ID
+						WHERE pm.meta_key = 'rank_math_schema_VideoObject'
+						AND post_type IN ( '" . join( "', '", esc_sql( $video_post_types ) ) . "' )
+						AND post_status IN ( 'publish', 'inherit' )";
+
+		return (int) DB_Helper::get_var( $sql );
 	}
 
 	/**

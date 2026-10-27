@@ -56,7 +56,7 @@ class Executor {
 	private function find_posts_with_keywords( $variations, $keyword_map ) {
 		global $wpdb;
 
-		// Build LIKE conditions for each variation.
+		// Build LIKE conditions for each variation against post_content.
 		$like_conditions = [];
 		foreach ( $variations as $variation ) {
 			$like_conditions[] = $wpdb->prepare(
@@ -71,6 +71,17 @@ class Executor {
 
 		$like_sql = implode( ' OR ', $like_conditions );
 
+		// Build LIKE conditions for _elementor_data postmeta (Elementor stores
+		// content as JSON in this meta key, not in post_content).
+		$elementor_conditions = [];
+		foreach ( $variations as $variation ) {
+			$elementor_conditions[] = $wpdb->prepare(
+				'pm.meta_value LIKE %s',
+				'%' . $wpdb->esc_like( $variation ) . '%'
+			);
+		}
+		$elementor_like_sql = implode( ' OR ', $elementor_conditions );
+
 		// Get global settings once for both post types and exclusions.
 		$global_settings = Keyword_Maps::get_settings();
 
@@ -84,12 +95,15 @@ class Executor {
 		$post_types_placeholders = implode( ',', array_fill( 0, count( $post_types ), '%s' ) );
 
 		// Build query with alias 'p' for exclusion SQL.
-		// Note: $like_sql is already prepared via wpdb->prepare() on lines 63-66.
-		$base_query = "SELECT p.ID, p.post_title, p.post_content, p.post_type
+		// LEFT JOIN with _elementor_data postmeta so Elementor posts are found even
+		// when post_content is empty/placeholder. Both $like_sql and $elementor_like_sql
+		// are already prepared via wpdb->prepare() above.
+		$base_query = "SELECT DISTINCT p.ID, p.post_title, p.post_content, p.post_type
 			FROM {$wpdb->posts} p
+			LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = '_elementor_data'
 			WHERE p.post_status = 'publish'
 			AND p.post_type IN ($post_types_placeholders)
-			AND ($like_sql)";
+			AND (($like_sql) OR (pm.post_id IS NOT NULL AND ($elementor_like_sql)))";
 
 		$query = $wpdb->prepare( $base_query, ...$post_types );
 
@@ -211,7 +225,10 @@ class Executor {
 
 		foreach ( $posts as $post ) {
 			// Analyze content once per post.
-			$content          = $post->post_content;
+			// Allow page-builder integrations to provide the effective content
+			// (e.g. Elementor stores post content in _elementor_data, not post_content).
+			$content = apply_filters( 'rank_math/link_genius/keyword_map_post_content', $post->post_content, $post->ID );
+
 			$content_analysis = Content_Analyzer::analyze( $content );
 
 			// Apply links (content is modified by reference, but we don't save it).

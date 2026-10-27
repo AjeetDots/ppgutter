@@ -1135,7 +1135,7 @@ class Rest extends Base_Operation_Controller {
 		if ( ! $plan || $plan === 'free' ) {
 			return new WP_Error(
 				'upgrade_required',
-				esc_html__( 'This feature is only available for Content AI subscribers.', 'rank-math-pro' ),
+				esc_html__( 'This feature is only available for Rank Math AI subscribers.', 'rank-math-pro' ),
 				[ 'status' => 426 ]
 			);
 		}

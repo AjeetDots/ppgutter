@@ -14,6 +14,7 @@ use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Controller;
+use RankMath\Helper;
 use RankMath\Rest\Rest_Helper;
 
 defined( 'ABSPATH' ) || exit;
@@ -33,13 +34,13 @@ abstract class Base_Controller extends WP_REST_Controller {
 	}
 
 	/**
-	 * Permission check: user must be an administrator.
+	 * Permission check: user must have required capability.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return true|WP_Error
 	 */
 	public function check_admin_permission( $request ) {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! Helper::has_cap( 'link_builder' ) ) {
 			return new WP_Error(
 				'rest_forbidden',
 				__( 'Sorry, you are not allowed to access this resource.', 'rank-math-pro' ),
@@ -56,6 +57,14 @@ abstract class Base_Controller extends WP_REST_Controller {
 	 * @return true|WP_Error
 	 */
 	public function check_post_edit_permission( $request ) {
+		if ( ! Helper::has_cap( 'link_builder' ) ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'Sorry, you are not allowed to access this resource.', 'rank-math-pro' ),
+				[ 'status' => rest_authorization_required_code() ]
+			);
+		}
+
 		$post_id = (int) $request->get_param( 'post_id' );
 		if ( $post_id <= 0 ) {
 			return new WP_Error(

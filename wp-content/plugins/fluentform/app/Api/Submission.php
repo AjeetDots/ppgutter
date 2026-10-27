@@ -142,11 +142,11 @@ class Submission
             'grouped'           => false,
         ]);
 
+        // Ownership is authoritative on the submission (set at purchase for logged-in buyers,
+        // by the registration feed, or by an order claim); the transaction row may lag it.
         $query = Transaction::orderBy('id', 'DESC')
-            ->where(function ($q) use ($user) {
-                $q->where('user_id', $user->ID)
-                    ->orderBy('id', 'DESC')
-                    ->orWhere('payer_email', $user->user_email);
+            ->whereIn('submission_id', function ($subQuery) use ($user) {
+                $subQuery->select('id')->from('fluentform_submissions')->where('user_id', $user->ID);
             });
 
         if (!empty($args['transaction_types'])) {

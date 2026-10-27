@@ -100,13 +100,14 @@ class Rest extends WP_REST_Controller {
 			DB::delete_schema_data( $post_id );
 		}
 
-		$meta_key    = 'rank_math_schema_' . $schema['@type'];
+		$meta_key    = 'rank_math_schema_' . Utils::get_primary_type( $schema['@type'] );
+		$title       = Utils::get_primary_type( $schema['metadata']['title'] );
 		$template_id = wp_insert_post(
 			[
 				'ID'          => $post_id,
 				'post_status' => 'publish',
 				'post_type'   => 'rank_math_schema',
-				'post_title'  => $schema['metadata']['title'],
+				'post_title'  => $title,
 			]
 		);
 
