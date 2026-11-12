@@ -1061,6 +1061,74 @@ class Helper
             ->count();
     }
 
+    /**
+     * Among the given upload basenames, those still referenced by a submission
+     * whose id is not in $excludeIds. A submitted file value is attacker-controlled
+     * and can name another entry's upload, so callers use this to avoid deleting
+     * or attaching a file another submission still owns. Matches are read in
+     * id-ordered batches and the scan stops once every basename is found.
+     *
+     * @param array $basenames upload basenames to test
+     * @param array|int $excludeIds submission ids to exclude (the entries being acted on)
+     * @return array map of referenced basename => true
+     */
+    public static function getFilesReferencedByOtherSubmissions($basenames, $excludeIds = [])
+    {
+        $basenames = array_values(array_unique(array_filter((array) $basenames)));
+        if (!$basenames) {
+            return [];
+        }
+
+        global $wpdb;
+
+        $excludeIds = array_filter((array) $excludeIds);
+        $referenced = [];
+        $remaining = array_fill_keys($basenames, true);
+
+        // Match each basename only as a whole trailing path segment: preceded by a
+        // separator and followed by neither a filename character nor another
+        // separator. So photo.txt is not flagged by my-photo.txt, report.pdf.bak,
+        // or a crafted intermediate segment such as /photo.txt/x.
+        $patterns = [];
+        foreach ($basenames as $name) {
+            $patterns[$name] = '~/' . preg_quote($name, '~') . '(?![A-Za-z0-9._\-/\\\\])~';
+        }
+
+        $lastId = 0;
+        $batchSize = 100;
+
+        // Scan all submissions: a form's current schema can't tell which old entries hold files.
+        do {
+            $names = array_keys($remaining);
+            $query = Submission::select(['id', 'response'])->where('id', '>', $lastId);
+            if ($excludeIds) {
+                $query->whereNotIn('id', $excludeIds);
+            }
+            $query->where(function ($q) use ($names, $wpdb) {
+                foreach ($names as $name) {
+                    $q->orWhere('response', 'LIKE', '%' . $wpdb->esc_like($name) . '%');
+                }
+            });
+            $rows = $query->orderBy('id')->limit($batchSize)->get();
+            $isFullBatch = count($rows) === $batchSize;
+
+            foreach ($rows as $row) {
+                $lastId = (int) $row->id;
+                foreach ($names as $name) {
+                    if (isset($remaining[$name]) && preg_match($patterns[$name], $row->response)) {
+                        $referenced[$name] = true;
+                        unset($remaining[$name]);
+                    }
+                }
+                if (!$remaining) {
+                    break;
+                }
+            }
+        } while ($remaining && $isFullBatch);
+
+        return $referenced;
+    }
+
     public static function getForms()
     {
         $ff_list = Form::select(['id', 'title'])->orderBy('id', 'DESC')->get();

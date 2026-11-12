@@ -173,7 +173,43 @@ class WPCode_Admin_Page_Headers_Footers extends WPCode_Admin_Page {
 			$this->textarea_field( 'body', __( 'Body', 'insert-headers-and-footers' ), $body_desc );
 		}
 		$this->textarea_field( 'footer', __( 'Footer', 'insert-headers-and-footers' ), $footer_desc );
+		$this->abilities_write_toggle();
 		wp_nonce_field( $this->action, $this->nonce_name );
+	}
+
+	/**
+	 * Whether the AI & Automation Access toggle is available on this page.
+	 *
+	 * Only shown in simple mode, as the full settings page is not reachable then.
+	 *
+	 * @return bool
+	 */
+	private function can_manage_abilities_write() {
+		return WPCode_Abilities_API::is_simple_mode() && current_user_can( 'wpcode_manage_settings' );
+	}
+
+	/**
+	 * Output the AI & Automation Access toggle (simple mode only).
+	 *
+	 * @return void
+	 */
+	private function abilities_write_toggle() {
+		if ( ! $this->can_manage_abilities_write() ) {
+			return;
+		}
+		?>
+		<div class="wpcode-code-textarea" id="wpcode-global-abilities-write">
+			<h2><?php esc_html_e( 'AI & Automation Access', 'insert-headers-and-footers' ); ?></h2>
+			<?php
+			echo $this->get_checkbox_toggle( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				wpcode()->settings->get_option( 'abilities_write_enabled' ),
+				'wpcode-abilities-write',
+				esc_html__( 'Let AI assistants and automation tools connected through the WordPress Abilities API create and edit snippets and header & footer code. They can only do what the connected user is allowed to do.', 'insert-headers-and-footers' ),
+				1
+			);
+			?>
+		</div>
+		<?php
 	}
 
 	/**
@@ -295,6 +331,10 @@ class WPCode_Admin_Page_Headers_Footers extends WPCode_Admin_Page {
 			if ( apply_filters( 'wpcode_clear_cache_on_global_save', true ) ) {
 				wpcode_clear_all_plugins_page_cache( 'global' );
 			}
+		}
+
+		if ( $this->can_manage_abilities_write() ) {
+			wpcode()->settings->update_option( 'abilities_write_enabled', isset( $_REQUEST['wpcode-abilities-write'] ) );
 		}
 
 		if ( wpcode()->settings->get_option( 'headers_footers_mode' ) && ! isset( $_REQUEST['headers_footers_mode'] ) ) {

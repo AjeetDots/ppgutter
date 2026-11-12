@@ -7,20 +7,42 @@ $list []= 'https://cdn.trustindex.io/';
 $list []= 'https://cdn.trustindex.io/loader.js';
 $list []= 'https://cdn.trustindex.io/loader-cert.js';
 $list []= 'https://cdn.trustindex.io/loader-feed.js';
+$list []= 'trustindex-asset=';
 return $list;
 }
 }
+if (!function_exists('trustindex_is_wp_rocket_compatibility_enabled')) {
+function trustindex_is_wp_rocket_compatibility_enabled() {
+return 1 === (int)get_option('trustindex-wp-rocket-compatibility', 1);
+}
+}
+if (!function_exists('trustindex_set_wp_rocket_compatibility_enabled')) {
+function trustindex_set_wp_rocket_compatibility_enabled($isEnabled) {
+return update_option('trustindex-wp-rocket-compatibility', $isEnabled ? 1 : 0, true);
+}
+}
+add_filter('litespeed_optimize_js_excludes', 'trustindex_exclude_js');
+add_filter('sgo_javascript_combine_excluded_external_paths', 'trustindex_exclude_js');
+if (trustindex_is_wp_rocket_compatibility_enabled()) {
 add_filter('rocket_minify_excluded_external_js', 'trustindex_exclude_js');
 add_filter('rocket_exclude_js', 'trustindex_exclude_js');
 add_filter('rocket_delay_js_exclusions', 'trustindex_exclude_js');
-add_filter('litespeed_optimize_js_excludes', 'trustindex_exclude_js');
-add_filter('sgo_javascript_combine_excluded_external_paths', 'trustindex_exclude_js');
 add_filter('rocket_exclude_css', function($list) {
 $list []= 'trustindex.io';
 $list []= 'https://cdn.trustindex.io/';
 $list []= 'trustindex-(.*).css';
 return $list;
 });
+add_filter('rocket_rucss_safelist', function($list) {
+$list []= 'trustindex-(.*).css';
+$list []= '.ti-widget';
+return $list;
+});
+add_filter('rocket_rucss_inline_atts_exclusions', function($list) {
+$list []= 'trustindex-';
+return $list;
+});
+}
 add_filter('sgo_css_combine_exclude', function($list) {
 foreach (array (
  0 => 'facebook',
@@ -60,15 +82,6 @@ foreach (array (
 ) as $platform) {
 $list []= 'trustindex-feed-widget-css-'. $platform;
 }
-return $list;
-});
-add_filter('rocket_rucss_safelist', function($list) {
-$list []= 'trustindex-(.*).css';
-$list []= '.ti-widget';
-return $list;
-});
-add_filter('rocket_rucss_inline_atts_exclusions', function($list) {
-$list []= 'trustindex-';
 return $list;
 });
 add_filter('script_loader_tag', function($tag) {

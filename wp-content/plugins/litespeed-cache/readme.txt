@@ -4,7 +4,7 @@ Tags: caching, optimize, performance, pagespeed, seo, image optimize, object cac
 Requires at least: 6.0
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 7.9.2
+Stable tag: 7.9.3
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 
@@ -264,6 +264,25 @@ Please don't report a suspected vulnerability in this support forum. Reporting d
 
 = 8.0 - Coming soon 2026 =
 * 🌱**OptiMax** OptiMax to maximize the page score.
+
+= 7.9.3 - Nov 3 2026 =
+* **Object Cache** Fixed repeated database queries when Memcached rejects oversized alloptions values. (Peter Wells #1076)
+* **Core** Moved uninstall handling to uninstall.php to avoid unnecessary option reads on normal requests. (Contributolo PR#1078)
+* **Purge** Added the litespeed_purged action for public purge tag additions. (Contributolo PR#1072)
+* **Page Optimize** Prioritized the front page in CCSS, UCSS, VPI and OptiMax queues and corrected queue capacity handling. (Faisal Ahammad PR#1064)
+* **Guest Mode** Fixed PHP 8.5 deprecation warnings in CIDR checks. (deltafactory PR#1080)
+* **Conf** Fixed WooCommerce option warnings with shared multisite settings. (lhero-org #1077, dassels43)
+* **Page Optimize** Kept CSS/JS optimization on pages with a very large inline style or script block that previously exceeded the PCRE limit and skipped optimization. (ventio, PR#1081)
+* **Crawler** Limited automatic HTTP fallback to connection failures during the Server IP HTTPS test. (unsetfocus #1074)
+* **Core** Fixed constant rewrites of the shared static folder .htaccess on subdirectory multisite. (#869638)
+* **Purge** Fixed excessive cache purges from non-public custom post types. (markhysted #1044, models118)
+* **Purge** Purge Post Type Archive now purges only the post type archive page (e.g. the Shop page), instead of also purging every post of that type. (John-belt #310, models118)
+* **Cloud** Signed the QUIC.cloud link request.
+* **Cloud** Cleared the stored main domain when the QUIC.cloud registration is reset, so a deactivated site no longer reports itself as an alias of an old domain.
+* **Heartbeat** Kept the configured interval on post lists and editors. (#1082)
+* **3rd** Perfmatters script manager no longer disables ESI site-wide; it is now skipped only on ESI requests. (VIP PR#1055)
+* **Cache** Fixed mobile cache vary detection behind LiteSpeed ADC on Apache origins. (PR#1088)
+* **VPI** Preloaded responsive VPI images with their srcset and sizes, so the browser fetches the same candidate the page renders. (PR#1089)
 
 = 7.9.2 - Oct 20 2026 =
 * **Image Optimize** Fixed thumbnails skipped for images in the uploads root. (AsFLY-902 PR#1059)

@@ -153,6 +153,13 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 		if ( isset( $this->snippet ) && $this->snippet->is_active() && ! current_user_can( 'wpcode_activate_snippets', $this->snippet ) ) {
 			$this->is_read_only = true;
 		}
+		/**
+		 * Filter whether the editor is read-only for this snippet.
+		 *
+		 * @param bool                $is_read_only Whether the editor is read-only.
+		 * @param WPCode_Snippet|null $snippet      The snippet being edited, null for a new one.
+		 */
+		$this->is_read_only = (bool) apply_filters( 'wpcode_snippet_manager_is_read_only', $this->is_read_only, isset( $this->snippet ) ? $this->snippet : null );
 		$this->process_message();
 		add_action( 'admin_init', array( $this, 'check_status' ) );
 		add_filter( 'submenu_file', array( $this, 'change_current_menu' ) );
@@ -193,7 +200,13 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 		// phpcs:disable WordPress.Security.NonceVerification
 		if ( ! isset( $_GET['message'] ) ) {
 			if ( $this->is_read_only ) {
-				$this->set_error_message( __( 'This snippet is active, so it is read-only here. Please ask a user who can activate snippets to make changes.', 'insert-headers-and-footers' ) );
+				/**
+				 * Filter the message shown when the editor is read-only.
+				 *
+				 * @param string              $message The message.
+				 * @param WPCode_Snippet|null $snippet The snippet being edited, null for a new one.
+				 */
+				$this->set_error_message( apply_filters( 'wpcode_snippet_manager_read_only_message', __( 'This snippet is active, so it is read-only here. Please ask a user who can activate snippets to make changes.', 'insert-headers-and-footers' ), isset( $this->snippet ) ? $this->snippet : null ) );
 			} else {
 				$snippet_types = array_keys( wpcode()->execute->get_options() );
 				if ( in_array( 'html', $snippet_types, true ) && ! current_user_can( 'unfiltered_html', 'wpcode-editor' ) ) {
@@ -1418,14 +1431,13 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 		$snippet_code = isset( $_POST['wpcode_snippet_code'] ) ? $_POST['wpcode_snippet_code'] : '';  // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		// Bind the submitted code type to the user's tier and require object-level edit on an existing snippet.
-		$submitted_id        = empty( $_REQUEST['id'] ) ? 0 : absint( $_REQUEST['id'] );
-		$required_capability = class_exists( 'WPCode_Access' ) ? WPCode_Access::capability_for_code_type( $code_type ) : '';
-		$can_edit_type       = empty( $required_capability ) ? current_user_can( 'wpcode_edit_snippets' ) : current_user_can( $required_capability );
-		if ( ! $can_edit_type || ( $submitted_id && ! current_user_can( 'edit_post', $submitted_id ) ) ) {
+		$submitted_id = empty( $_REQUEST['id'] ) ? 0 : absint( $_REQUEST['id'] );
+		if ( ! WPCode_Snippet_Input::can_edit( $code_type, $submitted_id ) ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to edit snippets of this type.', 'insert-headers-and-footers' ), '', array( 'response' => 403 ) );
 		}
 
-		if ( WPCode_Snippet_Execute::is_code_not_allowed( $snippet_code ) ) {
+		$prepared_code = WPCode_Snippet_Input::prepare_code( $snippet_code, $code_type );
+		if ( is_wp_error( $prepared_code ) ) {
 			$title = esc_html__( 'Restricted Code Detected', 'insert-headers-and-footers' );
 			wp_die(
 				'<h2>' . $title . '</h2>' .
@@ -1438,15 +1450,7 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 				$title
 			);
 		}
-
-		if ( 'text' === $code_type ) {
-			$snippet_code = wpautop( $snippet_code );
-		}
-
-		// Strip script/event-handler HTML from text snippets authored without unfiltered_html.
-		if ( 'text' === $code_type && ! current_user_can( 'unfiltered_html' ) ) {
-			$snippet_code = wp_kses_post( $snippet_code );
-		}
+		$snippet_code = $prepared_code;
 
 		$tags = array();
 
@@ -1455,17 +1459,6 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 			if ( ! empty( $tags ) ) {
 				$tags = explode( ',', $tags );
 			}
-		}
-
-		if ( 'php' === $code_type ) {
-			$snippet_code = preg_replace( '|^\s*<\?(php)?|', '', $snippet_code );
-			// Let's also replace the closing php tag if any.
-			$snippet_code = preg_replace( '|\?>\s*$|', '', $snippet_code );
-		}
-
-		if ( 'js' === $code_type && apply_filters( 'wpcode_strip_script_tags_for_js', true ) ) {
-			$snippet_code = preg_replace( '|^\s*<script[^>]*>|', '', $snippet_code );
-			$snippet_code = preg_replace( '|</(script)>\s*$|', '', $snippet_code );
 		}
 
 		$rules = isset( $_POST['wpcode_cl_rules'] ) ? json_decode( sanitize_textarea_field( wp_unslash( $_POST['wpcode_cl_rules'] ) ), true ) : array();
@@ -1521,7 +1514,10 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 
 		$this->add_extra_snippet_data( $snippet );
 
+		// The posted code is slashed; the activation check must unslash it before running it.
+		wpcode()->execute->set_activation_code_slashed( true );
 		$id = $snippet->save();
+		wpcode()->execute->set_activation_code_slashed( false );
 
 		// Save the last used code type.
 		update_user_meta( get_current_user_id(), 'wpcode_default_code_type', $code_type );
@@ -1544,10 +1540,13 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 			$execute_now = false;
 		}
 
-		// Now that we saved the data, let's execute the snippet if needed.
-		if ( $execute_now ) {
-			wpcode()->execute->doing_activation(); // Mark this to unslash the code.
+		// Now that we saved the data, let's execute the snippet if needed. A refused save runs nothing.
+		if ( $execute_now && $id ) {
+			// The on-demand code is the posted, still-slashed value; mark it so the run unslashes it like the activation check.
+			wpcode()->execute->doing_activation();
+			wpcode()->execute->set_activation_code_slashed( true );
 			$snippet->execute( apply_filters( 'wpcode_on_demand_ignore_conditional_logic', false ) );
+			wpcode()->execute->set_activation_code_slashed( false );
 			$message_number = 5;
 		}
 

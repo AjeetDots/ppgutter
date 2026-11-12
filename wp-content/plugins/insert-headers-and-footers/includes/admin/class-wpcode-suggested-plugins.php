@@ -72,7 +72,7 @@ class WPCode_Suggested_Plugins {
 				'description' => esc_html__( 'Making Email Deliverability Easy for WordPress', 'insert-headers-and-footers' ),
 				'url'         => 'https://downloads.wordpress.org/plugin/wp-mail-smtp.zip',
 				'slug'        => 'wp-mail-smtp/wp_mail_smtp.php',
-				'pro_slug'    => 'wp-mail-smtp-pro/wp_mail_smtp_pro.php',
+				'pro_slug'    => 'wp-mail-smtp-pro/wp_mail_smtp.php',
 				'icon'        => 'icon-wp-mail-smtp.png',
 				'suggested'   => true,
 				'library'     => false,

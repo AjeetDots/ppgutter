@@ -561,10 +561,20 @@ class DoubleOptin
         $deletingIds = [];
         foreach ($entries as $entry) {
             $deletingIds[] = $entry->id;
-            $this->deleteAssociateFiles($entry);
         }
-
         $deletingIds = array_filter($deletingIds);
+
+        // A forged file value can name another entry's upload; when core exposes
+        // the check, skip a file another submission owns.
+        $referenced = [];
+        if (method_exists(Helper::class, 'getFilesReferencedByOtherSubmissions')) {
+            $referenced = Helper::getFilesReferencedByOtherSubmissions(
+                $this->collectUploadBasenames($entries), $deletingIds
+            );
+        }
+        foreach ($entries as $entry) {
+            $this->deleteAssociateFiles($entry, $referenced);
+        }
 
         if (!$deletingIds) {
             return;
@@ -612,7 +622,7 @@ class DoubleOptin
         $errors = ob_get_clean();
     }
 
-    private function deleteAssociateFiles($entry)
+    private function deleteAssociateFiles($entry, $referenced = [])
     {
         $status = apply_filters_deprecated(
             'fluentform_disable_attachment_delete',
@@ -642,13 +652,51 @@ class DoubleOptin
                     $files = [$files];
                 }
                 foreach ($files as $file) {
-                    $file = wp_upload_dir()['basedir'] . FLUENTFORM_UPLOAD_DIR . '/' . basename($file);
+                    $fileName = basename($file);
+
+                    // Plugin uploads are ff-prefixed, so a guard or dot-file name is forged.
+                    if ('' === $fileName || '.' === $fileName[0]
+                        || in_array(strtolower($fileName), ['index.php', 'web.config'], true)) {
+                        continue;
+                    }
+
+                    // The response is submitter-controlled and can name another entry's
+                    // upload, so only delete a file no other submission still references.
+                    if (isset($referenced[$fileName])) {
+                        continue;
+                    }
+
+                    $file = wp_upload_dir()['basedir'] . FLUENTFORM_UPLOAD_DIR . '/' . $fileName;
                     if (is_readable($file) && !is_dir($file)) {
                         wp_delete_file($file);
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Upload basenames the given entries' responses point at.
+     *
+     * @param iterable $entries
+     * @return string[]
+     */
+    private function collectUploadBasenames($entries)
+    {
+        $names = [];
+        foreach ($entries as $entry) {
+            $data = json_decode($entry->response, true);
+            foreach ($this->getFileFields($entry->form_id) as $field) {
+                if (empty($data[$field])) {
+                    continue;
+                }
+                foreach ((array) $data[$field] as $file) {
+                    $names[basename($file)] = true;
+                }
+            }
+        }
+
+        return array_keys($names);
     }
 
     private function getFileFields($formId)

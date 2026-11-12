@@ -55,13 +55,10 @@ function ppg_status_checks() {
 	} else {
 		$folder = false !== strpos( $host, '}' ) ? substr( $host, strpos( $host, '}' ) + 1 ) : $host;
 		$c[]    = array( 'Mailbox settings', false !== stripos( $folder, 'INBOX' ) ? 'warn' : 'ok', $user . ' / folder "' . $folder . '"' . ( false !== stripos( $folder, 'INBOX' ) ? ' (INBOX misses archived mail: use [Gmail]/All Mail)' : '' ) );
+		$c[]    = array( 'Mailbox certificate check', 'ok', false !== stripos( $host, 'novalidate-cert' ) ? 'OFF (host has /novalidate-cert; use only if the server cannot send SNI)' : 'on (add /novalidate-cert to PPG_IMAP_HOST if you get "No SNI provided")' );
 	}
 
 	$c[] = array( 'HubSpot token', '' !== (string) ppg_lead_cfg( 'PPG_HUBSPOT_TOKEN' ) ? 'ok' : 'bad', '' !== (string) ppg_lead_cfg( 'PPG_HUBSPOT_TOKEN' ) ? 'set (use the button below to test it)' : 'PPG_HUBSPOT_TOKEN is not set' );
-
-	$secret = (string) ppg_lead_cfg( 'PPG_LEAD_SECRET' );
-	$weak   = '' === $secret || 0 === stripos( $secret, 'CHANGE-ME' ) || strlen( $secret ) < 24;
-	$c[]    = array( 'Zapier/lead secret', $weak ? 'bad' : 'ok', $weak ? 'PPG_LEAD_SECRET is missing, a placeholder or shorter than 24 characters' : 'set' );
 
 	$go = ppg_go_live_timestamp();
 	if ( ! $go ) {
@@ -95,7 +92,6 @@ function ppg_status_checks() {
 
 	$held = count( (array) get_option( 'ppg_lead_review', array() ) );
 	$c[]  = array( 'Review queue', $held ? 'warn' : 'ok', $held ? $held . ' lead(s) held (Tools > PPG Lead Review)' : 'empty' );
-	$c[]  = array( 'Checkatrade webhook', 'ok', ppg_lead_cfg( 'PPG_ENABLE_CHECKATRADE_WEBHOOK' ) ? 'enabled: /wp-json/ppg/v1/checkatrade' : 'off (email route only)' );
 	return $c;
 }
 

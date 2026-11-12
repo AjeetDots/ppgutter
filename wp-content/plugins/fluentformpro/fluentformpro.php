@@ -2,7 +2,7 @@
 /**
 Plugin Name: Fluent Forms Pro Add On Pack
 Description: The Pro version of FluentForm, the most advanced, drag and drop form builder plugin for WordPress.
-Version: 6.2.16
+Version: 6.2.17
 Author: Fluent Forms
 Author URI: https://fluentforms.com
 Plugin URI: https://fluentforms.com/
@@ -14,7 +14,7 @@ Domain Path: /resources/languages
 defined('ABSPATH') or die;
 
 define('FLUENTFORMPRO', true);
-define('FLUENTFORMPRO_VERSION', '6.2.16');
+define('FLUENTFORMPRO_VERSION', '6.2.17');
 defined('FLUENTFORM_MINIMUM_CORE_VERSION') or define('FLUENTFORM_MINIMUM_CORE_VERSION', '6.0.0');
 define('FLUENTFORM_UPLOAD_DIR', '/fluentform');
 define('FLUENTFORMPRO_DIR_URL', plugin_dir_url(__FILE__));
@@ -52,7 +52,6 @@ if (!class_exists('FluentFormPro')) {
             'FluentFormPro\Integrations\GoogleSheet',
             'FluentFormPro\Integrations\Trello',
             'FluentFormPro\Integrations\Drip',
-            // 'FluentFormPro\Integrations\Aweber',
             'FluentFormPro\Integrations\Sendinblue',
             'FluentFormPro\Integrations\UserRegistration',
             'FluentFormPro\Integrations\Automizy',
@@ -297,8 +296,10 @@ if (!class_exists('FluentFormPro')) {
              * Field selection for slack
              */
             add_filter('fluentform/slack_field_label_selection', function ($labels, $settings) {
-                if (FluentForm\Framework\Helpers\ArrayHelper::exists($settings, 'fields')) {
-                    $selectedFields = FluentForm\Framework\Helpers\ArrayHelper::get($settings, 'fields');
+                $selectedFields = FluentForm\Framework\Helpers\ArrayHelper::get($settings, 'fields');
+                // An empty selection means the admin never touched "Select Fields" (its default),
+                // not "send nothing" — restrict only once at least one field is actually checked.
+                if (!empty($selectedFields)) {
                     $labels = array_intersect($labels, $selectedFields);
                 }
 

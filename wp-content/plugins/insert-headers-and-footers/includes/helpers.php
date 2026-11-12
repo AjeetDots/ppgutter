@@ -129,13 +129,14 @@ function wpcode_find_location_label( $location_slug ) {
  * @param string     $description Field description (optional).
  * @param string|int $value Field value (optional).
  * @param string     $label Field label (optional).
+ * @param bool       $disabled Render the toggle locked; a disabled checkbox is not posted (optional).
  *
  * @return string
  */
-function wpcode_get_checkbox_toggle( $checked, $name, $description = '', $value = '', $label = '' ) {
+function wpcode_get_checkbox_toggle( $checked, $name, $description = '', $value = '', $label = '', $disabled = false ) {
 	$markup = '<label class="wpcode-checkbox-toggle">';
 
-	$markup .= '<input type="checkbox" ' . checked( $checked, true, false ) . ' name="' . esc_attr( $name ) . '" id="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '" />';
+	$markup .= '<input type="checkbox" ' . checked( $checked, true, false ) . disabled( $disabled, true, false ) . ' name="' . esc_attr( $name ) . '" id="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '" />';
 	$markup .= '<span class="wpcode-checkbox-toggle-slider"></span>';
 	$markup .= '</label>';
 	if ( ! empty( $label ) ) {

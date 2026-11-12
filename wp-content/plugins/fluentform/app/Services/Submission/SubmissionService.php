@@ -2,7 +2,7 @@
 
 namespace FluentForm\App\Services\Submission;
 
-defined('ABSPATH') or die;
+defined('ABSPATH') || die;
 
 use Exception;
 use FluentForm\App\Models\EntryDetails;
@@ -21,6 +21,8 @@ use FluentForm\App\Services\Manager\FormManagerService;
 class SubmissionService
 {
     /**
+     * The submission model the service queries.
+     *
      * @var \FluentForm\App\Models\Submission|\FluentForm\Framework\Database\Query\Builder|\FluentForm\Framework\Database\Orm\Builder
      */
     protected $model;
@@ -58,12 +60,14 @@ class SubmissionService
                 define('FLUENTFORM_RENDERING_ENTRY', true);
             }
 
-            $submission = $this->model->with(['form','submissionMeta' => function($q) {
-                $q->where('meta_key', '_entry_uid_hash');
-            }])->findOrFail($submissionId);
+            $submission = $this->model->with([
+                'form',
+                'submissionMeta' => function ($q) {
+                    $q->where('meta_key', '_entry_uid_hash');
+                },
+            ])->findOrFail($submissionId);
 
             $form = $submission->form;
-
 
             $autoRead = apply_filters_deprecated(
                 'fluentform_auto_read',
@@ -83,9 +87,9 @@ class SubmissionService
                 $submission->_entry_uid_hash = Arr::get($meta, '0.value');
                 $this->setEntryUidLink($submission);
             }
-        
+
             $submission = apply_filters('fluentform/submission_before_parse', $submission, $form);
-        
+
             $submission = FormDataParser::parseFormEntry($submission, $form, null, true);
             $this->enrichWithUser($submission);
 
@@ -107,12 +111,10 @@ class SubmissionService
 
 
     /**
-     * @param array{
-     *     formId?: int,         // Optional when using uidHash
-     *     serialNumber?: int,   // Required if using formId without uidHash
-     *     uidHash?: string,     // Can be used with or without formId
-     *     isHtml?: bool
-     * } $params Either (formId + serialNumber) OR uidHash required
+     * Find a submission by form and serial number, or by its uid hash.
+     * Pass either formId + serialNumber, or uidHash (with or without formId).
+     *
+     * @param array{formId?: int, serialNumber?: int, uidHash?: string, isHtml?: bool} $params
      *
      * @return Submission
      * @throws Exception
@@ -421,7 +423,7 @@ class SubmissionService
 
     public function deleteEntries($submissionIds, $formId)
     {
-        $submissionIds = (array)$submissionIds;
+        $submissionIds = (array) $submissionIds;
 
         do_action('fluentform/before_deleting_entries', $submissionIds, $formId);
 
@@ -456,7 +458,7 @@ class SubmissionService
             'fluentform_disable_attachment_delete',
             [
                 false,
-                $formId
+                $formId,
             ],
             FLUENTFORM_FRAMEWORK_UPGRADE,
             'fluentform/disable_attachment_delete',
@@ -471,6 +473,9 @@ class SubmissionService
 
         if ($shouldDelete) {
             $deletables = $this->getAttachments($submissionIds, $formId);
+            $referenced = Helper::getFilesReferencedByOtherSubmissions(
+                array_map('basename', $deletables), $submissionIds
+            );
 
             foreach ($deletables as $file) {
                 $fileName = basename($file);
@@ -478,6 +483,12 @@ class SubmissionService
                 // Plugin uploads are ff-prefixed, so guard files and dot-files can only be crafted.
                 if ('' === $fileName || '.' === $fileName[0]
                     || in_array(strtolower($fileName), ['index.php', 'web.config'], true)) {
+                    continue;
+                }
+
+                // The response is submitter-controlled and can name another entry's
+                // upload, so only delete a file no other submission still references.
+                if (isset($referenced[$fileName])) {
                     continue;
                 }
 
@@ -491,7 +502,7 @@ class SubmissionService
             if (defined('FLUENTFORMPRO')) {
                 $tempDir = wp_upload_dir()['basedir'] . FLUENTFORM_UPLOAD_DIR . '/temp/';
                 $files = glob($tempDir . '*');
-                if(!empty($files)){
+                if (!empty($files)) {
                     // Shared across forms/visitors: only aged files, never an in-flight upload.
                     $cutoff = time() - apply_filters('fluentform/temp_file_delete_time', 172800);
                     foreach ($files as $file) {
@@ -507,7 +518,7 @@ class SubmissionService
 
     public function getAttachments($submissionIds, $form)
     {
-        $submissionIds = (array)$submissionIds;
+        $submissionIds = (array) $submissionIds;
 
         if (!$form instanceof Form) {
             $form = Form::find($form);
@@ -536,7 +547,7 @@ class SubmissionService
 
     public function getNotes($submissionId, $attributes)
     {
-        $formId = (int)Arr::get($attributes, 'form_id');
+        $formId = (int) Arr::get($attributes, 'form_id');
         $apiLog = 'yes' === sanitize_text_field(Arr::get($attributes, 'api_log'));
 
         $metaKeys = ['_notes'];
@@ -587,7 +598,7 @@ class SubmissionService
             [
                 $notes,
                 $submissionId,
-                $formId
+                $formId,
             ],
             FLUENTFORM_FRAMEWORK_UPGRADE,
             'fluentform/entry_notes',
@@ -634,7 +645,7 @@ class SubmissionService
 
         $note = apply_filters('fluentform/store_submission_note', $note);
 
-        $submissionMeta = new SubmissionMeta;
+        $submissionMeta = new SubmissionMeta();
 
         $submissionMeta->fill($note)->save();
 
@@ -697,7 +708,7 @@ class SubmissionService
             'fluentform_submission_user_changed',
             [
                 $submission,
-                $user
+                $user,
             ],
             FLUENTFORM_FRAMEWORK_UPGRADE,
             'fluentform/submission_user_changed',
@@ -770,13 +781,13 @@ class SubmissionService
 
         $entryItems = [];
         foreach ($formData as $dataKey => $dataValue) {
-            if ($dataValue === '' || $dataValue === null) {
+            if ('' === $dataValue || null === $dataValue) {
                 continue;
             }
 
             if (is_array($dataValue) || is_object($dataValue)) {
                 foreach ($dataValue as $subKey => $subValue) {
-                    if ($subValue === '' || $subValue === null || $subValue === [] || $subValue === false) {
+                    if ('' === $subValue || null === $subValue || [] === $subValue || false === $subValue) {
                         continue;
                     }
                     $entryItems[] = [

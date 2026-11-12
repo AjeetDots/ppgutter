@@ -2,7 +2,7 @@
 
 namespace FluentFormPro\classes\Chat;
 
-defined('ABSPATH') or die;
+defined('ABSPATH') || die;
 
 use FluentForm\App\Models\FormMeta;
 use FluentForm\App\Services\FormBuilder\ShortCodeParser;
@@ -15,6 +15,8 @@ use FluentForm\Framework\Helpers\ArrayHelper;
  */
 class ChatApi
 {
+    const DEFAULT_MODEL = 'gpt-5.6-luna';
+
     protected $url = 'https://api.openai.com/v1/chat/completions';
     protected $key;
 
@@ -45,9 +47,30 @@ class ChatApi
         return $content;
     }
 
- 
+    /**
+     * OpenAI model sent with every Chat Completions request.
+     *
+     * @param int|null $formId Form the request is for; null for verification and AI form building.
+     * @return string
+     */
+    public function getModel($formId = null)
+    {
+        /**
+         * Filters the OpenAI model used for verification, AI form building and ChatGPT feeds.
+         *
+         * @param string   $model
+         * @param int|null $formId Form ID for ChatGPT feeds; null for verification and AI form building.
+         */
+        $model = apply_filters('fluentform/openai_model', self::DEFAULT_MODEL, $formId);
 
-    public function makeRequest($args = [], $token = '')
+        if (!is_string($model) || '' === trim($model)) {
+            return self::DEFAULT_MODEL;
+        }
+
+        return trim($model);
+    }
+
+    public function makeRequest($args = [], $token = '', $formId = null)
     {
         if (!$token) {
             $token = ArrayHelper::get(get_option($this->key), 'access_token');
@@ -58,28 +81,31 @@ class ChatApi
             'Content-Type'  => 'application/json',
         ];
 
+        $message = $args;
+        if (!$message) {
+            $message = [
+                'role'    => 'system',
+                'content' => 'You are a helpful assistant.',
+            ];
+        }
+
         $bodyArgs = [
-            "model"    => "gpt-3.5-turbo",
-            "messages" => [
-                $args ?: [
-                    "role"    => "system",
-                    "content" => "You are a helpful assistant."
-                ]
-            ]
+            'model'    => $this->getModel($formId),
+            'messages' => [$message],
         ];
 
-        add_filter('http_request_timeout', function($timeout) {
-            return 60; // Set timeout to 60 seconds
+        add_filter('http_request_timeout', function () {
+            return 60;
         });
 
         $request = wp_remote_post($this->url, [
             'headers' => $headers,
-            'body'    => json_encode($bodyArgs)
+            'body'    => wp_json_encode($bodyArgs),
         ]);
 
         if (did_filter('http_request_timeout')) {
-            add_filter('http_request_timeout', function($timeout) {
-                return 5; // Set timeout to original 5 seconds
+            add_filter('http_request_timeout', function () {
+                return 5;
             });
         }
 
@@ -91,7 +117,7 @@ class ChatApi
         $body = json_decode(wp_remote_retrieve_body($request), true);
         $code = wp_remote_retrieve_response_code($request);
 
-        if ($code !== 200) {
+        if (200 !== $code) {
             $error = __('Something went wrong.', 'fluentformpro');
             if (isset($body['error']['message'])) {
                 // phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- Dynamic string from API/config

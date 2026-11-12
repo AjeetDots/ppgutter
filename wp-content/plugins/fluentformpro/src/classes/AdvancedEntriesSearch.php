@@ -69,7 +69,9 @@ class AdvancedEntriesSearch
                 $arr['type'] = 'dates';
                 $format = Arr::get($field, 'settings.date_format');
                 $arr['format'] = $format;
-                $dateType = Arr::get($this->getDatesInfo(), $format . '.type');
+                $dateFormats = $this->getDatesInfo();
+                $dateInfo = Arr::exists($dateFormats, $format) ? $dateFormats[$format] : [];
+                $dateType = Arr::get($dateInfo, 'type');
                 if ('time' == $dateType) {
                     $arr['type'] = 'time';
                 }
@@ -571,8 +573,9 @@ class AdvancedEntriesSearch
         $column = "{$entryDetailsTableAlias}.{$column}";
         $operator = Arr::get($where, 'operator');
         $value = Arr::get($where, 'value');
-        $regex = Arr::get($dateFormats, $format . '.regex');
-        $mysqlDateFormat = Arr::get($dateFormats, $format . '.mysql_format');
+        $dateInfo = $dateFormats[$format];
+        $regex = Arr::get($dateInfo, 'regex');
+        $mysqlDateFormat = Arr::get($dateInfo, 'mysql_format');
         $dateInputFormat = 'time' === Arr::get($where, 'type') ? '%H:%i:%s' : '%Y-%m-%d %H:%i:%s';
         $query->where(function ($query) use ($column, $mysqlDateFormat, $regex, $dateInputFormat, $operator, $value) {
             // Use REGEXP to filter valid date/time strings

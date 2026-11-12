@@ -4,7 +4,7 @@ Tags: contact form, wp forms, forms, form builder, custom form
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 6.2.16
+Stable tag: 6.2.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -439,6 +439,25 @@ You can get support from our official support thread at <a href="https://wpmanag
 12. Asset Loading Comparison with Other Plugins
 
 == Changelog ==
+= 6.2.17 (Date: November 02, 2026) =
+- Fixes Turnstile sometimes not rendering
+- Fixes Slack and Discord sometimes missing field data on multi-integration submissions
+- Fixes Slack dropping a field answered with "0"
+- Fixes form re-import overwriting forms a manager can't access
+- Fixes the dashboard widget showing stats from restricted forms
+- Fixes the payment-success email not sending for some free orders
+- Improves security of Mailchimp API key validation
+- Improves manager-permission security so access stays within their assigned forms
+- Improves form-settings security so protected options can't be saved through the generic settings endpoint
+- Improves global-settings security to keep internal data private
+- Improves entry-view security so external images show as a link instead of loading
+- Improves security of file matching during entry cleanup, avoiding unrelated files with similar names
+- Improves email-attachment security so only files from their own entry are used
+- Improves entry-deletion security to protect files still used by other entries
+- Improves Range Slider security so product quantities accept only whole numbers within range
+- Improves subscription security so fixed-amount coupon discounts always add up correctly
+- Improves checkout security so the order total stays accurate if a paid item is removed
+- Improves payment security so an amount rounding to zero can't be accepted
 
 = 6.2.16 (Date: October 16, 2026) =
 - Adds "Add my past orders" to claim guest orders by email

@@ -24,7 +24,7 @@ class Client extends IntegrationManagerHelper
 		$this->app = $app;
 
 		parent::__construct(
-			$this->metaKey, $app->request->get('form_id', false), true
+			$this->metaKey, absint($app->request->get('form_id', false)), true
 		);
 	}
 

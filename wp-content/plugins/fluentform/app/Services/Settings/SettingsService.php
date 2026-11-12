@@ -189,17 +189,7 @@ class SettingsService
 
         $key = sanitize_text_field(Arr::get($attributes, 'meta_key'));
 
-        // SECURITY (FINDING-14): this generic settings store accepted an arbitrary meta_key with no
-        // allowlist, letting a forms_manager overwrite meta owned by dedicated, capability-gated
-        // endpoints — most importantly the unfiltered_html-gated custom JS/CSS keys (bypassing the
-        // boundary Customizer::store() enforces) and payment settings. Reject those keys here; each
-        // has its own proper route. Filterable so first-party code can extend the protected set.
-        $protectedKeys = apply_filters('fluentform/protected_form_meta_keys', [
-            '_custom_form_js',
-            '_custom_form_css',
-            '_payment_settings',
-        ]);
-        if (in_array($key, $protectedKeys, true)) {
+        if (!$this->isStorableMetaKey($key)) {
             throw new \FluentForm\Framework\Validator\ValidationException('', 422, null, [
                 'errors' => [
                     'meta_key' => [__('This settings key cannot be modified from this endpoint.', 'fluentform')],
@@ -230,16 +220,14 @@ class SettingsService
             'form_id'  => $formId,
         ];
 
-        // If the request has an valid id field it's safe to assume
-        // that the user wants to update an existing settings.
-        // So, we'll proceed to do so by finding it first.
         $id = (int) Arr::get($attributes, 'meta_id');
 
         $settingsQuery = FormMeta::where('form_id', $formId);
 
         $settings = null;
         if ($id) {
-            $settings = $settingsQuery->find($id);
+            // Match the key too, so an id can't repurpose another meta row of the form.
+            $settings = FormMeta::where('form_id', $formId)->where('meta_key', $key)->find($id);
         }
 
         if (!empty($settings)) {
@@ -260,7 +248,35 @@ class SettingsService
         $formId = intval(Arr::get($attributes, 'form_id'));
         $id = intval(Arr::get($attributes, 'meta_id'));
 
-        FormMeta::where('form_id', $formId)->where('id', $id)->delete();
+        $meta = FormMeta::where('form_id', $formId)->where('id', $id)->first();
+
+        if ($meta && $this->isStorableMetaKey($meta->meta_key)) {
+            FormMeta::where('form_id', $formId)->where('id', $id)->delete();
+        }
+    }
+
+    /**
+     * These keys have their own capability-gated routes; block them here so a
+     * lesser capability can't write them through the generic store.
+     *
+     * @param string $key
+     * @return bool
+     */
+    private function isStorableMetaKey($key)
+    {
+        $protectedKeys = (array) apply_filters('fluentform/protected_form_meta_keys', [
+            '_custom_form_js',
+            '_custom_form_css',
+            '_payment_settings',
+            'is_conversion_form',
+            '_primary_email_field',
+            'user_registration_feeds',
+            'fluentform_webhook_feed',
+            '_pdf_feeds',
+            'double_optin_settings',
+        ]);
+
+        return !in_array($key, $protectedKeys, true);
     }
 
     public function conversationalDesign($formId)

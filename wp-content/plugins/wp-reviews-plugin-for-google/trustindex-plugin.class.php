@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'include' . DIRECTORY_SEPARATOR . 'asset-proxy.php';
 class TrustindexPlugin_google
 {
 private $plugin_file_path;
@@ -158,6 +159,7 @@ public function is_review_download_in_progress()
 {
 return get_option($this->get_option_name('review-download-inprogress'), 0);
 }
+
 public function is_review_manual_download()
 {
 return get_option($this->get_option_name('review-manual-download'), 0);
@@ -196,13 +198,38 @@ $details['access_token'] = sanitize_text_field(wp_unslash($tmp['access_token']))
 }
 update_option($this->get_option_name('page-details'), $details, false);
 }
+public function sanitizePageDetails($pageDetails)
+{
+$sanitizers = [
+'id' => 'sanitize_text_field',
+'name' => 'sanitize_text_field',
+'address' => 'sanitize_text_field',
+'avatar_url' => 'esc_url_raw',
+'rating_number' => 'intval',
+'rating_score' => 'floatval',
+];
+foreach ($sanitizers as $key => $sanitizer) {
+if (isset($pageDetails[$key])) {
+$pageDetails[$key] = call_user_func($sanitizer, is_scalar($pageDetails[$key]) ? $pageDetails[$key] : '');
+}
+}
+foreach ([ 'rating_numbers', 'rating_numbers_last' ] as $key) {
+if (isset($pageDetails[$key])) {
+$pageDetails[$key] = is_array($pageDetails[$key]) ? array_map('intval', $pageDetails[$key]) : [];
+}
+}
+return $pageDetails;
+}
 public function save_reviews($tmp)
 {
 global $wpdb;
 $tableName = $this->get_tablename('reviews');
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-$oldReviews = $wpdb->get_results($wpdb->prepare('SELECT reviewId, hidden, highlight FROM %i ORDER BY date DESC', $tableName), ARRAY_A);
+$oldReviews = $wpdb->get_results($wpdb->prepare('SELECT reviewId, hidden, highlight, user_photo FROM %i ORDER BY date DESC', $tableName), ARRAY_A);
+$oldPhotos = array_column($oldReviews, 'user_photo');
 $oldReviews = array_combine(array_column($oldReviews, 'reviewId'), $oldReviews);
+$deletedReviewIds = $this->getDeletedReviewIds();
+$photos = [];
 $wpdb->query($wpdb->prepare('TRUNCATE %i', $tableName));
 if ($wpdb->last_error) {
 throw new Exception('DB truncate failed: '. esc_html($wpdb->last_error));
@@ -226,6 +253,9 @@ else {
 $review[ $key ] = $value ? sanitize_text_field(wp_unslash($value)) : $value;
 }
 }
+if (isset($review['id']) && in_array((string)$review['id'], $deletedReviewIds, true)) {
+continue;
+}
 
 $hidden = 0;
 $highlight = null;
@@ -239,7 +269,7 @@ $wpdb->insert($tableName, [
 'user_photo' => $review['reviewer']['avatar_url'],
 'text' => $review['text'],
 'rating' => $review['rating'] ? $review['rating'] : 5,
-'date' => substr($review['created_at'], 0, 10),
+'date' => substr($review['created_at'] ?? $review['date'] ?? '', 0, 10),
 'reviewId' => isset($review['id']) ? $review['id'] : null,
 'reply' => isset($review['reply']) ? $review['reply'] : "",
 'hidden' => $hidden,
@@ -248,8 +278,45 @@ $wpdb->insert($tableName, [
 if ($wpdb->last_error) {
 throw new Exception('DB insert failed: '. esc_html($wpdb->last_error));
 }
+$photos []= $review['reviewer']['avatar_url'];
 }
+$this->getAssetProxy()->restoreUrls($photos);
+$this->getAssetProxy()->revokeUrls(array_diff($oldPhotos, $photos));
+wp_cache_delete('ti-reviews-cache-'.$this->getShortName());
 update_option($this->get_option_name('review-download-modal'), 0, false);
+}
+public function deleteReview($id)
+{
+global $wpdb;
+$tableName = $this->get_tablename('reviews');
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+$review = $wpdb->get_row($wpdb->prepare('SELECT reviewId, user_photo FROM %i WHERE id = %d', $tableName, $id), ARRAY_A);
+if (null === $review) {
+return;
+}
+if ('' !== (string)$review['reviewId']) {
+$deletedReviewIds = $this->getDeletedReviewIds();
+$deletedReviewIds []= $review['reviewId'];
+update_option($this->get_option_name('deleted-reviews'), array_values(array_unique($deletedReviewIds)), false);
+}
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+$wpdb->delete($tableName, [ 'id' => $id ]);
+wp_cache_delete('ti-reviews-cache-'.$this->getShortName());
+$this->getAssetProxy()->revokeUrls([ $review['user_photo'] ]);
+}
+private function getDeletedReviewIds()
+{
+$deletedReviewIds = get_option($this->get_option_name('deleted-reviews'), []);
+return is_array($deletedReviewIds) ? $deletedReviewIds : [];
+}
+private function getReviewPhotoUrls()
+{
+global $wpdb;
+if (!$this->is_table_exists('reviews')) {
+return [];
+}
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+return $wpdb->get_col($wpdb->prepare('SELECT user_photo FROM %i', $this->get_tablename('reviews')));
 }
 
 
@@ -270,15 +337,45 @@ public function get_plugin_slug()
 {
 return basename($this->get_plugin_dir());
 }
+private $assetProxy = null;
+public function getAssetProxy()
+{
+if (null === $this->assetProxy) {
+$this->assetProxy = new TrustindexAssetProxy_google($this);
+}
+return $this->assetProxy;
+}
 
 
 public function uninstall()
 {
 $this->delete_async_request();
+$this->getAssetProxy()->revokeUrls($this->getReviewPhotoUrls());
 include $this->get_plugin_dir() . 'include' . DIRECTORY_SEPARATOR . 'uninstall.php';
-if (is_file($this->getCssFile())) {
-wp_delete_file($this->getCssFile());
+foreach ([ $this->getCssFile(false, false), $this->getCssFile(false, true) ] as $cssFile) {
+if (is_file($cssFile)) {
+wp_delete_file($cssFile);
 }
+}
+if ($this->isLastInstalledPlugin()) {
+$this->getAssetProxy()->delete();
+}
+else {
+$this->getAssetProxy()->clearCache();
+}
+}
+private function isLastInstalledPlugin()
+{
+if (!function_exists('get_plugins')) {
+require_once ABSPATH . 'wp-admin' . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'plugin.php';
+}
+foreach (array_keys(get_plugins()) as $pluginFile) {
+$slug = dirname($pluginFile);
+if ($slug !== $this->get_plugin_slug() && in_array($slug, $this->get_plugin_slugs(), true)) {
+return false;
+}
+}
+return true;
 }
 
 
@@ -324,6 +421,10 @@ $this->getNotificationParam('not-using-no-connection', 'do-check', true)
 ) {
 $this->setNotificationParam('not-using-no-connection', 'active', true);
 $this->setNotificationParam('not-using-no-connection', 'do-check', false);
+}
+if (is_admin() && $this->getAssetProxy()->isEnabled() && ($this->isNotificationActive('gdpr-mode') || $this->isNotificationActive('gdpr-mode', 'dashboard-active'))) {
+$this->setNotificationParam('gdpr-mode', 'active', false);
+$this->setNotificationParam('gdpr-mode', 'dashboard-active', false);
 }
 if ( !class_exists('TrustindexGutenbergPlugin') && function_exists( 'register_block_type' ) && !WP_Block_Type_Registry::get_instance()->is_registered( 'trustindex/block-selector' )) {
 require_once $this->get_plugin_dir() . 'static' . DIRECTORY_SEPARATOR . 'block-editor' . DIRECTORY_SEPARATOR . 'block-editor.php';
@@ -443,7 +544,7 @@ $isWidgetCacheOption = 0 === strpos($opt_name, 'widget-html-') || 0 === strpos($
 if (!$isWidgetCacheOption && !in_array($opt_name, $this->get_option_names())) {
 echo esc_html('Option not registered in plugin (Trustindex class)');
 }
-if (in_array($opt_name, [ 'subscription-id', 'proxy-check' ])) {
+if ($isWidgetCacheOption || in_array($opt_name, [ 'subscription-id', 'proxy-check' ])) {
 return 'trustindex-'. $opt_name;
 }
 else {
@@ -487,6 +588,7 @@ return [
 'review-download-is-connecting',
 'review-download-is-failed',
 'review-manual-download',
+'deleted-reviews',
 'reply-generated',
 'instagram-promo-opened',
 'footer-filter-text',
@@ -737,6 +839,19 @@ sprintf(__('Thank you. Gabor, %s', 'wp-reviews-plugin-for-google'), 'Trustindex 
 /* translators: %s: Platform name */
 'text' => sprintf(__('Your new %s reviews have been downloaded.', 'wp-reviews-plugin-for-google'), $platformName),
 ],
+'gdpr-mode' => [
+'type' => 'warning',
+'extra-class' => "",
+'button-text' => __('Enable It Now »', 'wp-reviews-plugin-for-google'),
+'is-closeable' => true,
+'hide-on-close' => true,
+'hide-on-open' => true,
+'remind-later-button' => false,
+'dashboard' => true,
+'redirect' => '?page='. $this->get_plugin_slug() .'/settings.php&tab=advanced',
+/* translators: %s: Name of the plugin */
+'text' => sprintf(__('New Feature: GDPR-Compliant Mode for %s Plugin!', 'wp-reviews-plugin-for-google'), $this->plugin_name),
+],
 ];
 return $type ? $list[$type] : $list;
 }
@@ -757,18 +872,24 @@ return $default;
 }
 return $notifications[ $type ][ $param ];
 }
-public function isNotificationActive($type)
+public function isNotificationActive($type, $activeParam = 'active')
 {
 $notifications = get_option($this->get_option_name('notifications'), []);
 if (
 !isset($notifications[ $type ]) ||
-!isset($notifications[ $type ]['active']) || !$notifications[ $type ]['active'] ||
+!isset($notifications[ $type ][ $activeParam ]) || !$notifications[ $type ][ $activeParam ] ||
 (isset($notifications[ $type ]['hidden']) && $notifications[ $type ]['hidden']) ||
 (isset($notifications[ $type ]['timestamp']) && $notifications[ $type ]['timestamp'] > time())
 ) {
 return false;
 }
 return true;
+}
+public function getDashboardNotificationOptions()
+{
+return array_filter($this->getNotificationOptions(), function($options, $type) {
+return true === ($options['dashboard'] ?? false) && $this->isNotificationActive($type, 'dashboard-active');
+}, ARRAY_FILTER_USE_BOTH);
 }
 public function getNotificationEmailContent($type)
 {
@@ -967,7 +1088,7 @@ $className = 'TrustindexPlugin_' . $forcePlatform;
 if (!class_exists($className)) {
 return wp_kses_post($this->frontEndErrorForAdmins(ucfirst($forcePlatform) . ' plugin is not active or not found!'));
 }
-$chosedPlatform = new $className($forcePlatform, $filePath, "do-not-care-14.2", "do-not-care-Widgets for Google Reviews", "do-not-care-Google");
+$chosedPlatform = new $className($forcePlatform, $filePath, "do-not-care-14.3", "do-not-care-Widgets for Google Reviews", "do-not-care-Google");
 $chosedPlatform->setNotificationParam('not-using-no-widget', 'active', false);
 if (!$chosedPlatform->is_noreg_linked()) {
 /* translators: %s: Platform name */
@@ -979,7 +1100,7 @@ if ($this->isElementorEditing()) {
 $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $chosedPlatform->renderWidgetAdmin(true));
 $html = wp_kses($html, $className::$allowedAttributesForWidget);
 $html .= $chosedPlatform->addOptimizerOptOutAttributes(
-'<style type="text/css">'.get_option($chosedPlatform->get_option_name('css-content')).'</style>'
+'<style type="text/css">'.$chosedPlatform->getWidgetCssContent().'</style>'
 );
 return $html;
 } else {
@@ -987,7 +1108,7 @@ $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $chosedPlatform->rend
 $html = wp_kses($html, $className::$allowedAttributesForWidget);
 if (!is_file($chosedPlatform->getCssFile()) || get_option($chosedPlatform->get_option_name('load-css-inline'), 0)) {
 $html .= $chosedPlatform->addOptimizerOptOutAttributes(
-'<style type="text/css">'.get_option($chosedPlatform->get_option_name('css-content')).'</style>'
+'<style type="text/css">'.$chosedPlatform->getWidgetCssContent().'</style>'
 );
 }
 return $html;
@@ -1050,9 +1171,12 @@ $cssContent .= '.ti-preview-box { position: unset !important }';
 update_option($this->get_option_name('css-content'), $cssContent, false);
 return $this->handleCssFile();
 }
-public function getCssFile($returnOnlyFile = false)
+public function getCssFile($returnOnlyFile = false, $isGdprMode = null)
 {
-$file = 'trustindex-'. $this->getShortName() .'-widget.css';
+if (null === $isGdprMode) {
+$isGdprMode = $this->getAssetProxy()->isEnabled();
+}
+$file = 'trustindex-'. $this->getShortName() .'-widget'. ($isGdprMode ? '-gdpr' : '') .'.css';
 if ($returnOnlyFile) {
 return $file;
 }
@@ -1067,9 +1191,13 @@ $path = str_replace('http://', 'https://', $path);
 }
 return $path;
 }
+public function getWidgetCssContent()
+{
+return $this->getAssetProxy()->rewriteCss((string)get_option($this->get_option_name('css-content')));
+}
 public function handleCssFile()
 {
-$css = get_option($this->get_option_name('css-content'));
+$css = $this->getWidgetCssContent();
 if (!$css) {
 return;
 }
@@ -3610,7 +3738,7 @@ private static $widget_rating_texts = array (
  1 => 'Onder het gemiddelde',
  2 => 'Gemiddeld',
  3 => 'Goed',
- 4 => 'Uitstekende',
+ 4 => 'Uitstekend',
  ),
  'no' => 
  array (
@@ -4276,6 +4404,273 @@ private static $widget_verified_platform_texts = array (
  'vi' => 'Trustindex xác minh rằng nguồn đánh giá ban đầu là %platform%.',
  'zh' => 'Trustindex 核实该评论的原始来源是 %platform%。',
  'zh_TW' => 'Trustindex 驗證此評論的原始來源為 %platform%。',
+);
+private static $widget_source_disclaimer_texts = array (
+ 'en' => 
+ array (
+ 'text' => 'Trustindex verified that these reviews were published on %name%\'s Google Business Profile.',
+ 'learn-more' => 'Learn more',
+ ),
+ 'af' => 
+ array (
+ 'text' => 'Trustindex het geverifieer dat hierdie resensies op %name% se Google Besigheidsprofiel gepubliseer is.',
+ 'learn-more' => 'Leer meer',
+ ),
+ 'ar' => 
+ array (
+ 'text' => 'تحققت Trustindex من أن هذه المراجعات نُشرت في الملف التجاري لـ %name% على Google.',
+ 'learn-more' => 'اعرف المزيد',
+ ),
+ 'az' => 
+ array (
+ 'text' => 'Trustindex bu rəylərin %name% Google Biznes Profilində dərc olunduğunu təsdiqləyib.',
+ 'learn-more' => 'Ətraflı məlumat',
+ ),
+ 'bg' => 
+ array (
+ 'text' => 'Trustindex потвърди, че тези отзиви са публикувани в бизнес профила в Google на %name%.',
+ 'learn-more' => 'Научете повече',
+ ),
+ 'bn' => 
+ array (
+ 'text' => 'Trustindex যাচাই করেছে যে এই পর্যালোচনাগুলি %name%-এর Google বিজনেস প্রোফাইলে প্রকাশিত হয়েছে।',
+ 'learn-more' => 'আরও জানুন',
+ ),
+ 'bs' => 
+ array (
+ 'text' => 'Trustindex je potvrdio da su ove recenzije objavljene na Google poslovnom profilu %name%.',
+ 'learn-more' => 'Saznajte više',
+ ),
+ 'ca' => 
+ array (
+ 'text' => 'Trustindex ha verificat que aquestes ressenyes es van publicar al Perfil d\'Empresa de Google de %name%.',
+ 'learn-more' => 'Més informació',
+ ),
+ 'cs' => 
+ array (
+ 'text' => 'Trustindex ověřil, že tyto recenze byly zveřejněny ve Firemním profilu Google %name%.',
+ 'learn-more' => 'Zjistit více',
+ ),
+ 'cy' => 
+ array (
+ 'text' => 'Mae Trustindex wedi gwirio bod yr adolygiadau hyn wedi\'u cyhoeddi ar Broffil Busnes Google %name%.',
+ 'learn-more' => 'Dysgu mwy',
+ ),
+ 'da' => 
+ array (
+ 'text' => 'Trustindex har bekræftet, at disse anmeldelser er offentliggjort på Google Virksomhedsprofilen for %name%.',
+ 'learn-more' => 'Læs mere',
+ ),
+ 'de' => 
+ array (
+ 'text' => 'Trustindex hat bestätigt, dass diese Bewertungen im Google Unternehmensprofil von %name% veröffentlicht wurden.',
+ 'learn-more' => 'Mehr erfahren',
+ ),
+ 'el' => 
+ array (
+ 'text' => 'Το Trustindex επαλήθευσε ότι αυτές οι κριτικές δημοσιεύτηκαν στο Προφίλ Επιχείρησης στο Google της επιχείρησης %name%.',
+ 'learn-more' => 'Μάθετε περισσότερα',
+ ),
+ 'es' => 
+ array (
+ 'text' => 'Trustindex ha verificado que estas reseñas se publicaron en el Perfil de Empresa de Google de %name%.',
+ 'learn-more' => 'Más información',
+ ),
+ 'et' => 
+ array (
+ 'text' => 'Trustindex kinnitas, et need arvustused avaldati ettevõtte %name% Google\'i ettevõtteprofiilil.',
+ 'learn-more' => 'Loe lähemalt',
+ ),
+ 'fa' => 
+ array (
+ 'text' => 'Trustindex تأیید کرد که این بازبینی‌ها در نمایه کسب‌وکار %name% در Google منتشر شده‌اند.',
+ 'learn-more' => 'بیشتر بدانید',
+ ),
+ 'fi' => 
+ array (
+ 'text' => 'Trustindex vahvisti, että nämä arvostelut on julkaistu yrityksen %name% Google-yritysprofiilissa.',
+ 'learn-more' => 'Lue lisää',
+ ),
+ 'fr' => 
+ array (
+ 'text' => 'Trustindex a vérifié que ces avis ont été publiés sur la fiche d\'établissement Google de %name%.',
+ 'learn-more' => 'En savoir plus',
+ ),
+ 'gd' => 
+ array (
+ 'text' => 'Dhearbh Trustindex gun deach na lèirmheasan seo fhoillseachadh air Pròifil Gnìomhachais Google aig %name%.',
+ 'learn-more' => 'Barrachd fiosrachaidh',
+ ),
+ 'gl' => 
+ array (
+ 'text' => 'Trustindex verificou que estas recensións se publicaron no Perfil da empresa en Google de %name%.',
+ 'learn-more' => 'Máis información',
+ ),
+ 'he' => 
+ array (
+ 'text' => 'Trustindex אימת שהביקורות האלה פורסמו בפרופיל העסק ב-Google של %name%.',
+ 'learn-more' => 'מידע נוסף',
+ ),
+ 'hi' => 
+ array (
+ 'text' => 'Trustindex ने सत्यापित किया है कि ये समीक्षाएँ %name% के Google बिज़नेस प्रोफ़ाइल पर प्रकाशित की गई थीं।',
+ 'learn-more' => 'और जानें',
+ ),
+ 'hr' => 
+ array (
+ 'text' => 'Trustindex je potvrdio da su ove recenzije objavljene na Google profilu tvrtke %name%.',
+ 'learn-more' => 'Saznajte više',
+ ),
+ 'hu' => 
+ array (
+ 'text' => 'A Trustindex ellenőrizte, hogy ezek a vélemények a(z) %name% Google Cégprofilján jelentek meg.',
+ 'learn-more' => 'További információ',
+ ),
+ 'hy' => 
+ array (
+ 'text' => 'Trustindex-ը հաստատել է, որ այս կարծիքները հրապարակվել են %name%-ի Google բիզնես պրոֆիլում։',
+ 'learn-more' => 'Իմանալ ավելին',
+ ),
+ 'id' => 
+ array (
+ 'text' => 'Trustindex telah memverifikasi bahwa ulasan-ulasan ini dipublikasikan di Profil Bisnis Google milik %name%.',
+ 'learn-more' => 'Pelajari lebih lanjut',
+ ),
+ 'is' => 
+ array (
+ 'text' => 'Trustindex staðfesti að þessar umsagnir voru birtar á Google-fyrirtækjaprófíl fyrirtækisins %name%.',
+ 'learn-more' => 'Frekari upplýsingar',
+ ),
+ 'it' => 
+ array (
+ 'text' => 'Trustindex ha verificato che queste recensioni sono state pubblicate sul Profilo dell\'attività su Google di %name%.',
+ 'learn-more' => 'Scopri di più',
+ ),
+ 'ja' => 
+ array (
+ 'text' => 'Trustindex は、これらのレビューが %name% の Google ビジネス プロフィールで公開されたものであることを確認しました。',
+ 'learn-more' => '詳細はこちら',
+ ),
+ 'ka' => 
+ array (
+ 'text' => 'Trustindex-მა დაადასტურა, რომ ეს მიმოხილვები გამოქვეყნდა %name%-ის Google ბიზნეს პროფილზე.',
+ 'learn-more' => 'გაიგეთ მეტი',
+ ),
+ 'kk' => 
+ array (
+ 'text' => 'Trustindex бұл пікірлердің %name% компаниясының Google бизнес профилінде жарияланғанын растады.',
+ 'learn-more' => 'Толығырақ',
+ ),
+ 'ko' => 
+ array (
+ 'text' => 'Trustindex는 이 리뷰들이 %name%의 Google 비즈니스 프로필에 게시되었음을 확인했습니다.',
+ 'learn-more' => '자세히 알아보기',
+ ),
+ 'lt' => 
+ array (
+ 'text' => 'Trustindex patvirtino, kad šie atsiliepimai buvo paskelbti įmonės %name% Google verslo profilyje.',
+ 'learn-more' => 'Sužinokite daugiau',
+ ),
+ 'lv' => 
+ array (
+ 'text' => 'Trustindex apstiprināja, ka šīs atsauksmes tika publicētas %name% Google uzņēmuma profilā.',
+ 'learn-more' => 'Uzziniet vairāk',
+ ),
+ 'mk' => 
+ array (
+ 'text' => 'Trustindex потврди дека овие рецензии се објавени на Google бизнис-профилот на %name%.',
+ 'learn-more' => 'Дознајте повеќе',
+ ),
+ 'ms' => 
+ array (
+ 'text' => 'Trustindex telah mengesahkan bahawa ulasan ini diterbitkan di Profil Perniagaan Google milik %name%.',
+ 'learn-more' => 'Ketahui lebih lanjut',
+ ),
+ 'nl' => 
+ array (
+ 'text' => 'Trustindex heeft geverifieerd dat deze recensies zijn gepubliceerd op het Google Bedrijfsprofiel van %name%.',
+ 'learn-more' => 'Meer informatie',
+ ),
+ 'no' => 
+ array (
+ 'text' => 'Trustindex har bekreftet at disse anmeldelsene er publisert på Google Bedriftsprofilen til %name%.',
+ 'learn-more' => 'Les mer',
+ ),
+ 'pl' => 
+ array (
+ 'text' => 'Trustindex zweryfikował, że te opinie zostały opublikowane w Profilu Firmy w Google należącym do %name%.',
+ 'learn-more' => 'Dowiedz się więcej',
+ ),
+ 'pt' => 
+ array (
+ 'text' => 'Trustindex verificou que estas avaliações foram publicadas no Perfil da Empresa no Google de %name%.',
+ 'learn-more' => 'Saiba mais',
+ ),
+ 'ro' => 
+ array (
+ 'text' => 'Trustindex a verificat că aceste recenzii au fost publicate în Profilul Companiei pe Google pentru %name%.',
+ 'learn-more' => 'Află mai multe',
+ ),
+ 'ru' => 
+ array (
+ 'text' => 'Trustindex подтвердил, что эти отзывы были опубликованы в профиле компании %name% в Google.',
+ 'learn-more' => 'Подробнее',
+ ),
+ 'sk' => 
+ array (
+ 'text' => 'Trustindex overil, že tieto recenzie boli zverejnené vo Firemnom profile na Googli pre %name%.',
+ 'learn-more' => 'Zistiť viac',
+ ),
+ 'sl' => 
+ array (
+ 'text' => 'Trustindex je potrdil, da so bile te ocene objavljene v Google Profilu podjetja %name%.',
+ 'learn-more' => 'Več o tem',
+ ),
+ 'sq' => 
+ array (
+ 'text' => 'Trustindex verifikoi që këto vlerësime janë publikuar në Profilin e Biznesit në Google të %name%.',
+ 'learn-more' => 'Mëso më shumë',
+ ),
+ 'sr' => 
+ array (
+ 'text' => 'Trustindex је потврдио да су ове рецензије објављене на Google профилу предузећа %name%.',
+ 'learn-more' => 'Сазнајте више',
+ ),
+ 'sv' => 
+ array (
+ 'text' => 'Trustindex har verifierat att dessa recensioner har publicerats på Google Företagsprofilen för %name%.',
+ 'learn-more' => 'Läs mer',
+ ),
+ 'th' => 
+ array (
+ 'text' => 'Trustindex ได้ยืนยันแล้วว่ารีวิวเหล่านี้เผยแพร่บนโปรไฟล์ธุรกิจใน Google ของ %name%',
+ 'learn-more' => 'ดูข้อมูลเพิ่มเติม',
+ ),
+ 'tr' => 
+ array (
+ 'text' => 'Trustindex, bu yorumların %name% işletmesinin Google İşletme Profili\'nde yayınlandığını doğruladı.',
+ 'learn-more' => 'Daha fazla bilgi',
+ ),
+ 'uk' => 
+ array (
+ 'text' => 'Trustindex підтвердив, що ці відгуки було опубліковано в профілі компанії %name% у Google.',
+ 'learn-more' => 'Докладніше',
+ ),
+ 'vi' => 
+ array (
+ 'text' => 'Trustindex đã xác minh rằng các bài đánh giá này được đăng trên Hồ sơ doanh nghiệp trên Google của %name%.',
+ 'learn-more' => 'Tìm hiểu thêm',
+ ),
+ 'zh' => 
+ array (
+ 'text' => 'Trustindex 已核实这些评论发布在 %name% 的 Google 商家资料上。',
+ 'learn-more' => '了解更多',
+ ),
+ 'zh_TW' => 
+ array (
+ 'text' => 'Trustindex 已驗證這些評論發布於 %name% 的 Google 商家檔案。',
+ 'learn-more' => '瞭解更多',
+ ),
 );
 private static $widget_footer_filter_texts = array (
  'en' => 
@@ -6240,7 +6635,7 @@ if (is_file($this->getCssFile()) && !$this->isElementorEditing()) {
 wp_enqueue_style('trustindex-widget-editor', $this->getCssUrl(), [], filemtime($this->getCssFile()));
 } else {
 $html .= $this->addOptimizerOptOutAttributes(
-'<style type="text/css">'.get_option($this->get_option_name('css-content')).'</style>'
+'<style type="text/css">'.$this->getWidgetCssContent().'</style>'
 );
 }
 }
@@ -6264,9 +6659,12 @@ $format = self::$widget_nameformats[$formatId];
 if (!$format['regex']) {
 return $name;
 }
-$result = preg_replace($format['regex'], '$1 $2', $name);
+$result = preg_replace($format['regex'].'u', '$1 $2', $name);
+if (null === $result) {
+return $name;
+}
 if ($format['ucfirst']) {
-$result = ucfirst($result);
+$result = function_exists('mb_strtoupper') ? mb_strtoupper(mb_substr($result, 0, 1)).mb_substr($result, 1) : ucfirst($result);
 }
 if ($format['toupper']) {
 $result = function_exists('mb_strtoupper') ? mb_strtoupper($result) : strtoupper($result);
@@ -6278,7 +6676,7 @@ public function enqueueLoaderScript()
 if (wp_script_is('trustindex-loader-js', 'registered')) {
 wp_enqueue_script('trustindex-loader-js');
 } else {
-wp_enqueue_script('trustindex-loader-js', 'https://cdn.trustindex.io/loader.js', [], null, [ // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The loader URL must not contain cache-busting query parameters.
+wp_enqueue_script('trustindex-loader-js', $this->getAssetProxy()->getLoaderUrl(), [], null, [ // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The loader URL must not contain cache-busting query parameters.
 'strategy' => is_admin() ? 'defer' : 'async',
 'in_footer' => !is_admin(),
 ]);
@@ -6291,7 +6689,7 @@ if (self::$loaderFallbackRendered || is_admin()) {
 return "";
 }
 self::$loaderFallbackRendered = true;
-$loaderUrl = 'https://cdn.trustindex.io/loader.js';
+$loaderUrl = $this->getAssetProxy()->getLoaderUrl();
 $script = '(function () {
 if (window.tiLoaderFallback) {
 return;
@@ -6406,6 +6804,8 @@ $stylesheetUrl = is_string($html) ? $this->getWidgetStylesheetUrl($html) : null;
 if (!$stylesheetUrl) {
 return null;
 }
+$stylesheetUrl = $this->getAssetProxy()->getAssetUrl($stylesheetUrl);
+$html = $this->prepareWidgetRootElement($this->getAssetProxy()->rewriteWidgetHtml($html));
 $html = $this->addCssUrlToWidgetHtml($html, $stylesheetUrl);
 return $this->enqueueWidgetStylesheet($stylesheetUrl).
 $this->prepareWidgetHtmlForFrontend($html).$this->getRichSnippetHtml($tiPublicId, $html);
@@ -6566,7 +6966,7 @@ return false;
 }
 $this->rememberCachedWidgetHtmlId($tiPublicId);
 $expiresOptionName = $this->get_option_name('widget-html-expires-'.$tiPublicId);
-$response = wp_remote_get($this->getWidgetHtmlUrl($tiPublicId), [ 'timeout' => 5 ]);
+$response = wp_remote_get($this->getWidgetFileUrl($tiPublicId, 'content.html'), [ 'timeout' => 5 ]);
 $statusCode = is_wp_error($response) ? 0 : (int)wp_remote_retrieve_response_code($response);
 $htmlOptionName = $this->get_option_name('widget-html-'.$tiPublicId);
 if (200 !== $statusCode) {
@@ -6577,6 +6977,7 @@ return false;
 $html = wp_remote_retrieve_body($response);
 $isWidget = (bool)preg_match('/class="[^"]*\bti-widget\b/', $html);
 if ($isWidget) {
+$html = $this->addSubcontentsToWidgetHtml($tiPublicId, $html);
 update_option($htmlOptionName, $this->prepareWidgetHtmlForStorage($html), false);
 } else {
 delete_option($htmlOptionName);
@@ -6597,9 +6998,39 @@ return '&#x'.dechex(mb_ord($match[0], 'UTF-8')).';';
 }, $html);
 return null === $encodedHtml ? wp_encode_emoji($html) : $encodedHtml;
 }
-private function getWidgetHtmlUrl($tiPublicId)
+private function addSubcontentsToWidgetHtml($tiPublicId, $html)
 {
-return 'https://cdn.trustindex.io/widgets/'.substr($tiPublicId, 0, 2).'/'.$tiPublicId.'/content.html';
+preg_match_all('/<a\s[^>]*\bdata-subcontent="(\d+)"[^>]*>/i', $html, $buttonMatches, PREG_SET_ORDER);
+foreach ($buttonMatches as $buttonMatch) {
+if (!preg_match('/\bdata-subcontent-target="\.([a-z0-9_-]+)"/i', $buttonMatch[0], $targetMatch)) {
+continue;
+}
+$subcontent = $this->downloadWidgetSubcontent($tiPublicId, $buttonMatch[1]);
+if ("" !== $subcontent) {
+$html = $this->insertIntoEmptyElement($html, $targetMatch[1], $subcontent);
+}
+}
+return $html;
+}
+private function downloadWidgetSubcontent($tiPublicId, $subcontentId)
+{
+$response = wp_remote_get($this->getWidgetFileUrl($tiPublicId, '_subcontent-'.$subcontentId.'.html'), [ 'timeout' => 5 ]);
+if (is_wp_error($response) || 200 !== (int)wp_remote_retrieve_response_code($response)) {
+return "";
+}
+return trim(wp_remote_retrieve_body($response));
+}
+private function insertIntoEmptyElement($html, $className, $content)
+{
+$pattern = '/(<([a-z]+)\s[^>]*\bclass="(?:[^"]*\s)?'.preg_quote($className, '/').'(?:\s[^"]*)?"[^>]*>)\s*(<\/\2>)/i';
+$result = preg_replace_callback($pattern, function($match) use ($content) {
+return $match[1].$content.$match[3];
+}, $html, 1);
+return null === $result ? $html : $result;
+}
+private function getWidgetFileUrl($tiPublicId, $fileName)
+{
+return 'https://cdn.trustindex.io/widgets/'.substr($tiPublicId, 0, 2).'/'.$tiPublicId.'/'.$fileName;
 }
 public function getCachedWidgetHtmlIds()
 {
@@ -6643,16 +7074,18 @@ $content = $this->getWidgetOption('review-content');
 $language = $this->getWidgetOption('lang', false, $isPreview);
 if (!$content || strpos($content, '<!-- R-LIST -->') === false) {
 if (!$this->templateCache) {
-add_action('http_api_curl', function($handle) {
+$disableSslVerify = function($handle) {
 // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt
 curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
 // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt
 curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
-}, 10);
+};
+add_action('http_api_curl', $disableSslVerify, 10);
 if (!isset(self::$widget_languages[$language])) {
 $language = 'en';
 }
 $response = wp_remote_get("https://cdn.trustindex.io/widget-assets/template/v2/$language.json", [ 'timeout' => 300 ]);
+remove_action('http_api_curl', $disableSslVerify, 10);
 if (is_wp_error($response)) {
 // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 return $this->frontEndErrorForAdmins(__('Could not download the template for the widget.<br />Please reload the page.<br />If the problem persists, please write an email to support@trustindex.io.', 'wp-reviews-plugin-for-google') .'<br /><br />'. print_r($response, true));
@@ -6722,8 +7155,15 @@ $styleText .= 'left: '.$this->getWidgetOption('fomo-margin', false, $isPreview).
 $hideCount = $this->getWidgetOption('fomo-hide-count', false, $isPreview);
 $content = str_replace('" data-layout-id=', '" style="'.$styleText.'" data-hide-count='.$hideCount.' data-layout-id=', $content);
 }
-$content = str_replace('" data-layout-id=', '" data-plugin-version="'.str_replace('do-not-care-', '', $this->getVersion()).'" data-layout-id=', $content);
-return $content;
+return $this->getAssetProxy()->rewriteWidgetHtml($this->prepareWidgetRootElement($content));
+}
+private function prepareWidgetRootElement($html)
+{
+$result = preg_replace_callback('/(<div\b[^>]*?\sclass=")([^"]*(?<![\w-])ti-widget(?![\w-])[^"]*)"/', function($match) {
+$version = str_replace('do-not-care-', '', $this->getVersion());
+return $match[1].trim(preg_replace('/\s+/', ' ', $match[2])).'" data-plugin-version="'.esc_attr($version).'"';
+}, $html, 1);
+return null === $result ? $html : $result;
 }
 private function getReviewsForWidgetHtml($isDemoReviews = false, $isForceDemoReviews = false, $isPreview = false)
 {
@@ -6880,9 +7320,9 @@ $reviewContent .= str_replace([
 '<!-- STARS-CONTENT -->',
 ], [
 $platformName,
-$this->getProfileImageUrl($r->user_photo, $styleId, 2).' 2x',
-$this->getProfileImageUrl($r->user_photo, $styleId),
-$this->renderNameFormat($r->user),
+esc_url($this->getProfileImageUrl($r->user_photo, $styleId, 2)).' 2x',
+esc_url($this->getProfileImageUrl($r->user_photo, $styleId)),
+esc_html($this->renderNameFormat($r->user)),
 $date,
 $text,
 round($r->original_rating),
@@ -6965,17 +7405,17 @@ $content = str_replace([
 '<div class="ti-profile-images"></div>',
 ], [
 ucfirst($this->getShortName()),
-$pageDetails['name'],
-$fiveStarRatingNumberLast,
-$fiveStarRatingNumber,
-$ratingCount,
+esc_html($pageDetails['name']),
+(int)$fiveStarRatingNumberLast,
+(int)$fiveStarRatingNumber,
+(int)$ratingCount,
 number_format((float)$ratingScore, 1),
 $this->is_ten_scale_rating_platform() ? 10 : 5,
 $this->get_rating_text_long($ratingScore, $language),
 $ratingText,
 $ratingTextUcfirst,
-$image2xUrl.' 2x',
-$imageUrl,
+esc_url($image2xUrl).' 2x',
+esc_url($imageUrl),
 $this->get_platform_name($this->getShortName(), $pageDetails['id']),
 $this->get_rating_stars($this->is_ten_scale_rating_platform() ? $ratingScore / 2 : $ratingScore, $showStars),
 '<div class="ti-small-logo"><img src="'.$this->get_plugin_file_url('static/img/platform/logo.svg').'" alt="'.ucfirst($this->getShortName()).'" width="150" height="25" loading="lazy"></div>',
@@ -7003,7 +7443,7 @@ $footerUrl = in_array($styleId, [8, 13, 14, 26]) ? $this->getReviewWriteUrl() : 
 if ($widgetTemplate['type'] === 'fomo') {
 $footerUrl = $this->getWidgetOption('fomo-url', false, $isPreview);
 }
-$content = str_replace('%footer_link%', $footerUrl, $content);
+$content = str_replace('%footer_link%', esc_url($footerUrl), $content);
 }
 } else {
 $content = preg_replace('/<a href=[\'"]%footer_link%[\'"][^>]*>(.+)<\/a>/mU', '$1', $content);
@@ -7139,7 +7579,26 @@ $regex = '/<div class="ti-title-text">.*<\/div>/mU';
 $content = preg_replace($regex, $title, $content);
 $content = str_replace('a=sys&c=top-rated-badge', 'a=sys&c=wp-top-rated-badge', $content);
 }
-return $content;
+return $this->replaceSourceDisclaimers($content, $language);
+}
+private function replaceSourceDisclaimers($content, $language)
+{
+$texts = self::$widget_source_disclaimer_texts[$language];
+$pageDetails = $this->getPageDetails();
+$name = esc_html($pageDetails['name']);
+$url = $this->getPageUrl();
+$sourceProfileLink = '' === $url ? $name : '<a href="'.esc_url($url).'" target="_blank" rel="noopener nofollow">'.$name.'</a>';
+$platformName = esc_html($this->get_platform_name($this->getShortName(), $pageDetails['id']));
+$text = str_replace(['%name%', '%platform%'], [$sourceProfileLink, $platformName], $texts['text']);
+$result = preg_replace_callback('/(<div class="ti-disclaimer">)(.*?)(<\/div>)/s', function($match) use ($text, $texts) {
+$learnMore = "";
+if (preg_match('/href="([^"]+)"/', $match[2], $urlMatch)) {
+$learnMoreUrl = preg_replace('/\burl=[^&]*/', 'url=/review-platform-verification/', $urlMatch[1]);
+$learnMore = ' <a href="'.$learnMoreUrl.'" target="_blank">'.esc_html($texts['learn-more']).'</a>';
+}
+return $match[1].$text.$learnMore.$match[3];
+}, $content);
+return null === $result ? $content : $result;
 }
 public function isVerifiedByTrustindexAvailable()
 {
@@ -7409,12 +7868,15 @@ return $number;
 }
 public function get_trustindex_widgets()
 {
-$widgets = array();
+$widgets = [];
 $trustindexSubscriptionId = $this->is_trustindex_connected();
 if ($trustindexSubscriptionId) {
 $response = wp_remote_get("https://admin.trustindex.io/" . "api/getWidgets?subscription_id=" . $trustindexSubscriptionId);
-if ($response && !is_wp_error($response)) {
-$widgets = json_decode($response['body'], true);
+if (!is_wp_error($response) && 200 === (int)wp_remote_retrieve_response_code($response)) {
+$decodedWidgets = json_decode(wp_remote_retrieve_body($response), true);
+if (is_array($decodedWidgets)) {
+$widgets = $decodedWidgets;
+}
 }
 }
 return $widgets;

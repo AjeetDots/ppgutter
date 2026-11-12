@@ -276,9 +276,14 @@ class Menu
             return;
         }
 
+        $allowForms = FormManagerService::getUserAllowedFormsScope();
+
         $forms = wpFluent()->table('fluentform_forms')
                             ->orderBy('id', 'desc')
                             ->select(['id', 'title'])
+                            ->when(false !== $allowForms, function ($q) use ($allowForms) {
+                                return $q->whereIn('id', $allowForms ? $allowForms : [0]);
+                            })
                             ->get();
 
         wp_enqueue_script('fluent_forms_global');
@@ -316,6 +321,7 @@ class Menu
             'wp_date_time_format'  => Helper::getDefaultDateTimeFormatForMoment(),
             'server_time'          => current_time('mysql'),
             'has_default_style'    => $hasDefaultStyle,
+            'entry_image_hosts'    => $this->getEntryImageHosts(),
         ];
 
         if (Acl::hasAnyFormPermission()) {
@@ -563,6 +569,26 @@ class Menu
         );
 
         $this->commonAction();
+    }
+
+    /**
+     * Hosts the entry view may load a submitted image from.
+     *
+     * A submitted image value is any URL the submitter typed, so an image from another host is shown as a
+     * link instead of loading in the admin's browser. Cloud-storage add-ons can add their host.
+     *
+     * @return string[]
+     */
+    private function getEntryImageHosts()
+    {
+        $ownUrls = [wp_upload_dir()['baseurl'], home_url(), site_url()];
+        $hosts = array_map(function ($url) {
+            return strtolower((string) wp_parse_url($url, PHP_URL_HOST));
+        }, $ownUrls);
+
+        $hosts = (array) apply_filters('fluentform/entry_image_hosts', $hosts);
+
+        return array_values(array_unique(array_filter($hosts)));
     }
 
     private function getMenuIcon()

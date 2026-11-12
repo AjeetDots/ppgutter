@@ -1,6 +1,6 @@
 <?php
 /**
- * WordPress Abilities API Integration for WPCode (Read-Only)
+ * WordPress Abilities API Integration for WPCode
  *
  * @package WPCode
  * @since 2.3.0
@@ -13,8 +13,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * WPCode_Abilities_API class.
  *
- * Registers read-only abilities for WordPress 6.9+ Abilities API
- * to allow AI and automation tools to query WPCode data safely.
+ * Registers abilities for WordPress 6.9+ Abilities API. Read-only abilities
+ * let AI and automation tools query WPCode data safely. Abilities that
+ * create or change snippets and site-wide code are opt-in and only
+ * registered when the "AI & Automation Access" setting is enabled.
  */
 class WPCode_Abilities_API {
 
@@ -24,6 +26,29 @@ class WPCode_Abilities_API {
 	public function __construct() {
 		add_action( 'wp_abilities_api_categories_init', array( $this, 'register_categories' ) );
 		add_action( 'wp_abilities_api_init', array( $this, 'register_abilities' ) );
+	}
+
+	/**
+	 * Whether the opt-in write abilities are enabled.
+	 *
+	 * @return bool
+	 */
+	public static function write_enabled() {
+		/**
+		 * Filters whether the write abilities are enabled.
+		 *
+		 * @param bool $enabled Whether the "AI & Automation Access" setting is on.
+		 */
+		return (bool) apply_filters( 'wpcode_abilities_write_enabled', (bool) wpcode()->settings->get_option( 'abilities_write_enabled', false ) );
+	}
+
+	/**
+	 * Whether WPCode is running in Headers & Footers (simple) mode.
+	 *
+	 * @return bool
+	 */
+	public static function is_simple_mode() {
+		return (bool) wpcode()->settings->get_option( 'headers_footers_mode' );
 	}
 
 	/**
@@ -58,10 +83,21 @@ class WPCode_Abilities_API {
 				'description' => __( 'Abilities for reading current snippet configurations', 'insert-headers-and-footers' ),
 			)
 		);
+
+		// WPCode Management category (opt-in write abilities).
+		if ( self::write_enabled() ) {
+			wp_register_ability_category(
+				'wpcode-management',
+				array(
+					'label'       => __( 'WPCode Management', 'insert-headers-and-footers' ),
+					'description' => __( 'Abilities for creating and changing snippets and site-wide code', 'insert-headers-and-footers' ),
+				)
+			);
+		}
 	}
 
 	/**
-	 * Register all read-only abilities.
+	 * Register all abilities.
 	 *
 	 * @return void
 	 */
@@ -80,6 +116,19 @@ class WPCode_Abilities_API {
 
 		// 5. Get settings.
 		$this->register_get_settings_ability();
+
+		// Opt-in write abilities.
+		if ( ! self::write_enabled() ) {
+			return;
+		}
+
+		if ( class_exists( 'WPCode_Abilities_Headers_Footers' ) ) {
+			( new WPCode_Abilities_Headers_Footers() )->register();
+		}
+
+		if ( ! self::is_simple_mode() && class_exists( 'WPCode_Abilities_Snippets' ) ) {
+			( new WPCode_Abilities_Snippets() )->register();
+		}
 	}
 
 	/**
@@ -444,6 +493,29 @@ class WPCode_Abilities_API {
 	}
 
 	/**
+	 * Load the library classes when they are not available yet (they are not loaded outside the admin).
+	 *
+	 * @return void
+	 */
+	public static function ensure_library_loaded() {
+		if ( isset( wpcode()->library ) && is_object( wpcode()->library ) ) {
+			return;
+		}
+		if ( ! class_exists( 'WPCode_File_Cache' ) ) {
+			require_once WPCODE_PLUGIN_PATH . 'includes/class-wpcode-file-cache.php';
+		}
+		if ( ! class_exists( 'WPCode_Library' ) ) {
+			require_once WPCODE_PLUGIN_PATH . 'includes/class-wpcode-library.php';
+		}
+		if ( ! class_exists( 'WPCode_Library_Auth' ) ) {
+			require_once WPCODE_PLUGIN_PATH . 'includes/class-wpcode-library-auth.php';
+		}
+		wpcode()->file_cache   = new WPCode_File_Cache();
+		wpcode()->library      = new WPCode_Library();
+		wpcode()->library_auth = new WPCode_Library_Auth();
+	}
+
+	/**
 	 * Execute search library.
 	 *
 	 * @param array $input Input parameters.
@@ -453,21 +525,7 @@ class WPCode_Abilities_API {
 	public function execute_search_library( $input ) {
 		$keyword = sanitize_text_field( $input['keyword'] );
 
-		// Lazy load library classes if not already available.
-		if ( ! isset( wpcode()->library ) || ! is_object( wpcode()->library ) ) {
-			if ( ! class_exists( 'WPCode_File_Cache' ) ) {
-				require_once WPCODE_PLUGIN_PATH . 'includes/class-wpcode-file-cache.php';
-			}
-			if ( ! class_exists( 'WPCode_Library' ) ) {
-				require_once WPCODE_PLUGIN_PATH . 'includes/class-wpcode-library.php';
-			}
-			if ( ! class_exists( 'WPCode_Library_Auth' ) ) {
-				require_once WPCODE_PLUGIN_PATH . 'includes/class-wpcode-library-auth.php';
-			}
-			wpcode()->file_cache   = new WPCode_File_Cache();
-			wpcode()->library      = new WPCode_Library();
-			wpcode()->library_auth = new WPCode_Library_Auth();
-		}
+		self::ensure_library_loaded();
 
 		// Use the library's search method.
 		if ( method_exists( wpcode()->library, 'search_snippets' ) ) {
@@ -491,7 +549,7 @@ class WPCode_Abilities_API {
 		$formatted_results = array();
 		foreach ( $results as $snippet ) {
 			$formatted_results[] = array(
-				'id'          => isset( $snippet['id'] ) ? (string) $snippet['id'] : '',
+				'id'          => isset( $snippet['library_id'] ) ? (string) $snippet['library_id'] : ( isset( $snippet['id'] ) ? (string) $snippet['id'] : '' ),
 				'title'       => isset( $snippet['title'] ) ? $snippet['title'] : '',
 				'description' => isset( $snippet['note'] ) ? $snippet['note'] : '',
 				'category'    => isset( $snippet['categories'][0] ) ? $snippet['categories'][0] : '',

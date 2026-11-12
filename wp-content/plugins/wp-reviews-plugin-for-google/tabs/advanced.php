@@ -26,6 +26,29 @@ $pluginManagerInstance->clearWidgetHtmlCacheExpiration();
 header('Location: admin.php?page='.esc_attr($_page).'&tab=advanced');
 exit;
 }
+if (isset($_GET['toggle_asset_proxy'])) {
+check_admin_referer('ti-toggle-asset-proxy');
+if (current_user_can('manage_options')) {
+$pluginManagerInstance->getAssetProxy()->setEnabled(1 === (int)$_GET['toggle_asset_proxy']);
+$pluginManagerInstance->handleCssFile();
+}
+header('Location: admin.php?page='.esc_attr($_page).'&tab=advanced');
+exit;
+}
+if (isset($_GET['toggle_wp_rocket_compatibility'])) {
+check_admin_referer('ti-toggle-wp-rocket-compatibility');
+if (current_user_can('manage_options')) {
+trustindex_set_wp_rocket_compatibility_enabled(1 === (int)$_GET['toggle_wp_rocket_compatibility']);
+}
+header('Location: admin.php?page='.esc_attr($_page).'&tab=advanced');
+exit;
+}
+if (isset($_GET['clear_asset_cache'])) {
+check_admin_referer('ti-clear-asset-cache');
+$pluginManagerInstance->getAssetProxy()->clearCache();
+header('Location: admin.php?page='.esc_attr($_page).'&tab=advanced');
+exit;
+}
 if (isset($_POST['save-notification-email'])) {
 check_admin_referer('ti-notification-email-save');
 $type = isset($_POST['type']) ? sanitize_text_field(wp_unslash($_POST['type'])) : null;
@@ -37,10 +60,10 @@ exit;
 }
 $yesIcon = '<span class="dashicons dashicons-yes-alt"></span>';
 $noIcon = '<span class="dashicons dashicons-dismiss"></span>';
-$pluginUpdated = ($pluginManagerInstance->get_plugin_current_version() <= "14.2");
+$pluginUpdated = ($pluginManagerInstance->get_plugin_current_version() <= "14.3");
 $cssInline = get_option($pluginManagerInstance->get_option_name('load-css-inline'), 0);
 $widgetHtmlCacheIds = $pluginManagerInstance->getCachedWidgetHtmlIds();
-$css = get_option($pluginManagerInstance->get_option_name('css-content'));
+$css = $pluginManagerInstance->getWidgetCssContent();
 $tiSuccess = "";
 if (isset($_COOKIE['ti-success'])) {
 $tiSuccess = sanitize_text_field(wp_unslash($_COOKIE['ti-success']));
@@ -89,6 +112,35 @@ $widgetNumber = $pluginManagerInstance->get_trustindex_widget_number();
 ?>
 <h1 class="ti-header-title"><?php echo esc_html(__('Advanced', 'wp-reviews-plugin-for-google')); ?></h1>
 <div class="ti-box">
+<div class="ti-box-header"><?php echo esc_html(__('GDPR mode', 'wp-reviews-plugin-for-google')); ?></div>
+<p><?php echo esc_html(__('The files of the widgets (loader script, styles, fonts, icons, reviewer photos) are served from your server, so the browsers of your visitors do not connect to Trustindex or to the review platforms. The first load of a file can be slightly slower.', 'wp-reviews-plugin-for-google')); ?></p>
+<details class="ti-details">
+<summary><?php echo esc_html(__('Your responsibilities as a website operator', 'wp-reviews-plugin-for-google')); ?></summary>
+<p><?php echo esc_html(__('You are responsible for ensuring an appropriate legal basis for using reviews, reviewers’ names and profile photos on your website, providing the required privacy information, and handling data subject requests in accordance with the GDPR. These may include requests for access, rectification and erasure, as well as objections to processing. Enabling GDPR mode does not replace these responsibilities as a website operator.', 'wp-reviews-plugin-for-google')); ?></p>
+<p><?php
+$myReviewsTabLink = '<a href="'.esc_url('?page='.esc_attr($_page).'&tab=my-reviews').'">'.esc_html(__('My Reviews', 'wp-reviews-plugin-for-google')).'</a>';
+/* translators: %s: My Reviews tab link */
+echo wp_kses_post(sprintf(__('You can permanently delete individual reviews from the %s tab.', 'wp-reviews-plugin-for-google'), $myReviewsTabLink));
+?></p>
+</details>
+<?php if ($pluginManagerInstance->getAssetProxy()->isEnabled()): ?>
+<a href="<?php echo esc_url(wp_nonce_url('?page='.esc_attr($_page).'&tab=advanced&toggle_asset_proxy=0', 'ti-toggle-asset-proxy')); ?>" class="ti-btn ti-btn-loading-on-click"><?php echo esc_html(__('Disable', 'wp-reviews-plugin-for-google')); ?></a>
+<a href="<?php echo esc_url(wp_nonce_url('?page='.esc_attr($_page).'&tab=advanced&clear_asset_cache', 'ti-clear-asset-cache')); ?>" class="ti-btn ti-btn-loading-on-click ti-pull-right"><?php echo esc_html(__('Clear cache', 'wp-reviews-plugin-for-google')); ?></a>
+<div class="clear"></div>
+<?php if (!$pluginManagerInstance->getAssetProxy()->isCacheWritable()): ?>
+<div class="ti-notice ti-notice-warning ti-mt-1">
+<p><?php echo esc_html(__('The files cannot be saved on your server (the uploads folder is not writable), so they are downloaded again for every request.', 'wp-reviews-plugin-for-google')); ?></p>
+</div>
+<?php endif; ?>
+<div class="ti-notice ti-notice-error ti-mt-1 ti-d-none" id="ti-asset-proxy-error">
+<p><?php echo esc_html(__('The widget files could not be loaded from your server, so the widgets may not appear on your site. A security or cache plugin may block the requests containing "trustindex-asset".', 'wp-reviews-plugin-for-google')); ?></p>
+</div>
+<img class="ti-d-none" src="<?php echo esc_url($pluginManagerInstance->getAssetProxy()->getProxyUrl('https://cdn.trustindex.io/assets/platform/'.ucfirst($pluginManagerInstance->getShortName()).'/icon.svg')); ?>" alt="" onerror="document.getElementById('ti-asset-proxy-error').classList.remove('ti-d-none')" />
+<?php else: ?>
+<a href="<?php echo esc_url(wp_nonce_url('?page='.esc_attr($_page).'&tab=advanced&toggle_asset_proxy=1', 'ti-toggle-asset-proxy')); ?>" class="ti-btn ti-btn-loading-on-click"><?php echo esc_html(__('Enable', 'wp-reviews-plugin-for-google')); ?></a>
+<?php endif; ?>
+</div>
+<div class="ti-box">
 <div class="ti-box-header"><?php echo esc_html(__('Notifications', 'wp-reviews-plugin-for-google')); ?></div>
 <ul class="ti-troubleshooting-checklist">
 <li>
@@ -117,7 +169,7 @@ echo esc_html(__('Notification', 'wp-reviews-plugin-for-google')) .': '. ($isNot
 <?php if ($isNotificationActive): ?>
 <a href="<?php echo esc_url(wp_nonce_url('?page='.esc_attr($_page).'&tab=advanced&notification=review-download-finished&action=hide', 'ti-notification')); ?>" class="ti-btn ti-btn-loading-on-click"><?php echo esc_html(__('Disable', 'wp-reviews-plugin-for-google')); ?></a>
 <?php else: ?>
-<a href="<?php echo esc_url(wp_nonce_url('?page='.esc_attr($_page).'&tab=advanced&notification=notification=review-download-finished&action=unhide', 'ti-notification')); ?>" class="ti-btn ti-btn-loading-on-click"><?php echo esc_html(__('Enable', 'wp-reviews-plugin-for-google')); ?></a>
+<a href="<?php echo esc_url(wp_nonce_url('?page='.esc_attr($_page).'&tab=advanced&notification=review-download-finished&action=unhide', 'ti-notification')); ?>" class="ti-btn ti-btn-loading-on-click"><?php echo esc_html(__('Enable', 'wp-reviews-plugin-for-google')); ?></a>
 <?php endif; ?>
 </li>
 <li>
@@ -137,9 +189,21 @@ echo esc_html(__('Notification', 'wp-reviews-plugin-for-google')) .': '. ($isNot
 </li>
 </ul>
 </div>
+<?php if (defined('WP_ROCKET_VERSION')): ?>
+<div class="ti-box">
+<div class="ti-box-header"><?php echo esc_html(__('Automatically configure WP Rocket for Trustindex widgets', 'wp-reviews-plugin-for-google')); ?></div>
+<p><?php echo esc_html(__('Excludes Trustindex widget scripts from JavaScript minification, combination and delayed execution, and protects widget styles from CSS minification and Remove Unused CSS. This helps widgets load and display correctly. WP Rocket’s saved settings and global optimization switches remain unchanged.', 'wp-reviews-plugin-for-google')); ?></p>
+<?php if (trustindex_is_wp_rocket_compatibility_enabled()): ?>
+<a href="<?php echo esc_url(wp_nonce_url('?page='.esc_attr($_page).'&tab=advanced&toggle_wp_rocket_compatibility=0', 'ti-toggle-wp-rocket-compatibility')); ?>" class="ti-btn ti-btn-loading-on-click"><?php echo esc_html(__('Disable', 'wp-reviews-plugin-for-google')); ?></a>
+<?php else: ?>
+<a href="<?php echo esc_url(wp_nonce_url('?page='.esc_attr($_page).'&tab=advanced&toggle_wp_rocket_compatibility=1', 'ti-toggle-wp-rocket-compatibility')); ?>" class="ti-btn ti-btn-loading-on-click"><?php echo esc_html(__('Enable', 'wp-reviews-plugin-for-google')); ?></a>
+<?php endif; ?>
+</div>
+<?php endif; ?>
 <div class="ti-box">
 <div class="ti-box-header"><?php echo esc_html(__("Troubleshooting", 'wp-reviews-plugin-for-google')); ?></div>
-<p class="ti-bold"><?php echo esc_html(__('If you have any problem, you should try these steps:', 'wp-reviews-plugin-for-google')); ?></p>
+<a href="https://trustindex.zohodesk.eu/portal/en/kb/trustindex" class="ti-btn" target="_blank">Trustindex Knowledge Base</a>
+<p class="ti-bold ti-mt-1"><?php echo esc_html(__('If you have any problem, you should try these steps:', 'wp-reviews-plugin-for-google')); ?></p>
 <ul class="ti-troubleshooting-checklist">
 <li>
 <?php echo esc_html(__("Trustindex plugin", 'wp-reviews-plugin-for-google')); ?>
@@ -260,7 +324,7 @@ echo wp_kses_post(sprintf(__('If you have an (webserver) error log, you can copy
 </li>
 </ul>
 <textarea class="ti-troubleshooting-info" readonly><?php include $pluginManagerInstance->get_plugin_dir() . 'include' . DIRECTORY_SEPARATOR . 'troubleshooting.php'; ?></textarea>
-<a href=".ti-troubleshooting-info" class="ti-btn ti-pull-right ti-tooltip toggle-tooltip btn-copy2clipboard">
+<a href=".ti-troubleshooting-info" class="ti-btn ti-pull-right ti-tooltip ti-tooltip-left ti-toggle-tooltip btn-copy2clipboard">
 <?php echo esc_html(__('Copy to clipboard', 'wp-reviews-plugin-for-google')) ;?>
 <span class="ti-tooltip-message">
 <span style="color: #00ff00; margin-right: 2px">✓</span>
@@ -311,15 +375,15 @@ echo esc_html(sprintf(__('Your %s is connected.', 'wp-reviews-plugin-for-google'
 </p>
 <?php if ($tiPackage === 'free'): ?>
 <?php
-$tabName = esc_html(__('Free Widget Configurator', 'wp-reviews-plugin-for-google'));
+$tabName = __('Free Widget Configurator', 'wp-reviews-plugin-for-google');
 /* translators: %s: link */
-echo wp_kses_post($pluginManager::get_noticebox('error', esc_html(sprintf(__("Once the trial period has expired, the widgets will not appear. You can subscribe or switch back to the \"%s\" tab", 'wp-reviews-plugin-for-google'), [ $tabName ]))));
+echo wp_kses_post($pluginManager::get_noticebox('error', esc_html(sprintf(__("Once the trial period has expired, the widgets will not appear. You can subscribe or switch back to the \"%s\" tab", 'wp-reviews-plugin-for-google'), $tabName))));
 ?>
 <?php elseif ($tiPackage === 'trial'): ?>
 <?php
-$tabName = esc_html(__('Free Widget Configurator', 'wp-reviews-plugin-for-google'));
+$tabName = __('Free Widget Configurator', 'wp-reviews-plugin-for-google');
 /* translators: %s: link */
-echo wp_kses_post($pluginManager::get_noticebox('warning', esc_html(sprintf(__("Once the trial period has expired, the widgets will not appear. You can subscribe or switch back to the \"%s\" tab", 'wp-reviews-plugin-for-google'), [ $tabName ]))));
+echo wp_kses_post($pluginManager::get_noticebox('warning', esc_html(sprintf(__("Once the trial period has expired, the widgets will not appear. You can subscribe or switch back to the \"%s\" tab", 'wp-reviews-plugin-for-google'), $tabName))));
 ?>
 <?php endif; ?>
 <form method="post" class="ti-mt-0" action="">

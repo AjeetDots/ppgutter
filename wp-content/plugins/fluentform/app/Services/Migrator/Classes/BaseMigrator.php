@@ -3,6 +3,7 @@
 namespace FluentForm\App\Services\Migrator\Classes;
 
 use FluentForm\App\Modules\Form\FormFieldsParser;
+use FluentForm\App\Services\Manager\FormManagerService;
 use FluentForm\App\Services\Submission\SubmissionService;
 use FluentForm\Framework\Helpers\ArrayHelper;
 
@@ -67,6 +68,11 @@ abstract class BaseMigrator
                 ];
 
                 if ($formId = $this->isAlreadyImported($formItem)) {
+                    // The import map is site-wide, so a form-scoped manager must not overwrite a form outside their scope.
+                    if (!FormManagerService::hasFormPermission($formId)) {
+                        $failed[] = $this->getFormName($formItem);
+                        continue;
+                    }
                     $insertedForms = $this->updateForm($formId, $formFields, $insertedForms);
                 } else {
                     list($insertedForms, $formId) = $this->insertForm($form, $insertedForms, $formItem);
@@ -1502,6 +1508,8 @@ abstract class BaseMigrator
     public function insertForm($form, $insertedForms, $formItem)
     {
         $formId = wpFluent()->table('fluentform_forms')->insertGetId($form);
+        // Same as a form created in the editor: a form-scoped importer keeps access to what they imported.
+        FormManagerService::maybeAddUserAllowedFormIds($formId);
         $insertedForms[$formId] = [
             'title'    => $form['title'],
             'edit_url' => admin_url('admin.php?page=fluent_forms&route=editor&form_id=' . $formId)

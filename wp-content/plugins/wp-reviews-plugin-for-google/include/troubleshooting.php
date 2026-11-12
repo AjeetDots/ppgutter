@@ -40,6 +40,7 @@ SSL Version: <?php echo esc_html($curl['ssl_version'])."\n"; ?>
 cURL Library Present: No
 <?php endif; ?>
 <?php if (method_exists($pluginManagerInstance, 'getCssFile')): ?>CSS path: <?php echo esc_html($pluginManagerInstance->getCssFile()) ."\n"; ?><?php endif; ?>
+<?php if (method_exists($pluginManagerInstance, 'getAssetProxy')): ?>GDPR mode: <?php echo esc_html($pluginManagerInstance->getAssetProxy()->isEnabled() ? 'On' : 'Off') ."\n"; ?><?php endif; ?>
 PHP Info: <?php echo "\n\t"; ?>
 Version: <?php echo esc_html(phpversion()) ."\n\t"; ?>
 Memory Usage: <?php echo esc_html(round(memory_get_usage() / 1024 / 1024, 2)) . "MB\n\t"; ?>

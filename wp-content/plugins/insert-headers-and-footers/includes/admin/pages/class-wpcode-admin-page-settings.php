@@ -236,6 +236,17 @@ class WPCode_Admin_Page_Settings extends WPCode_Admin_Page {
 			),
 			'wpcode-admin-bar-info'
 		);
+
+		$this->metabox_row(
+			__( 'AI & Automation Access', 'insert-headers-and-footers' ),
+			$this->get_checkbox_toggle(
+				wpcode()->settings->get_option( 'abilities_write_enabled' ),
+				'wpcode-abilities-write',
+				esc_html__( 'Let AI assistants and automation tools connected through the WordPress Abilities API create and edit snippets and header & footer code. They can only do what the connected user is allowed to do.', 'insert-headers-and-footers' ),
+				1
+			),
+			'wpcode-abilities-write'
+		);
 	}
 
 	/**
@@ -348,13 +359,14 @@ class WPCode_Admin_Page_Settings extends WPCode_Admin_Page {
 			);
 		} else {
 			$settings = array(
-				'headers_footers_mode' => isset( $_POST['headers_footers_mode'] ),
-				'editor_height_auto'   => isset( $_POST['editor_height_auto'] ),
-				'editor_height'        => isset( $_POST['editor_height'] ) ? absint( $_POST['editor_height'] ) : 300,
-				'usage_tracking'       => isset( $_POST['usage_tracking'] ),
-				'admin_bar_info'       => isset( $_POST['wpcode-admin-bar-info'] ),
-				'dark_mode'            => isset( $_POST['wpcode-dark-mode'] ),
-				'uninstall_data'       => isset( $_POST['wpcode-uninstall-data'] ),
+				'headers_footers_mode'    => isset( $_POST['headers_footers_mode'] ),
+				'editor_height_auto'      => isset( $_POST['editor_height_auto'] ),
+				'editor_height'           => isset( $_POST['editor_height'] ) ? absint( $_POST['editor_height'] ) : 300,
+				'usage_tracking'          => isset( $_POST['usage_tracking'] ),
+				'admin_bar_info'          => isset( $_POST['wpcode-admin-bar-info'] ),
+				'dark_mode'               => isset( $_POST['wpcode-dark-mode'] ),
+				'abilities_write_enabled' => isset( $_POST['wpcode-abilities-write'] ),
+				'uninstall_data'          => isset( $_POST['wpcode-uninstall-data'] ),
 			);
 		}
 

@@ -9,9 +9,12 @@ use FluentForm\App\Http\Controllers\IntegrationManagerController;
 use FluentForm\Framework\Foundation\Application;
 use FluentForm\Framework\Helpers\ArrayHelper;
 use FluentForm\Framework\Support\Arr;
+use FluentFormPro\Services\RemoteAuth;
 
 class Bootstrap extends IntegrationManagerController
 {
+    private $dataSourceIds = [];
+
     public function __construct(Application $app)
     {
         parent::__construct(
@@ -42,6 +45,28 @@ class Bootstrap extends IntegrationManagerController
             10,
             3
         );
+
+        add_action('admin_init', [$this, 'maybeHandleAuthReturn']);
+    }
+
+    public function maybeHandleAuthReturn()
+    {
+        RemoteAuth::handleReturn(
+            'ff_notion_auth',
+            'notion',
+            'workspace',
+            admin_url('admin.php?page=fluent_forms_settings#general-notion-settings'),
+            [$this, 'saveConnection']
+        );
+    }
+
+    public function saveConnection($result)
+    {
+        update_option($this->optionKey, [
+            'status'       => true,
+            'access_token' => $result['token']['access_token'],
+            'version'      => 'latest',
+        ], 'no');
     }
 
     public function resolveIntegrationSettings($settings, $feed, $formId)
@@ -62,37 +87,25 @@ class Bootstrap extends IntegrationManagerController
 
     public function getGlobalFields($fields)
     {
-        $api = new API();
-
         return [
             'logo'             => $this->logo,
             'menu_title'       => __('Notion Integration', 'fluentformpro'),
             // phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- Dynamic string from API/config
             'menu_description' => __($this->description, 'fluentformpro'),
             'valid_message'    => __('Your Notion connection is valid', 'fluentformpro'),
-            'invalid_message'  => __('Your Notion connection is not valid', 'fluentformpro'),
-            'save_button_text' => __('Verify Notion', 'fluentformpro'),
-            'fields'           => [
-                'button_link'  => [
-                    'type'      => 'link',
-                    'link_text' => __('Get Notion Code', 'fluentformpro'),
-                    'link'      => $api->getAuthUrl(),
-                    'target'    => '_blank',
-                    'tips'      => __('Please click on this link get Access Code from Notion and Select your Notion database to connect with Fluent Forms', 'fluentformpro'),
-                ],
-                'access_token' => [
-                    'type'        => 'password',
-                    'placeholder' => __('Access Code', 'fluentformpro'),
-                    'label_tips'  => __("Please find access code by clicking 'Get Notion Access Code' Button then paste it here", 'fluentformpro'),
-                    'label'       => __('Access Code', 'fluentformpro'),
-                ]
-            ],
+            'invalid_message'  => RemoteAuth::pullFailure() ?: __('Your Notion connection is not valid', 'fluentformpro'),
+            'save_button_text' => __('Connect Notion', 'fluentformpro'),
+            // Shown on a connection made before per-site credentials existed ($integration.version is unset).
+            'reconnect_notice' => __("This connection is using an older shared app credential that we're retiring for security reasons. Your feeds keep working as-is — no data is at risk — but we recommend reconnecting to switch to a secure, dedicated connection for your site. It only takes a minute and won't change your feed settings.", 'fluentformpro'),
+            'fields'           => [],
             'hide_on_valid'    => true,
+            // Disconnect leaves discard_settings.data in the screen's state; refetch so the next Connect posts fresh settings.
+            'reload_on_save'   => true,
             'discard_settings' => [
                 'section_description' => __('Your Notion integration is up and running', 'fluentformpro'),
                 'button_text'         => __('Disconnect Notion', 'fluentformpro'),
                 'data'                => [
-                    'access_code' => ''
+                    'connected' => ''
                 ],
                 'show_verify'         => false
             ]
@@ -105,53 +118,25 @@ class Bootstrap extends IntegrationManagerController
         if (!$globalSettings) {
             $globalSettings = [];
         }
-        $defaults = [
-            'access_token' => ''
-        ];
 
-        return wp_parse_args($globalSettings, $defaults);
+        return wp_parse_args($globalSettings, ['status' => false]);
     }
 
     public function saveGlobalSettings($settings)
     {
-        if (empty($settings['access_token'])) {
-            $integrationSettings = [
-                'access_token' => '',
-                'status'       => false
-            ];
-            // Update the reCaptcha details with siteKey & secretKey.
-            update_option($this->optionKey, $integrationSettings, 'no');
+        if (array_key_exists('connected', $settings) && empty($settings['connected'])) {
+            update_option($this->optionKey, ['status' => false], 'no');
             wp_send_json_success([
-                'message' => __('Your settings has been updated', 'fluentformpro'),
+                'message' => __('Your Notion connection has been removed', 'fluentformpro'),
                 'status'  => false
             ], 200);
         }
 
-        // Verify API key now
-        try {
-            $token = sanitize_textarea_field($settings['access_token']);
-            $api = new API();
-            $result = $api->generateAccessToken($token);
-
-            if (is_wp_error($result)) {
-                throw new \Exception($result->get_error_message());
-            }
-
-            $token = [
-                'status'       => true,
-                'access_token' => $result
-            ];
-
-            update_option($this->optionKey, $token, 'no');
-        } catch (\Exception $exception) {
-            wp_send_json_error([
-                'message' => $exception->getMessage()
-            ], 400);
-        }
+        $connectUrl = RemoteAuth::prepareAuth('notion', 'workspace', admin_url('?ff_notion_auth=1'));
 
         wp_send_json_success([
-            'message' => __('Your Notion api key has been verified and successfully set', 'fluentformpro'),
-            'status'  => true
+            'message'      => __('You are being redirected to Notion to authorize access', 'fluentformpro'),
+            'redirect_url' => $connectUrl
         ], 200);
     }
 
@@ -259,7 +244,7 @@ class Bootstrap extends IntegrationManagerController
 
         $bodyArgs = [
             "filter" => [
-                "value"    => "database",
+                "value"    => "data_source",
                 "property" => "object"
             ]
         ];
@@ -273,13 +258,48 @@ class Bootstrap extends IntegrationManagerController
             ], 423);
         }
 
+        $sourcesByDatabase = [];
+
+        foreach ($lists['results'] as $source) {
+            $databaseId = ArrayHelper::get($source, 'parent.database_id');
+            if ($databaseId) {
+                $sourcesByDatabase[$databaseId][$source['id']] = ArrayHelper::get($source, 'title.0.plain_text', __('(Untitled)', 'fluentformpro'));
+            }
+        }
+
+        // Saved feeds store the database ID, so it stays the key; it means the database's first data source.
         $databases = [];
 
-        foreach ($lists['results'] as $db) {
-            $databases[$db['id']] = $db['title'][0]['plain_text'];
+        foreach ($sourcesByDatabase as $databaseId => $sources) {
+            if (count($sources) === 1) {
+                $databases[$databaseId] = reset($sources);
+                continue;
+            }
+
+            $database = $api->makeRequest('https://api.notion.com/v1/databases/' . $databaseId);
+            $databaseTitle = is_wp_error($database) ? reset($sources) : ArrayHelper::get($database, 'title.0.plain_text', __('(Untitled)', 'fluentformpro'));
+
+            $databases[$databaseId] = $databaseTitle;
+            foreach ($sources as $sourceId => $sourceTitle) {
+                $databases[$sourceId] = $databaseTitle . ' › ' . $sourceTitle;
+            }
         }
 
         return $databases;
+    }
+
+    protected function resolveDataSourceId($listId)
+    {
+        if (isset($this->dataSourceIds[$listId])) {
+            return $this->dataSourceIds[$listId];
+        }
+
+        $database = (new API())->makeRequest('https://api.notion.com/v1/databases/' . $listId);
+
+        // A non-default source picked in the feed is saved as its own data source ID, which is not a database.
+        $dataSourceId = is_wp_error($database) ? $listId : ArrayHelper::get($database, 'data_sources.0.id', $listId);
+
+        return $this->dataSourceIds[$listId] = $dataSourceId;
     }
 
     public function validate($settings, $integrationId, $formId)
@@ -312,7 +332,7 @@ class Bootstrap extends IntegrationManagerController
             return false;
         }
 
-        $lists = $api->makeRequest('https://api.notion.com/v1/databases/' . $listId);
+        $lists = $api->makeRequest('https://api.notion.com/v1/data_sources/' . $this->resolveDataSourceId($listId));
 
         if (is_wp_error($lists)) {
             wp_send_json_error([
@@ -392,7 +412,7 @@ class Bootstrap extends IntegrationManagerController
             $value = ArrayHelper::get($feedData, $name);
 
             if (!empty($value)) {
-                $subscriber['parent']['database_id'] = $feedData['list_id'];
+                $subscriber['parent']['data_source_id'] = $this->resolveDataSourceId($feedData['list_id']);
                 $cls->$name = new \stdClass();
 
                 if ($type == 'title' || $type == 'rich_text') {

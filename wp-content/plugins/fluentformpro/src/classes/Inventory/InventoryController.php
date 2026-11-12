@@ -52,7 +52,14 @@ class InventoryController
          * Validate Inventory Form Fields
          */
         add_action('fluentform/before_insert_submission', function ($insertData, $formData, $form) {
-            (new InventoryValidation($formData, $form))->validate();
+            // Two inputs on purpose:
+            // - stock is checked against what core will charge: the saved, sanitized response,
+            //   whose keys and values can differ from the raw request (e.g. "0%351", "qty%41");
+            // - conditional logic is checked against the raw request, the same input core uses for it.
+            $savedResponse = json_decode((string) ArrayHelper::get((array) $insertData, 'response'), true);
+            $chargedData = is_array($savedResponse) ? $savedResponse : $formData;
+
+            (new InventoryValidation($chargedData, $form, $formData))->validate();
         }, 10, 3);
         
         /**

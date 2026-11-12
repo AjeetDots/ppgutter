@@ -201,7 +201,7 @@ class Acl
 
     // "Direct grant" = permissions attached to the USER themselves (per-user Manager),
     // as opposed to access inherited from a delegated WordPress role.
-    private static function userHasDirectGrant($userId, $user)
+    public static function userHasDirectGrant($userId, $user)
     {
         // Flag set when an admin adds the user via Settings -> Managers.
         if (get_user_meta($userId, '_fluent_forms_has_role', true)) {

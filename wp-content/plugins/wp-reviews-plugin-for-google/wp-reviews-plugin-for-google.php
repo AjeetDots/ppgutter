@@ -9,9 +9,9 @@ Author: Trustindex.io <support@trustindex.io>
 Author URI: https://www.trustindex.io/
 Contributors: trustindex
 License: GPLv2 or later
-Version: 14.2
+Version: 14.3
 Requires at least: 6.2
-Requires PHP: 7.4
+Requires PHP: 7.2
 Text Domain: wp-reviews-plugin-for-google
 Domain Path: /languages
 Donate link: https://www.trustindex.io/prices/
@@ -22,7 +22,7 @@ Copyright 2019 Trustindex Kft (email: support@trustindex.io)
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 require_once plugin_dir_path(__FILE__) . 'include' . DIRECTORY_SEPARATOR . 'cache-plugin-filters.php';
 require_once plugin_dir_path(__FILE__) . 'trustindex-plugin.class.php';
-$trustindex_pm_google = new TrustindexPlugin_google("google", __FILE__, "14.2", "Widgets for Google Reviews", "Google");
+$trustindex_pm_google = new TrustindexPlugin_google("google", __FILE__, "14.3", "Widgets for Google Reviews", "Google");
 $pluginManager = 'TrustindexPlugin_google';
 $pluginManagerInstance = $trustindex_pm_google;
 add_action('admin_init', function() { ob_start(); });
@@ -89,8 +89,13 @@ if (!function_exists('register_block_type')) {
 add_action('widgets_init', [ $pluginManagerInstance, 'init_widget' ]);
 add_action('widgets_init', [ $pluginManagerInstance, 'register_widget' ]);
 }
-add_action('init', function() {
-wp_register_script('trustindex-loader-js', 'https://cdn.trustindex.io/loader.js', [], null, [ // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The loader URL must not contain cache-busting query parameters.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public file endpoint, see TrustindexAssetProxy::handleRequest()
+if (isset($_GET['trustindex-asset']) && !defined('TRUSTINDEX_ASSET_REQUEST_HANDLED')) {
+define('TRUSTINDEX_ASSET_REQUEST_HANDLED', true);
+add_action('plugins_loaded', [ $pluginManagerInstance->getAssetProxy(), 'handleRequest' ], 1);
+}
+add_action('init', function() use($pluginManagerInstance) {
+wp_register_script('trustindex-loader-js', $pluginManagerInstance->getAssetProxy()->getLoaderUrl(), [], null, [ // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The loader URL must not contain cache-busting query parameters.
 'strategy' => is_admin() ? 'defer' : 'async',
 'in_footer' => !is_admin(),
 ]);
@@ -102,6 +107,7 @@ return 0 === strpos($handle, 'trustindex-widget-css-') ? $pluginManagerInstance-
 add_filter('script_loader_tag', function($tag, $handle) {
 if ('trustindex-loader-js' === $handle) {
 $tag = str_replace('<script ', '<script data-ccm-injected="1" ', $tag);
+$tag = preg_replace('/ src="'.preg_quote('https://cdn.trustindex.io/loader.js', '/').'(?![?#"])[^"]*"/', ' src="https://cdn.trustindex.io/loader.js"', $tag);
 }
 return $tag;
 }, 10, 2);
@@ -163,8 +169,10 @@ add_action('admin_notices', function() use ($pluginManager, $pluginManagerInstan
 if (!current_user_can($pluginManager::$permissionNeeded)) {
 return;
 }
+$screen = get_current_screen();
+$dashboardNotificationOptions = null !== $screen && 'dashboard' === $screen->id ? $pluginManagerInstance->getDashboardNotificationOptions() : [];
 foreach ($pluginManagerInstance->getNotificationOptions() as $type => $options) {
-if (!$pluginManagerInstance->isNotificationActive($type)) {
+if (!$pluginManagerInstance->isNotificationActive($type) || isset($dashboardNotificationOptions[$type])) {
 continue;
 }
 echo '<div class="notice notice-'. esc_attr($options['type']) .' '. ($options['is-closeable'] ? 'is-dismissible' : '') .' trustindex-notification-row '. esc_attr($options['extra-class']).'" data-close-url="'. esc_url(wp_nonce_url(admin_url('admin.php?page='. $pluginManagerInstance->get_plugin_slug() .'/settings.php&notification='. $type .'&action=close'), 'ti-notification')) .'">';
@@ -203,6 +211,21 @@ echo '
 </p>
 </div>';
 }
+});
+add_action('wp_dashboard_setup', function() use ($pluginManager, $pluginManagerInstance) {
+if (!current_user_can($pluginManager::$permissionNeeded) || [] === $pluginManagerInstance->getDashboardNotificationOptions()) {
+return;
+}
+wp_add_dashboard_widget('trustindex-dashboard-'. $pluginManagerInstance->getShortName(), "Widgets for Google Reviews", function() use ($pluginManagerInstance) {
+foreach ($pluginManagerInstance->getDashboardNotificationOptions() as $type => $options) {
+echo '<div class="notice notice-'. esc_attr($options['type']) .' inline '. ($options['is-closeable'] ? 'is-dismissible' : '') .' trustindex-notification-row" data-close-url="'. esc_url(wp_nonce_url(admin_url('admin.php?page='. $pluginManagerInstance->get_plugin_slug() .'/settings.php&notification='. $type .'&action=close&dashboard=1'), 'ti-notification')) .'">';
+echo '<p>'. wp_kses_post($options['text']) .'</p>';
+if ($options['button-text']) {
+echo '<p><a href="'. esc_url(wp_nonce_url(admin_url('admin.php?page='. $pluginManagerInstance->get_plugin_slug() .'/settings.php&notification='. $type .'&action=open&dashboard=1'), 'ti-notification')) .'" class="button button-primary">'. esc_html($options['button-text']) .'</a></p>';
+}
+echo '</div>';
+}
+});
 });
 unset($pluginManagerInstance);
 ?>

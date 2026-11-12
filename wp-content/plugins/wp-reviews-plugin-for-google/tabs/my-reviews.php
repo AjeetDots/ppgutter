@@ -41,6 +41,12 @@ wp_cache_delete('ti-reviews-cache-'.$pluginManagerInstance->getShortName());
 header('Location: admin.php?page='.esc_attr($_page).'&tab=my-reviews');
 exit;
 }
+if (isset($_GET['delete-review'])) {
+check_admin_referer('ti-delete-review');
+$pluginManagerInstance->deleteReview((int)$_GET['delete-review']);
+header('Location: admin.php?page='.esc_attr($_page).'&tab=my-reviews');
+exit;
+}
 /* Replied flag saving:
 - Google: comes after source connect
 - Facebook: we saved internal
@@ -70,9 +76,13 @@ if (isset($_POST['download_data'])) {
 check_admin_referer('ti-download-reviews');
 // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 $data = json_decode(wp_unslash($_POST['download_data']), true);
-if (isset($data['is_new_reviews']) && $data['is_new_reviews']) {
-if (isset($data['reviews']) && is_array($data['reviews']) && $data['reviews']) {
-$pluginManagerInstance->save_reviews($data['reviews']);
+$downloadedReviews = isset($data['reviews']) && is_array($data['reviews']) ? $data['reviews'] : [];
+$isNewReviews = isset($data['is_new_reviews']) && $data['is_new_reviews'];
+$isEmptyListInvalid = $isNewReviews && [] === $downloadedReviews && 0 < (int)($data['rating_number'] ?? 0);
+if ($isNewReviews && !$isEmptyListInvalid) {
+$pluginManagerInstance->save_reviews($downloadedReviews);
+
+if ([] !== $downloadedReviews) {
 if (!$pluginManagerInstance->getNotificationParam('review-download-finished', 'hidden')) {
 $pluginManagerInstance->setNotificationParam('review-download-finished', 'active', true);
 }
@@ -95,7 +105,7 @@ if (isset($data['rating_numbers_last']) && $data['rating_numbers_last']) {
 $pageDetails['rating_numbers_last'] = $data['rating_numbers_last'];
 }
 $pageDetails['rating_score'] = $data['rating_score'];
-update_option($pluginManagerInstance->get_option_name('page-details'), $pageDetails, false);
+update_option($pluginManagerInstance->get_option_name('page-details'), $pluginManagerInstance->sanitizePageDetails($pageDetails), false);
 $GLOBALS['wp_object_cache']->delete($pluginManagerInstance->get_option_name('page-details'), 'options');
 }
 if (!$pluginManagerInstance->getNotificationParam('review-download-available', 'hidden')) {
@@ -103,9 +113,11 @@ $pluginManagerInstance->setNotificationParam('review-download-available', 'do-ch
 $pluginManagerInstance->setNotificationParam('review-download-available', 'active', false);
 }
 } else {
-update_option($pluginManagerInstance->get_option_name('review-download-is-failed'), 1, false);
+update_option($pluginManagerInstance->get_option_name('review-download-is-failed'), $isEmptyListInvalid ? 'empty' : 1, false);
 }
+if (!$isEmptyListInvalid) {
 update_option($pluginManagerInstance->get_option_name('download-timestamp'), time() + (int)$data['next_update_available'], false);
+}
 exit;
 }
 $reviews = $pluginManagerInstance->getReviews();
@@ -160,14 +172,14 @@ delete_option($pluginManagerInstance->get_option_name('review-download-is-failed
 <?php if (!$isReviewDownloadInProgress): ?>
 <?php if ($reviewDownloadFailed): ?>
 <div class="ti-notice ti-notice-error">
-<p><?php echo esc_html(__('The manual review download not available yet.', 'wp-reviews-plugin-for-google')); ?></p>
+<p><?php echo esc_html('empty' === $reviewDownloadFailed ? __('The reviews could not be downloaded, please try again later.', 'wp-reviews-plugin-for-google') : __('The manual review download not available yet.', 'wp-reviews-plugin-for-google')); ?></p>
 </div>
 <?php endif; ?>
 <?php if ($downloadTimestamp <= time()): ?>
 <div class="ti-notice ti-d-none ti-notice-info" id="ti-connect-info">
 <p><?php echo esc_html(__("A popup window should be appear! Please, go to there and continue the steps! (If there is no popup window, you can check the the browser's popup blocker)", 'wp-reviews-plugin-for-google')); ?></p>
 </div>
-<a href="#" data-nonce="<?php echo esc_attr(wp_create_nonce('ti-download-reviews')); ?>" class="ti-btn ti-btn-lg ti-btn-loading-on-click ti-tooltip ti-show-tooltip ti-tooltip-light ti-mb-1 btn-download-reviews" data-delay=10>
+<a href="#" data-nonce="<?php echo esc_attr(wp_create_nonce('ti-download-reviews')); ?>" class="ti-btn ti-btn-lg ti-tooltip ti-show-tooltip ti-tooltip-light ti-mb-1 btn-download-reviews" data-delay=10>
 <?php echo esc_html(__('Download new reviews', 'wp-reviews-plugin-for-google'));?>
 <span class="ti-tooltip-message"><?php echo esc_html(__('Now, you can download your new reviews.', 'wp-reviews-plugin-for-google')); ?></span>
 </a>
@@ -262,6 +274,7 @@ $hideReplyButton = get_option($pluginManagerInstance->get_option_name('review-do
 <?php echo esc_html(__('Show review', 'wp-reviews-plugin-for-google')); ?>
 <?php endif; ?>
 </a>
+<a href="<?php echo esc_url(wp_nonce_url('?page='.esc_attr($_page).'&tab=my-reviews&delete-review='. $review->id, 'ti-delete-review')); ?>" class="ti-btn ti-btn-sm ti-btn-default btn-delete-review"><?php echo esc_html(__('Delete review', 'wp-reviews-plugin-for-google')); ?></a>
 <?php if (!$review->hidden && !$hideReplyButton): ?>
 <div class="ti-button-dropdown ti-reply-box<?php if ($state === 'replied'): ?> ti-active<?php endif; ?>" data-state="<?php echo esc_attr($state); ?>" data-original-state="<?php echo esc_attr($state); ?>">
 <span class="ti-button-dropdown-arrow" data-button=".btn-show-ai-reply"></span>
@@ -373,6 +386,22 @@ echo esc_html(sprintf(__('Upload reply to %s', 'wp-reviews-plugin-for-google'), 
 <?php endforeach; ?>
 </tbody>
 </table>
+<div class="ti-modal" id="ti-delete-review-modal">
+<div class="ti-modal-dialog">
+<div class="ti-modal-content">
+<div class="ti-modal-header">
+<span class="ti-modal-title"><?php echo esc_html(__('Delete review permanently?', 'wp-reviews-plugin-for-google')); ?></span>
+</div>
+<div class="ti-modal-body">
+<p><?php echo esc_html(__('The review and the reviewer’s photo will be deleted from your website, and the review will not be downloaded again. This cannot be undone.', 'wp-reviews-plugin-for-google')); ?></p>
+</div>
+<div class="ti-modal-footer">
+<a href="#" class="ti-btn ti-btn-default btn-modal-close"><?php echo esc_html(__('Cancel', 'wp-reviews-plugin-for-google')); ?></a>
+<a href="#" class="ti-btn ti-btn-danger ti-btn-loading-on-click btn-delete-review-confirm"><?php echo esc_html(__('Delete', 'wp-reviews-plugin-for-google')); ?></a>
+</div>
+</div>
+</div>
+</div>
 <?php endif; ?>
 </div>
 <?php if (!get_option($pluginManagerInstance->get_option_name('rate-us-feedback'), 0)): ?>

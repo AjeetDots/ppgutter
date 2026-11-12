@@ -32,7 +32,14 @@ class FormFieldsParser
             $form = \FluentForm\App\Models\Form::find($form);
         }
 
-        if (isset(static::$formsWith[$form->id]) && array_diff(static::$formsWith[$form->id], $with)) {
+        $previousWith = static::$formsWith[$form->id] ?? null;
+        // The parsed-fields cache is keyed only by form id, not by $with, so a caller asking
+        // for MORE than what's cached (not just less) must also invalidate it — otherwise it
+        // silently gets a shape missing what it asked for (e.g. no admin_label data).
+        $withChanged = null !== $previousWith
+            && (array_diff($previousWith, $with) || array_diff($with, $previousWith));
+
+        if ($withChanged) {
             static::$forms[$form->id] = [];
         }
         static::$formsWith[$form->id] = $with;

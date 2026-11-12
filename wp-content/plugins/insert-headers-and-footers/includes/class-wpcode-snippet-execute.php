@@ -19,6 +19,13 @@ class WPCode_Snippet_Execute {
 	private $doing_activation = false;
 
 	/**
+	 * Whether the code being activated is slashed (as posted form data is) and must be unslashed before it runs.
+	 *
+	 * @var bool
+	 */
+	private $activation_code_slashed = false;
+
+	/**
 	 *  The type of executors.
 	 *
 	 * @var array
@@ -647,6 +654,27 @@ class WPCode_Snippet_Execute {
 	}
 
 	/**
+	 * Tell the activation check whether the code on the snippet object is slashed (as posted form data is)
+	 * and must be unslashed before it runs. Replaces sniffing $_POST, which any request could spoof.
+	 *
+	 * @param bool $slashed Whether the code being activated is slashed.
+	 *
+	 * @return void
+	 */
+	public function set_activation_code_slashed( $slashed ) {
+		$this->activation_code_slashed = (bool) $slashed;
+	}
+
+	/**
+	 * Whether the code being activated is slashed.
+	 *
+	 * @return bool
+	 */
+	public function is_activation_code_slashed() {
+		return ! empty( $this->activation_code_slashed );
+	}
+
+	/**
 	 * Check if a code type is marked as pro.
 	 *
 	 * @param string $key The key of the type to check.
@@ -710,6 +738,30 @@ class WPCode_Snippet_Execute {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Normalize code the way the editor stores it: PHP without its opening and closing tags, JS without the
+	 * script wrapper. Shared by the editor and the file importer so the two never drift.
+	 *
+	 * @param string $code      The code as submitted.
+	 * @param string $code_type The code type.
+	 *
+	 * @return string
+	 */
+	public static function normalize_code( $code, $code_type ) {
+		if ( 'php' === $code_type ) {
+			$code = preg_replace( '|^\s*<\?(php)?|', '', $code );
+			// Let's also replace the closing php tag if any.
+			$code = preg_replace( '|\?>\s*$|', '', $code );
+		}
+
+		if ( 'js' === $code_type && apply_filters( 'wpcode_strip_script_tags_for_js', true ) ) {
+			$code = preg_replace( '|^\s*<script[^>]*>|', '', $code );
+			$code = preg_replace( '|</(script)>\s*$|', '', $code );
+		}
+
+		return $code;
 	}
 
 	/**

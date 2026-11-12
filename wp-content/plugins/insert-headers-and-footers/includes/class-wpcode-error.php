@@ -143,6 +143,19 @@ class WPCode_Error {
 	}
 
 	/**
+	 * Get the last recorded error as it was stored.
+	 *
+	 * @return array|Exception|null
+	 */
+	public function get_last_error() {
+		if ( empty( $this->errors ) ) {
+			return null;
+		}
+
+		return end( $this->errors );
+	}
+
+	/**
 	 * Get the last error message.
 	 *
 	 * @return string

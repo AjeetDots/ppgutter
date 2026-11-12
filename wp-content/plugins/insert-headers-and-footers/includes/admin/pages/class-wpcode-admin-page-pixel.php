@@ -600,9 +600,9 @@ class WPCode_Admin_Page_Pixel extends WPCode_Admin_Page {
 				'css_class'   => 'add-to-cart',
 			),
 			array(
-				'label'       => __( 'Checkout PageVisit Event', 'insert-headers-and-footers' ),
+				'label'       => __( 'InitiateCheckout Event', 'insert-headers-and-footers' ),
 				'name'        => 'begin_checkout',
-				'description' => __( 'Enable the Checkout PageVisit event to track when a user reaches the checkout page on your website.', 'insert-headers-and-footers' ),
+				'description' => __( 'Turn on the "InitiateCheckout" event to track when a user reaches the checkout page on your website.', 'insert-headers-and-footers' ),
 				'ecommerce'   => true,
 				'css_class'   => 'begin-checkout',
 			),

@@ -61,6 +61,9 @@ class PaymentHandler
 
         add_filter('fluentform/should_process_submission_actions', [$this, 'skipActionsForReversedPayment'], 10, 3);
 
+        // Before the payments gate: inventory counts stock from the same slider with payments off.
+        add_filter('fluentform/validate_input_item_rangeslider', [$this, 'validateRangeSliderQuantity'], 10, 6);
+
         if (!$this->isEnabled()) {
             return;
         }
@@ -728,12 +731,15 @@ class PaymentHandler
     public function validatePaymentNumber($error, $field, $formData)
     {
         $value = ArrayHelper::get($formData, $field['name']);
-        if ($error || in_array($value, [null, ''], true) || PaymentHelper::isValidPaymentAmount($value)) {
+        $isRequired = ArrayHelper::get($field, 'raw.settings.validation_rules.required.value');
+        // A required amount under half a cent is stored as 0 cents, which gateways skip as a free order.
+        $isRequiredButZeroCents = $isRequired && is_numeric($value) && round((float) $value * 100) < 1;
+        if ($error || in_array($value, [null, ''], true)
+            || (PaymentHelper::isValidPaymentAmount($value) && !$isRequiredButZeroCents)) {
             return $error;
         }
 
-        $isOptionalZero = is_numeric($value) && 0 == $value
-            && !ArrayHelper::get($field, 'raw.settings.validation_rules.required.value');
+        $isOptionalZero = is_numeric($value) && 0 == $value && !$isRequired;
 
         return $isOptionalZero ? $error : __('This payment item is invalid', 'fluentform');
     }
@@ -751,6 +757,42 @@ class PaymentHandler
             && !ArrayHelper::get($field, 'raw.settings.validation_rules.required.value');
 
         return $isOptionalZero ? $error : __('This payment item is invalid', 'fluentform');
+    }
+
+    // A slider that sets a product's quantity decides the charge and the stock count, and getQuantity()
+    // intval()s it, so 0.5 would drop the item and 1.5 bill 1. Judge the quantity getQuantity() will use.
+    public function validateRangeSliderQuantity($error, $field, $formData, $fields = [], $form = null, $errors = [])
+    {
+        $name = $field['name'];
+        $slider = ArrayHelper::get($field, 'raw', []);
+
+        $setsQuantity = 'yes' === ArrayHelper::get($slider, 'settings.enable_target_product')
+            && ArrayHelper::get($slider, 'settings.target_product');
+        $alreadyFailed = $error || !empty($errors[$name]); // e.g. "required": show only that message
+
+        if (!$setsQuantity || $alreadyFailed) {
+            return $error;
+        }
+
+        // Read it as getQuantity() does: blank is 0, missing is 1. Hidden sliders never reach here and a
+        // real slider always sends at least its min, so a missing value was stripped from the request.
+        $quantity = isset($formData[$name]) ? $formData[$name] : 1;
+        if ('' === $quantity) {
+            $quantity = 0;
+        }
+
+        $min = ArrayHelper::get($slider, 'attributes.min');
+        $max = ArrayHelper::get($slider, 'attributes.max');
+        $lowest = max(is_numeric($min) ? (float) $min : 0, 0); // a quantity is never negative
+        $highest = is_numeric($max) ? min((float) $max, PaymentHelper::maxQuantity()) : PaymentHelper::maxQuantity();
+
+        $isWholeNumber = is_numeric($quantity) && is_finite((float) $quantity) && floor($quantity) == $quantity;
+
+        if ($isWholeNumber && $quantity >= $lowest && $quantity <= $highest) {
+            return $error;
+        }
+
+        return __('This payment item is invalid', 'fluentform');
     }
 
     public function validatePaymentMethod($error, $field, $formData, $fields, $form)

@@ -403,6 +403,10 @@ class WPCode_Library {
 		$snippet = wpcode_get_snippet( $snippet_data );
 
 		$snippet_id = $snippet->save();
+		if ( ! $snippet_id ) {
+			// A refused save (permissions, or a site that manages this type from files) creates nothing.
+			return false;
+		}
 
 		// Save the version information if available in the API response.
 		if ( ! empty( $snippet_data['version'] ) ) {

@@ -4,7 +4,7 @@ Tags: contact form, contact forms, wp forms, forms, form builder, contact form b
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 6.2.16
+Stable tag: 6.2.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,11 @@ Starting from v4.3.0, Conversational Forms got even more powerful. Now you have 
 
 == Built-in Data Analysis Tool ==
 In version 3.0.0, we have added the most exciting features that no other form plugins provide, and that is built-in data visualization tool. Using the data visualization module, you can analyze your data from your web and contact forms, analyze the data using a pie-chart, bar chart, tabular view. Using Ninja Tables plugin you can even show the submitted data in the frontend.
+
+== Google Sheets & Notion Integration ==
+Connect your forms to Google Sheets or Notion and send every submission straight to a spreadsheet or database, no code required.
+
+**Data & Privacy:** Connecting Google Sheets or Notion uses a hosted external service (connect.fluentforms.com) to complete the authorization, so the OAuth client secret never ships inside the plugin. When you connect, your site's domain, the integration you connected, and the email of the WordPress user who clicked Connect are sent to that service and stored to measure feature usage. Your form submissions and spreadsheet/database content are never sent to or stored by that service — they go directly between your site and Google/Notion. Learn more in our [Privacy Policy](https://fluentforms.com/privacy-policy/).
 
 == Best Contact Form Plugin in WordPress ==
 Fluent Forms is an extremely feature-rich plugin that delivers a beautiful and bright user interface. Everything works with drag-and-drop, which makes creating new forms slightly quicker and more accessible, You will get all the premium components like conditional logics, more than 30 custom fields, 3rd party integrations, built-in entry management system, etc.
@@ -362,15 +367,25 @@ The entire source code is <a href="https://github.com/fluentform/fluentform">ava
 
 == Changelog ==
 
+= 6.2.17 (Date: November 02, 2026) =
+- Adds one-click connect for Google Sheets and Notion improving the security
+- Fixes the Notion database list breaking on a database with no title
+- Fixes Submission filters not matching Date/Time fields
+- Fixes OpenStreetMap address lookup's loading state and City fallback
+- Fixes Inventory refusing a submission over a sold-out product hidden by conditional logic
+- Improves WebHook security so feeds stay within the form a manager has access to
+- Improves Inventory security so stock limits only accept valid quantities
+- Improves Double Opt-in security so auto-delete only removes the entry's own files
+- Improves Resend Notification security so only files from their own entry are used
+
 = 6.2.16 (Date: October 16, 2026) =
 - Adds a "Map all form fields" button to Google Sheets feeds
-- Fixes Google Sheets feeds saving unmapped and adding empty rows
-- Fixes "0"-valued inventory options skipping their stock limit
-- Fixes unlinked radio and dropdown options showing out of stock
-- Stops orders from going over Global Inventory stock limits
-- Stops coupon limits being bypassed by case or stacking
-- Tightens security for User Registration roles and PayPal subscriptions
-- Tightens security for guest order linking and confirmation page values
+- Fixes Google Sheets feeds saving with no fields mapped and adding empty rows
+- Fixes Global Inventory options valued "0", like free tickets, not counting toward their stock limit
+- Fixes Global Inventory radio and dropdown options without an inventory item always showing as out of stock
+- Hardens Global Inventory stock limits so they can't be exceeded
+- Hardens coupon use limits so they can't be bypassed, including codes typed in a different case and non-stackable coupons
+- Hardens security for User Registration feed roles, PayPal subscription notifications, guest order linking, and submitted values on confirmation pages
 
 = 6.2.15 (Date: September 30, 2026) =
 - Adds the Autocomplete setting to the Phone field

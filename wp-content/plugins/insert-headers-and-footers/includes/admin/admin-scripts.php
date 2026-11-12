@@ -47,6 +47,7 @@ function wpcode_admin_scripts() {
 				'code_type_options'        => wpcode()->execute->get_code_type_options(),
 				'please_wait'              => __( 'Please wait.', 'insert-headers-and-footers' ),
 				'ok'                       => __( 'OK', 'insert-headers-and-footers' ),
+				'save_failed'              => __( 'The snippet could not be saved.', 'insert-headers-and-footers' ),
 				'live_preview_save_title'  => __( 'Save Snippet First', 'insert-headers-and-footers' ),
 				'live_preview_save_text'   => __( 'Please save your CSS snippet first before using Live Preview.', 'insert-headers-and-footers' ),
 				'live_preview_block_title' => __( 'Live Preview Unavailable', 'insert-headers-and-footers' ),

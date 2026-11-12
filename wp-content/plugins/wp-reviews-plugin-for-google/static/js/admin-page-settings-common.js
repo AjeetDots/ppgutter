@@ -452,6 +452,15 @@ jQuery(document).ready(function() {
 		td.find('.btn-show-ai-reply').removeClass('ti-btn-default-disabled');
 	});
 
+	jQuery(document).on('click', '.btn-delete-review', function(event) {
+		event.preventDefault();
+
+		let modal = jQuery('#ti-delete-review-modal');
+
+		modal.find('.btn-delete-review-confirm').attr('href', jQuery(this).attr('href'));
+		modal.fadeIn();
+	});
+
 	// hide highlight section
 	jQuery(document).on('click', '.btn-hide-highlight', function(event) {
 		event.preventDefault();

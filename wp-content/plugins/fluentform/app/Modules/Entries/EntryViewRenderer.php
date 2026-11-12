@@ -5,6 +5,7 @@ namespace FluentForm\App\Modules\Entries;
 use FluentForm\App\Helpers\Helper;
 use FluentForm\App\Modules\Form\FormFieldsParser;
 use FluentForm\App\Modules\Registerer\TranslationString;
+use FluentForm\App\Services\Manager\FormManagerService;
 use FluentForm\Framework\Helpers\ArrayHelper;
 
 class EntryViewRenderer
@@ -13,11 +14,17 @@ class EntryViewRenderer
     {
         wp_enqueue_script('fluentform_form_entries');
 
-        $forms = wpFluent()
+        $formsQuery = wpFluent()
             ->table('fluentform_forms')
             ->select(['id', 'title'])
-            ->orderBy('id', 'DESC')
-            ->get();
+            ->orderBy('id', 'DESC');
+
+        $allowedFormIds = FormManagerService::getUserAllowedFormsScope();
+        if (false !== $allowedFormIds) {
+            $formsQuery->whereIn('id', $allowedFormIds ? $allowedFormIds : [0]);
+        }
+
+        $forms = $formsQuery->get();
 
         $emailNotifications = wpFluent()
             ->table('fluentform_form_meta')
@@ -39,8 +46,8 @@ class EntryViewRenderer
         $submissionShortcodes = \FluentForm\App\Services\FormBuilder\EditorShortCode::getSubmissionShortcodes($form);
         $submissionShortcodes['shortcodes']['{submission.ip}'] = __('Submitter IP', 'fluentform');
         if ($form->has_payment) {
-            $submissionShortcodes['shortcodes']['{payment.payment_status}'] = __('Payment Status','fluentform');
-            $submissionShortcodes['shortcodes']['{payment.payment_total}'] = __('Payment Total','fluentform');
+            $submissionShortcodes['shortcodes']['{payment.payment_status}'] = __('Payment Status', 'fluentform');
+            $submissionShortcodes['shortcodes']['{payment.payment_total}'] = __('Payment Total', 'fluentform');
         }
         $formInputs = FormFieldsParser::getEntryInputs($form, ['admin_label', 'raw']);
         $inputLabels = FormFieldsParser::getAdminLabels($form, $formInputs);
@@ -72,7 +79,7 @@ class EntryViewRenderer
             'fluent_form_entries_vars',
             [
                 $data,
-                $form
+                $form,
             ],
             FLUENTFORM_FRAMEWORK_UPGRADE,
             'fluentform/entries_vars',

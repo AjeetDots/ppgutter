@@ -82,6 +82,8 @@ class ManagerService
             throw new ValidationException('', 0, null, ['message' => 'Please Provide Valid Email']);
         }
 
+        $this->guardDelegatedGrant($user, $manager);
+
         Acl::attachPermissions($user, $permissions);
 
         update_user_meta($user->ID, '_fluent_forms_has_role', 1);
@@ -116,6 +118,57 @@ class ManagerService
         ]);
     }
 
+    /**
+     * A delegated (non-administrator) manager may only hand out or take away access inside
+     * their own reach: never on their own record or an administrator's, and when they are
+     * form-scoped, only for managers who stay within their own forms. Otherwise a scoped
+     * full-access manager could lift any user, including themselves, to every form; removal
+     * counts too, because it hands a delegated-role user back their all-forms role fallback.
+     */
+    private function guardDelegatedGrant($user, $manager = null)
+    {
+        if (current_user_can('manage_options')) {
+            return;
+        }
+
+        // Lowering your own access is fine; only a permission you do not already hold is refused.
+        $isSelf = get_current_user_id() === $user->ID;
+        if ($isSelf && (!$manager || array_diff((array) Arr::get($manager, 'permissions', []), Acl::getUserPermissions($user)))) {
+            throw new ValidationException('', 0, null, ['message' => __('You cannot change your own manager access.', 'fluentform')]);
+        }
+
+        if (user_can($user, 'manage_options')) {
+            throw new ValidationException('', 0, null, ['message' => __('You cannot change an administrator\'s manager access.', 'fluentform')]);
+        }
+
+        $actorScope = FormManagerService::getUserAllowedFormsScope();
+        if (false === $actorScope) {
+            return;
+        }
+
+        $actorScope = array_map('intval', (array) $actorScope);
+        $isWithinActorScope = function ($scope) use ($actorScope) {
+            // [] is a restriction to no forms (fails closed), so it sits inside any scope; only false means all forms.
+            return false !== $scope && !array_diff(array_map('intval', (array) $scope), $actorScope);
+        };
+
+        $targetScope = FormManagerService::getUserAllowedFormsScope($user->ID);
+
+        // addManager() keeps the current scope when the flag is omitted, so judge the scope that will result.
+        $resultingScope = $targetScope;
+        if ($manager && null !== Arr::get($manager, 'has_specific_forms_permission')) {
+            $requestedForms = array_values(array_filter(array_map('intval', (array) Arr::get($manager, 'forms', []))));
+            $resultingScope = 'yes' === Arr::get($manager, 'has_specific_forms_permission') && $requestedForms ? $requestedForms : false;
+        }
+
+        // A delegated-role user already reaches every form, so limiting them is also out of reach.
+        $hasAccessNow = Acl::userHasDirectGrant($user->ID, $user) || Acl::findUserCapability($user);
+
+        if (!$isWithinActorScope($resultingScope) || ($hasAccessNow && !$isWithinActorScope($targetScope))) {
+            throw new ValidationException('', 0, null, ['message' => __('You can only manage access to forms you can access yourself.', 'fluentform')]);
+        }
+    }
+
     public function removeManager($attributes = [])
     {
         $userID = intval(Arr::get($attributes, 'id'));
@@ -140,6 +193,8 @@ class ManagerService
                 'message' => __('You do not have permission to remove a full access manager.', 'fluentform'),
             ]);
         }
+
+        $this->guardDelegatedGrant($user);
 
         Acl::attachPermissions($user, []);
 

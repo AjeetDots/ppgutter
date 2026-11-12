@@ -8,7 +8,8 @@ class GlobalSettingsService
 {
     // Keying material and the gateway secrets it encrypts. Together they let a settings
     // manager decrypt every stored API key offline, so neither is readable here.
-    const DENIED_OPTION_KEYS = ['_fluentform_encryption_key'];
+    // The security salt keys Protector, so reading it would let a caller forge anti-spam and upload tokens.
+    const DENIED_OPTION_KEYS = ['_fluentform_encryption_key', '_fluentform_security_salt'];
     const DENIED_OPTION_PREFIXES = ['fluentform_payment_settings_'];
 
     private function isAllowedOptionKey($key)

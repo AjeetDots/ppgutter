@@ -355,16 +355,29 @@ class ResendNotificationHandler
         $attachments = [];
         $uploadDir = wp_upload_dir();
         if (!empty($processedValues['attachments']) && is_array($processedValues['attachments'])) {
+            $candidates = [];
             foreach ($processedValues['attachments'] as $name) {
                 $fileUrls = ArrayHelper::get($formData, $name);
                 if ($fileUrls && is_array($fileUrls)) {
                     foreach ($fileUrls as $url) {
                         $filePath = $this->resolveUploadAttachmentPath($url, $uploadDir);
                         if ($filePath) {
-                            $attachments[] = $filePath;
+                            $candidates[$filePath] = basename($filePath);
                         }
                     }
                 }
+            }
+
+            // A submitter-controlled field value can name another entry's upload;
+            // when core exposes the check, skip a file another submission owns.
+            $referencedElsewhere = method_exists(Helper::class, 'getFilesReferencedByOtherSubmissions')
+                ? Helper::getFilesReferencedByOtherSubmissions(array_values($candidates), [$entry->id])
+                : [];
+            foreach ($candidates as $filePath => $fileName) {
+                if (isset($referencedElsewhere[$fileName])) {
+                    continue;
+                }
+                $attachments[] = $filePath;
             }
         }
 

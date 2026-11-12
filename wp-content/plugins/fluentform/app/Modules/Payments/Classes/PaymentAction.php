@@ -36,6 +36,8 @@ class PaymentAction
 
     private $quantityItems = [];
 
+    private $hasDroppedPaidItem = false;
+
     public $selectedPaymentMethod = '';
 
     public $methodSettings = [];
@@ -572,6 +574,7 @@ class PaymentAction
         }
 
         $data = $this->submissionData['response'];
+        $this->hasDroppedPaidItem = false;
 
         foreach ($paymentInputs as $paymentInput) {
             $name = ArrayHelper::get($paymentInput, 'attributes.name');
@@ -603,6 +606,7 @@ class PaymentAction
                 if ($item) {
                     $quantity = $this->getQuantity($item['parent_holder']);
                     if (!$quantity) {
+                        $this->markDroppedItem($item['item_price']);
                         continue;
                     }
                     $item['quantity'] = $quantity;
@@ -617,6 +621,7 @@ class PaymentAction
                     if ($item) {
                         $quantity = $this->getQuantity($item['parent_holder']);
                         if (!$quantity) {
+                            $this->markDroppedItem($item['item_price']);
                             continue;
                         }
                         $item['quantity'] = $quantity;
@@ -695,6 +700,20 @@ class PaymentAction
         // oversized value (e.g. a rangeslider quantity, which has no input validator) cannot overflow
         // item_price * quantity; item_quantity fields are already rejected at validation.
         return min(PaymentHelper::maxQuantity(), max(0, intval($quantity)));
+    }
+
+    /**
+     * Remember that a paid option the visitor picked was left out of the order.
+     * A single or number item at quantity 0 is a declined add-on, so it is not marked.
+     *
+     * @param mixed $price
+     * @return void
+     */
+    private function markDroppedItem($price)
+    {
+        if (is_numeric($price) && (float) $price > 0) {
+            $this->hasDroppedPaidItem = true;
+        }
     }
 
     private function pushItem($data)
@@ -779,10 +798,13 @@ class PaymentAction
         return $total;
     }
 
-    // A $0 order is a completed free order when a real priced product was zeroed by a
-    // server-validated discount (both a non-discount and a discount line are present;
-    // discount lines come solely from getValidCoupons), or when the visitor chose one of
-    // the form's own $0 options. Otherwise the $0 total is an omitted or zeroed input.
+    /**
+     * A $0 order is free when a priced product was zeroed by a validated coupon, or the
+     * visitor chose one of the form's own $0 options. A $0 option does not count when a
+     * picked paid option was dropped at quantity 0, since the quantity zeroed that order.
+     *
+     * @return bool
+     */
     public function isZeroTotalFreeOrder()
     {
         $hasProduct = $hasDiscount = false;
@@ -793,7 +815,7 @@ class PaymentAction
                 $hasProduct = true;
             }
         }
-        return ($hasProduct && $hasDiscount) || $this->hasSelectedFreeOption();
+        return ($hasProduct && $hasDiscount) || (!$this->hasDroppedPaidItem && $this->hasSelectedFreeOption());
     }
 
     // Validation rejects any option the form does not offer, so a selected $0 option is the site's own.
@@ -1260,12 +1282,20 @@ class PaymentAction
         $hasFixedDiscounts = false;
         foreach ($this->discountCodes as $discountCode) {
             if($discountCode->coupon_type == 'fixed') {
-                $fixedMaxTotal += intval($coupon->amount * 100);
+                $fixedMaxTotal += intval($discountCode->amount * 100);
                 $hasFixedDiscounts = true;
             }
         }
 
         $fixedMaxTotal = $fixedMaxTotal - $fixedAmountApplied;
+
+        // Spread a remaining fixed discount over the plan's recurring commitment,
+        // trial items included. $subInitialTotal omits trials (it also feeds coupon
+        // validation), so using it here would zero a trial plan outright.
+        $fixedDiscountBase = 0;
+        foreach ($subscriptionItems as $subscriptionItem) {
+            $fixedDiscountBase += $subscriptionItem['recurring_amount'] + $subscriptionItem['initial_amount'];
+        }
 
         foreach ($subscriptionItems as $subIndex => $subscriptionItem) {
             $recurringAmount = $subscriptionItem['recurring_amount'];
@@ -1286,14 +1316,14 @@ class PaymentAction
                 }
             }
 
-            if($hasFixedDiscounts && $fixedMaxTotal > 0) {
-                if($fixedMaxTotal >= $subInitialTotal) {
+            if($hasFixedDiscounts && $fixedMaxTotal > 0 && $fixedDiscountBase > 0) {
+                if($fixedMaxTotal >= $fixedDiscountBase) {
                     $recurringAmount = 0;
                     $signupFee = 0;
                 } else {
-                    $recurringAmount = $recurringAmount - ($fixedMaxTotal / $subInitialTotal) * $recurringAmount;
+                    $recurringAmount = $recurringAmount - ($fixedMaxTotal / $fixedDiscountBase) * $recurringAmount;
                     if($signupFee > 0) {
-                        $signupFee = $signupFee - ($fixedMaxTotal / $subInitialTotal) * $signupFee;
+                        $signupFee = $signupFee - ($fixedMaxTotal / $fixedDiscountBase) * $signupFee;
                     }
                 }
             }
@@ -1304,7 +1334,7 @@ class PaymentAction
             $originalPlan = Helper::safeUnserialize($subscriptionItem['original_plan']);
 
             $originalPlan['subscription_amount'] = round($recurringAmount / 100, 2);
-            $originalPlan['signup_fee'] = round($recurringAmount / 100, 2);
+            $originalPlan['signup_fee'] = round($signupFee / 100, 2);
             $subscriptionItems[$subIndex]['original_plan'] = maybe_serialize($originalPlan);
         }
 

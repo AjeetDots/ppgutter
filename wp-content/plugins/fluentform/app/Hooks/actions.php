@@ -151,7 +151,8 @@ $app->addAction('fluentform/global_menu', function () use ($app) {
 $app->addAction('wp_dashboard_setup', function () {
     $acl = new \FluentForm\App\Modules\Acl\Acl();
 
-    if (!$acl::getCurrentUserCapability()) {
+    // The widget shows entry counts, so a manager granted only dashboard access must not get it.
+    if (!$acl::getCurrentUserCapability() || !$acl::hasPermission(['fluentform_entries_viewer', 'fluentform_manage_entries'])) {
         return;
     }
     wp_add_dashboard_widget('fluentform_stat_widget', __('Fluent Forms Latest Form Submissions', 'fluentform'), function () {

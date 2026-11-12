@@ -64,7 +64,7 @@ class SubmitButton extends BaseComponent
             'ff-btn ff-btn-submit',
             $oldBtnType,
             $btnSize,
-            $data['attributes']['class'],
+            ArrayHelper::get($data, 'attributes.class', ''),
         ];
 
         $loadDefaultFluentStyle = 'ffs_inherit_theme' != $form->theme;
@@ -77,7 +77,7 @@ class SubmitButton extends BaseComponent
             $btnClasses[] = 'ff_btn_style';
         }
 
-        $align = 'ff-el-group ff-text-' . @$data['settings']['align'];
+        $align = 'ff-el-group ff-text-' . ArrayHelper::get($data, 'settings.align', '');
         $data['attributes']['class'] = trim(implode(' ', array_filter($btnClasses)));
 
         if ($tabIndex = Helper::getNextTabIndex()) {
@@ -124,7 +124,7 @@ class SubmitButton extends BaseComponent
         }
 
         $atts = $this->buildAttributes($data['attributes']);
-        $cls = trim($align . ' ' . $data['settings']['container_class']);
+        $cls = trim($align . ' ' . ArrayHelper::get($data, 'settings.container_class', ''));
 
         $html = "<div class='" . esc_attr($cls) . " ff_submit_btn_wrapper'>";
 

@@ -1,7 +1,7 @@
 <?php
 /**
- * Mailbox poller: reads unread lead-notification emails over IMAP (WP-Cron, every 5 minutes),
- * identifies the platform from the sender, parses the lead and sends it to HubSpot.
+ * Mailbox poller: reads Checkatrade lead-notification emails over IMAP (WP-Cron, every 5 minutes),
+ * parses the lead and sends it to HubSpot.
  *
  * Config (wp-config.php constants or env vars):
  *   PPG_IMAP_HOST  e.g. {imap.example.com:993/imap/ssl}INBOX
@@ -12,12 +12,9 @@ defined( 'ABSPATH' ) || exit;
 
 require_once __DIR__ . '/parsers.php';
 
-/** Sender domain => platform slug. Subdomains match too (em.yell.com, services.checkatrade.com). */
+/** Sender domain => platform slug. Subdomains match too (services.checkatrade.com). Checkatrade only. */
 function ppg_email_sources() {
 	return array(
-		'yelp.com'        => 'yelp',
-		'yelp.co.uk'      => 'yelp',
-		'yell.com'        => 'yell',
 		'checkatrade.com' => 'checkatrade',
 	);
 }
@@ -150,7 +147,9 @@ function ppg_poll_mailbox_run() {
 	if ( ! $imap ) {
 		$err = (string) imap_last_error();
 		error_log( '[ppg-lead-gateway] IMAP connect failed: ' . $err );
-		return array_merge( $stats, array( 'outcome' => 'connect_failed', 'detail' => substr( $err, 0, 200 ) ) );
+		// Say which host setting THIS run saw, so a run that still uses an old cached wp-config is easy to spot.
+		$seen = ( false !== stripos( $host, 'novalidate-cert' ) ? 'this run: /novalidate-cert set' : 'this run: /novalidate-cert NOT set' ) . ', ' . ( function_exists( 'wp_doing_cron' ) && wp_doing_cron() ? 'started by WP-Cron' : 'started by a button' );
+		return array_merge( $stats, array( 'outcome' => 'connect_failed', 'detail' => substr( $err, 0, 140 ) . ' [' . $seen . ']' ) );
 	}
 
 	// Import only emails received after the go-live time. Without PPG_GO_LIVE nothing is imported,
@@ -216,6 +215,13 @@ function ppg_poll_mailbox_run() {
 		// still created (identified by its lead id); only an unprocessable lead goes to the review queue.
 		$lead['dedupe_key'] = $header->message_id ?? md5( $subject . $body );
 		$lead['subject']    = $subject;
+
+		// Checkatrade never sends the customer's email, so the contact is created without one and the team adds it
+		// later. This reference (date, time, postcode) is what tells two leads with the same name apart; it is
+		// unique per email and is the contact's ppg_lead_id.
+		$ref                = ppg_checkatrade_ref( (int) $header->udate, $lead['postcode'], $lead['dedupe_key'] );
+		$lead['lead_id']    = $ref;
+		$lead['message']    = ppg_checkatrade_reference_lines( $ref, (int) $header->udate ) . $lead['message'];
 
 		// The mailbox is never modified (no read flags). HubSpot failures are not remembered, so the next run
 		// retries them. ppg_lead_process() logs failures itself and queues the ones that cannot be retried.

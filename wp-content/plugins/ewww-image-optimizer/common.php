@@ -199,10 +199,6 @@ function ewww_image_optimizer_parser_init() {
 		}
 		$buffer_start = true;
 		/**
-		 * Page Parsing class for working with HTML content.
-		 */
-		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-page-parser.php';
-		/**
 		 * ExactDN class for parsing image urls and rewriting them.
 		 */
 		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-exactdn.php';
@@ -216,10 +212,6 @@ function ewww_image_optimizer_parser_init() {
 	if ( ewww_image_optimizer_get_option( 'ewww_image_optimizer_lazy_load' ) ) {
 		$buffer_start = true;
 		/**
-		 * Page Parsing class for working with HTML content.
-		 */
-		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-page-parser.php';
-		/**
 		 * Lazy Load class for parsing image urls and rewriting them to defer off-screen images.
 		 */
 		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-lazy-load.php';
@@ -231,20 +223,12 @@ function ewww_image_optimizer_parser_init() {
 	if ( ewww_image_optimizer_get_option( 'ewww_image_optimizer_webp_for_cdn' ) && ! ewww_image_optimizer_get_option( 'ewww_image_optimizer_exactdn' ) ) {
 		$buffer_start = true;
 		/**
-		 * Page Parsing class for working with HTML content.
-		 */
-		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-page-parser.php';
-		/**
 		 * JS WebP class for parsing image urls and rewriting them for WebP support.
 		 */
 		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-js-webp.php';
 	}
 	if ( ewww_image_optimizer_get_option( 'ewww_image_optimizer_picture_webp' ) && ! ewww_image_optimizer_get_option( 'ewww_image_optimizer_exactdn' ) ) {
 		$buffer_start = true;
-		/**
-		 * Page Parsing class for working with HTML content.
-		 */
-		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-page-parser.php';
 		/**
 		 * Picture WebP class for parsing img elements and rewriting them with WebP URLs.
 		 */
@@ -4285,10 +4269,6 @@ function ewww_image_optimizer_exactdn_activate_ajax() {
 	}
 	if ( ! class_exists( 'EWWW\ExactDN' ) ) {
 		/**
-		 * Page Parsing class for working with HTML content.
-		 */
-		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-page-parser.php';
-		/**
 		 * ExactDN class for parsing image urls and rewriting them.
 		 */
 		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-exactdn.php';
@@ -4346,10 +4326,6 @@ function ewww_image_optimizer_exactdn_activate_site_ajax() {
 	update_option( 'ewww_image_optimizer_exactdn', true );
 	global $exactdn;
 	if ( ! class_exists( 'EWWW\ExactDN' ) ) {
-		/**
-		 * Page Parsing class for working with HTML content.
-		 */
-		require_once EWWW_IMAGE_OPTIMIZER_PLUGIN_PATH . 'classes/class-page-parser.php';
 		/**
 		 * ExactDN class for parsing image urls and rewriting them.
 		 */
@@ -4726,6 +4702,8 @@ function ewww_image_optimizer_cloud_key_verify_ajax() {
 	if ( wp_http_supports( array( 'ssl' ) ) ) {
 		$url = set_url_scheme( $url, 'https' );
 	}
+	$url = apply_filters( 'ewww_image_optimizer_api_verify_url', $url );
+	ewwwio_debug_message( "verifying API key via $url" );
 	$result = ewww_image_optimizer_cloud_post_key( $url, $api_key );
 	if ( is_wp_error( $result ) ) {
 		$url           = set_url_scheme( $url, 'http' );
@@ -4870,6 +4848,8 @@ function ewww_image_optimizer_cloud_verify( $api_key, $cache = true ) {
 	if ( $ssl ) {
 		$url = set_url_scheme( $url, 'https' );
 	}
+	$url = apply_filters( 'ewww_image_optimizer_api_verify_url', $url );
+	ewwwio_debug_message( "verifying API key via $url" );
 	$result = ewww_image_optimizer_cloud_post_key( $url, $api_key );
 	if ( is_wp_error( $result ) ) {
 		$url           = set_url_scheme( $url, 'http' );
@@ -4958,7 +4938,7 @@ function ewww_image_optimizer_soft_quota_exceeded() {
  * Checks the configured API key for quota information.
  *
  * @param bool $raw True to return the usage array as-is.
- * @return string A message with how many credits they have used/left and possibly a renwal date.
+ * @return string A message with how many credits they have used/left and possibly a renewal date.
  */
 function ewww_image_optimizer_cloud_quota( $raw = false ) {
 	ewwwio_debug_message( '<b>' . __FUNCTION__ . '()</b>' );
@@ -4968,6 +4948,11 @@ function ewww_image_optimizer_cloud_quota( $raw = false ) {
 	if ( $ssl ) {
 		$url = set_url_scheme( $url, 'https' );
 	}
+	$url = apply_filters( 'ewww_image_optimizer_api_quota_url', $url );
+	if ( empty( $url ) || empty( $api_key ) ) {
+		return '';
+	}
+	ewwwio_debug_message( "verifying API key via $url" );
 	add_filter( 'http_headers_useragent', 'ewww_image_optimizer_cloud_useragent', PHP_INT_MAX );
 	$result = wp_remote_post(
 		$url,
@@ -5261,9 +5246,11 @@ function ewww_image_optimizer_cloud_optimizer( $file, $type, $convert = false, $
 	if ( $ssl ) {
 		$url = set_url_scheme( $url, 'https' );
 	}
-	$boundary = wp_generate_password( 24, false );
+	$url = apply_filters( 'ewww_image_optimizer_api_optimize_url', $url );
+	ewwwio_debug_message( "optimizing images via $url" );
 
-	$headers = array(
+	$boundary = wp_generate_password( 24, false );
+	$headers  = array(
 		'content-type' => 'multipart/form-data; boundary=' . $boundary,
 		'timeout'      => 300,
 		'httpversion'  => '1.0',
@@ -5488,6 +5475,14 @@ function ewww_image_optimizer_get_webp_resize_params( $file ) {
 	}
 
 	$original_image = ewwwio_get_original_image_path_from_thumb( $file, $attachment_id );
+	if ( $original_image ) {
+		// If the image was edited in WP, the edited full-size file is the right source, not the pre-edit original.
+		$edited_image = ewww_image_optimizer_get_edited_full_image( $file, $attachment_id );
+		if ( $edited_image ) {
+			ewwwio_debug_message( "image was edited, using $edited_image instead of $original_image" );
+			$original_image = $edited_image;
+		}
+	}
 	if ( $original_image && ewwwio_is_file( $original_image ) ) {
 		ewww_image_optimizer_autorotate( $original_image );
 		$orientation = (int) ewww_image_optimizer_get_orientation( $original_image, 'image/jpeg' );
@@ -5522,6 +5517,33 @@ function ewww_image_optimizer_get_webp_resize_params( $file ) {
 		return array( (int) $thumb_width, (int) $thumb_height, $crop, $original_image );
 	}
 	return $params;
+}
+
+/**
+ * Gets the path to the edited full-size image, if the image was edited in the WP image editor.
+ *
+ * @param string $thumb_file The path to a thumbnail of the image.
+ * @param int    $attachment_id The attachment ID, if known.
+ * @return string The path to the edited full-size image, or an empty string if it hasn't been edited.
+ */
+function ewww_image_optimizer_get_edited_full_image( $thumb_file, $attachment_id = 0 ) {
+	$edited = (bool) preg_match( '/-e[0-9]{13}(-[0-9]+x[0-9]+)?\.[a-z0-9]+$/i', $thumb_file );
+	if ( ! $edited && $attachment_id ) {
+		$backup_sizes = get_post_meta( $attachment_id, '_wp_attachment_backup_sizes', true );
+		$edited       = is_array( $backup_sizes ) && isset( $backup_sizes['full-orig'] );
+	}
+	if ( ! $edited ) {
+		return '';
+	}
+	if ( $attachment_id ) {
+		$full = get_attached_file( $attachment_id );
+		if ( $full && ewwwio_is_file( $full ) ) {
+			return $full;
+		}
+	}
+	// No attachment ID, so strip the dimensions from the thumb name to get the full-size file.
+	$full = preg_replace( '/-[0-9]+x[0-9]+(\.[a-z0-9]+)$/i', '$1', $thumb_file );
+	return ( $full !== $thumb_file && ewwwio_is_file( $full ) ) ? $full : '';
 }
 
 /**
@@ -5577,11 +5599,15 @@ function ewww_image_optimizer_cloud_retrieve_pending_image( $image, $wait = fals
 		ewwwio_debug_message( 'no ID to retrieve' );
 		return false;
 	}
-	$api_key = ewww_image_optimizer_get_option( 'ewww_image_optimizer_cloud_key' );
-	$url     = 'http://api.exactlywww.net/v3/retrieve/?id=' . $image->retrieve;
-	$ssl     = wp_http_supports( array( 'ssl' ) );
+	$url = 'http://api.exactlywww.net/v3/retrieve/?id=' . $image->retrieve;
+	$ssl = wp_http_supports( array( 'ssl' ) );
 	if ( $ssl ) {
 		$url = set_url_scheme( $url, 'https' );
+	}
+	$url = apply_filters( 'ewww_image_optimizer_api_retrieve_url', $url );
+	if ( empty( $url ) ) {
+		ewwwio_debug_message( 'no URL for retrieval' );
+		return false;
 	}
 	ewwwio_debug_message( "fetching result via $url" );
 	while ( $start_time + $max_time > time() ) {
@@ -5705,9 +5731,11 @@ function ewww_image_optimizer_cloud_autorotate( $file, $type ) {
 	if ( $ssl ) {
 		$url = set_url_scheme( $url, 'https' );
 	}
-	$boundary = wp_generate_password( 24, false );
+	$url = apply_filters( 'ewww_image_optimizer_api_rotate_url', $url );
+	ewwwio_debug_message( "rotating images via $url" );
 
-	$headers = array(
+	$boundary = wp_generate_password( 24, false );
+	$headers  = array(
 		'content-type' => 'multipart/form-data; boundary=' . $boundary,
 		'timeout'      => 60,
 		'httpversion'  => '1.0',
@@ -5820,9 +5848,11 @@ function ewww_image_optimizer_cloud_reduce_png( $file, $colors ) {
 	if ( $ssl ) {
 		$url = set_url_scheme( $url, 'https' );
 	}
-	$boundary = wp_generate_password( 24, false );
+	$url = apply_filters( 'ewww_image_optimizer_api_reduce_url', $url );
+	ewwwio_debug_message( "reducing PNG images via $url" );
 
-	$headers = array(
+	$boundary = wp_generate_password( 24, false );
+	$headers  = array(
 		'content-type' => 'multipart/form-data; boundary=' . $boundary,
 		'timeout'      => 30,
 		'httpversion'  => '1.0',
@@ -5927,9 +5957,15 @@ function ewww_image_optimizer_cloud_backup( $file ) {
 	if ( $ssl ) {
 		$url = set_url_scheme( $url, 'https' );
 	}
-	$boundary = wp_generate_password( 24, false );
+	$url = apply_filters( 'ewww_image_optimizer_api_backup_url', $url );
+	if ( empty( $url ) ) {
+		ewwwio_debug_message( 'no URL for backup' );
+		return false;
+	}
+	ewwwio_debug_message( "backup image via $url" );
 
-	$headers = array(
+	$boundary = wp_generate_password( 24, false );
+	$headers  = array(
 		'content-type' => 'multipart/form-data; boundary=' . $boundary,
 		'timeout'      => 20,
 		'httpversion'  => '1.0',
@@ -6054,9 +6090,11 @@ function ewww_image_optimizer_cloud_resize( $file, $type, $dst_x, $dst_y, $src_x
 	if ( $ssl ) {
 		$url = set_url_scheme( $url, 'https' );
 	}
-	$boundary = wp_generate_password( 24, false );
+	$url = apply_filters( 'ewww_image_optimizer_api_resize_url', $url );
+	ewwwio_debug_message( "resizing images via $url" );
 
-	$headers = array(
+	$boundary = wp_generate_password( 24, false );
+	$headers  = array(
 		'content-type' => 'multipart/form-data; boundary=' . $boundary,
 		'timeout'      => 60,
 		'httpversion'  => '1.0',
@@ -8407,6 +8445,8 @@ function ewwwio_remove_original_image( $id, $meta = null ) {
 /**
  * Checks if attachment meta is ready for optimization.
  *
+ * NOTE: Do not use this for a PDF, as it may not work.
+ *
  * @param array $meta The attachment metadata.
  * @return bool True if the meta is ready, false if not.
  */
@@ -8418,6 +8458,13 @@ function ewww_image_optimizer_attachment_meta_ready( $meta ) {
 	}
 	$thumb_w = get_option( 'thumbnail_size_w' );
 	$thumb_h = get_option( 'thumbnail_size_h' );
+	if ( empty( $thumb_w ) && empty( $thumb_h ) && ! empty( $meta['file'] ) ) {
+		return true;
+	}
+	// Potential check for PDF uploads, but needs to be tested to be sure.
+	if ( empty( $meta['width'] ) && empty( $meta['height'] ) && ! empty( $meta['filesize'] ) ) {
+		return true;
+	}
 	if ( ! empty( $meta['width'] ) && $meta['width'] > $thumb_w && empty( $meta['sizes'] ) ) {
 		ewwwio_debug_message( "image width ({$meta['width']}) is larger than thumbnail width ($thumb_w), but meta is missing sizes" );
 		return false;

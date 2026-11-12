@@ -1,7 +1,6 @@
 <?php
 function whatsappchat_html($options)
 {
-    $number = esc_html($options['whatsappchat_phone_number']);
     $avatar = esc_html($options['whatsappchat_avatar_url'] ?? 'https://placehold.co/40x40/?text=:)');
     $company = esc_html($options['whatsappchat_company_name']) ?? get_option('blogname');
     $status = esc_html($options['whatsappchat_status']) ?? "We typically respond in minutes.";
@@ -18,7 +17,7 @@ function whatsappchat_html($options)
             </defs>
         </svg>
         <div id="whatsapp_cta">
-            <div id="whatsapp_cta__button" onclick="whatsappChatInit(this);" data-whatsapp-a="<?= $number ?>" data-whatsapp-b="<?= $avatar ?>" data-whatsapp-c="<?= $company ?>" data-whatsapp-d="<?= $status ?>" data-whatsapp-e="<?= $chat_init ?>" data-whatsapp-f="<?= $chat_ready ?>">
+            <div id="whatsapp_cta__button" onclick="whatsappChatInit(this);" data-whatsapp-b="<?= $avatar ?>" data-whatsapp-c="<?= $company ?>" data-whatsapp-d="<?= $status ?>" data-whatsapp-e="<?= $chat_init ?>" data-whatsapp-f="<?= $chat_ready ?>">
                 <svg style="width:28px;height:28px" focusable="false" role="img"><use href="#whatsapp_app__media_icon"></use> </svg>
             </div>
         </div>

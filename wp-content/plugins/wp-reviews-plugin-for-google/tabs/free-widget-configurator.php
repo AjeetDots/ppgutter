@@ -33,7 +33,6 @@ $ti_command = null;
 function trustindex_plugin_disconnect_page($settingsDelete = true)
 {
 global $pluginManagerInstance;
-global $wpdb;
 $pluginManagerInstance->delete_async_request();
 delete_option($pluginManagerInstance->get_option_name('review-download-inprogress'));
 delete_option($pluginManagerInstance->get_option_name('review-download-request-id'));
@@ -62,7 +61,7 @@ delete_option($pluginManagerInstance->get_option_name('widget-setted-up'));
 delete_option($pluginManagerInstance->get_option_name('show-review-replies'));
 delete_option($pluginManagerInstance->get_option_name('verified-by-trustindex'));
 }
-$wpdb->query($wpdb->prepare('TRUNCATE %i', $pluginManagerInstance->get_tablename('reviews')));
+$pluginManagerInstance->save_reviews([]);
 $pluginManagerInstance->setNotificationParam('not-using-no-connection', 'active', true);
 $pluginManagerInstance->setNotificationParam('not-using-no-connection', 'timestamp', time() + 86400);
 $pluginManagerInstance->setNotificationParam('not-using-no-widget', 'active', false);
@@ -124,7 +123,7 @@ trustindex_plugin_disconnect_page();
 if ($ti_command === 'save-page') {
 check_admin_referer('ti-save-page');
 // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-$pageDetails = isset($_POST['page_details']) ? json_decode(wp_unslash($_POST['page_details']), true) : null;
+$pageDetails = isset($_POST['page_details']) ? $pluginManagerInstance->sanitizePageDetails(json_decode(wp_unslash($_POST['page_details']), true)) : null;
 $reviewDownload = isset($_POST['review_download']) ? sanitize_text_field(wp_unslash($_POST['review_download'])) : 0;
 if ($pageDetails['name']) {
 $pageDetails['name'] = json_encode($pageDetails['name']);
@@ -132,8 +131,6 @@ $pageDetails['name'] = json_encode($pageDetails['name']);
 $pluginManagerInstance->setNotificationParam('not-using-no-connection', 'active', false);
 $pluginManagerInstance->setNotificationParam('not-using-no-widget', 'active', true);
 $pluginManagerInstance->setNotificationParam('not-using-no-widget', 'timestamp', time() + (2 * 3600));
-$tableName = $pluginManagerInstance->get_tablename('reviews');
-$wpdb->query($wpdb->prepare('TRUNCATE %i', $tableName));
 $reviews = null;
 if (isset($pageDetails['reviews'])) {
 $reviews = $pageDetails['reviews'];
@@ -169,24 +166,11 @@ delete_option($pluginManagerInstance->get_option_name('review-download-inprogres
 delete_option($pluginManagerInstance->get_option_name('review-manual-download'));
 delete_option($pluginManagerInstance->get_option_name('review-download-is-connecting'));
 }
+$pluginManagerInstance->save_reviews(is_array($reviews) ? $reviews : []);
 if (is_array($reviews)) {
-foreach ($reviews as $row) {
-$date = isset($row['created_at']) ? $row['created_at'] : (isset($row['date']) ? $row['date'] : '');
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-$wpdb->insert($tableName, [
-'user' => $row['reviewer']['name'],
-'user_photo' => $row['reviewer']['avatar_url'],
-'text' => $row['text'],
-'rating' => $row['rating'] ? $row['rating'] : 5,
-'date' => substr($date, 0, 10),
-'reviewId' => isset($row['id']) ? $row['id'] : null,
-'reply' => isset($row['reply']) ? $row['reply'] : ""
-]);
-}
 update_option($pluginManagerInstance->get_option_name('download-timestamp'), time() + (86400 * 10), false);
 delete_option($pluginManagerInstance->get_option_name('review-download-inprogress'));
 delete_option($pluginManagerInstance->get_option_name('review-manual-download'));
-update_option($pluginManagerInstance->get_option_name('review-download-modal'), 0, false);
 }
 update_option($pluginManagerInstance->get_option_name('page-details'), $pageDetails, false);
 $GLOBALS['wp_object_cache']->delete( $pluginManagerInstance->get_option_name('page-details'), 'options' );
@@ -807,7 +791,7 @@ esc_html(__('This widget style helps build trust and effectively increases sales
 <span class="dashicons dashicons-star-empty"></span> <strong><?php echo esc_html(__('Congratulations!', 'wp-reviews-plugin-for-google')); ?></strong><br />
 <?php
 /* translators: 1: 5, 2: 4.5, 3: 12 */
-echo esc_html(sprintf(__('Our system ranked you in the top %1$d%% of companies based on your reviews. Your total rating score above %2$s in the last %3$d month, and your reviews are genuine', 'wp-reviews-plugin-for-google'), 5, $pluginManager::$topRatedMinimumScore, 12));
+echo esc_html(sprintf(__('Our system ranked you in the top %1$d%% of companies based on your reviews. Your total rating score above %2$s in the last %3$d month, and your reviews are genuine.', 'wp-reviews-plugin-for-google'), 5, $pluginManager::$topRatedMinimumScore, 12));
 ?><br />
 <?php echo wp_kses_post(__('This allows you to <strong>use in the widgets the Trustindex verified badge, the Universal Symbol of Trust.</strong> With the verified badge you can build more trust, and sell more!', 'wp-reviews-plugin-for-google')); ?>
 </p>
@@ -1351,6 +1335,9 @@ echo esc_html(sprintf(__('There are no reviews on your %s platform.', 'wp-review
 <div class="ti-box-header"><?php echo esc_html(__('Insert this shortcode into your website', 'wp-reviews-plugin-for-google')); ?></div>
 <?php include(plugin_dir_path(__FILE__) . '../include/shortcode-paste-box.php'); ?>
 </div>
+<?php if (!get_option($pluginManagerInstance->get_option_name('rate-us-feedback'), 0)): ?>
+<?php include(plugin_dir_path(__FILE__) . '../include/rate-us-feedback-box.php'); ?>
+<?php endif; ?>
 <div class="ti-box ti-sales-widget-box-container">
 <div class="ti-box-header">
 <?php echo
@@ -1486,8 +1473,5 @@ $tiCampaign1 = 'wp-google-1';
 $tiCampaign2 = 'wp-google-2';
 include(plugin_dir_path(__FILE__) . '../include/get-more-customers-box.php');
 ?>
-<?php if (!get_option($pluginManagerInstance->get_option_name('rate-us-feedback'), 0)): ?>
-<?php include(plugin_dir_path(__FILE__) . '../include/rate-us-feedback-box.php'); ?>
-<?php endif; ?>
 <?php endif; ?>
 </div>

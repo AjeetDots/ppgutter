@@ -11,8 +11,8 @@ use FluentForm\App\Http\Controllers\IntegrationManagerController;
 use FluentForm\App\Modules\Form\FormFieldsParser;
 use FluentForm\Framework\Foundation\Application;
 use FluentForm\Framework\Helpers\ArrayHelper;
-use FluentFormPro\Integrations\GoogleSheet\API\API;
 use FluentFormPro\Integrations\GoogleSheet\API\Sheet;
+use FluentFormPro\Services\RemoteAuth;
 
 class Bootstrap extends IntegrationManagerController
 {
@@ -32,40 +32,56 @@ class Bootstrap extends IntegrationManagerController
         $this->registerAdminHooks();
         // add_filter('fluentform/notifying_async_google_sheet', '__return_false');
         add_filter('fluentform/save_integration_value_google_sheet', array($this, 'checkColumnSlugs'), 10, 2);
+
+        add_action('admin_init', [$this, 'maybeHandleAuthReturn']);
+        add_filter('fluentform/global_settings_denied_option_keys', [RemoteAuth::class, 'hideIdentityOption']);
+        // Free removes admin_notices on its own pages; notices render on this hook instead.
+        add_action('fluentform/global_menu', [RemoteAuth::class, 'showClockSkewNotice'], 99);
+    }
+
+    public function maybeHandleAuthReturn()
+    {
+        RemoteAuth::handleReturn(
+            'ff_gsheet_auth',
+            'google',
+            'sheets',
+            admin_url('admin.php?page=fluent_forms_settings#general-google_sheet-settings'),
+            [$this, 'saveConnection']
+        );
+    }
+
+    public function saveConnection($result)
+    {
+        $tokens = $result['token'];
+        $tokens['wrapped_refresh_token'] = $result['wrapped_refresh_token'];
+        $tokens['created_at'] = time();
+        $tokens['status'] = true;
+        $tokens['version'] = 'latest';
+
+        update_option($this->optionKey, $tokens, 'no');
+        RemoteAuth::resetClockState();
     }
 
     public function getGlobalFields($fields)
     {
-        $api = new API();
-
         return [
             'logo' => $this->logo,
             'menu_title' => __('Google Sheets', 'fluentformpro'),
-            'menu_description' => __('Copy that Google Access Code from other window and paste it here, then click on Verify Code button.', 'fluentformpro'),
-            'valid_message' => __('Your Google Access Code is valid', 'fluentformpro'),
-            'invalid_message' => __('Your Google Access Code is not valid', 'fluentformpro'),
-            'save_button_text' => __('Verify Code', 'fluentformpro'),
-            'fields' => [
-                'access_code' => [
-                    'type' => 'text',
-                    'placeholder' => __('Access Code', 'fluentformpro'),
-                    'label_tips' => __("Enter Google Access Code. Please find this by clicking 'Get Google Sheet Access Code' Button", 'fluentformpro'),
-                    'label' => __('Access Code', 'fluentformpro'),
-                ],
-                'button_link' => [
-                    'type' => 'link',
-                    'link_text' => __('Get Google Sheet Access Code', 'fluentformpro'),
-                    'link' => $api->getAUthUrl(),
-                    'target' => '_blank',
-                    'tips' => __('Please click on this link get get Access Code From Google', 'fluentformpro'),
-                ]
-            ],
+            'menu_description' => __('Connect your Google account to push form submissions to a Google Sheet.', 'fluentformpro'),
+            'valid_message' => __('Your Google Sheets connection is valid', 'fluentformpro'),
+            'invalid_message' => RemoteAuth::pullFailure() ?: __('Your Google Sheets connection is not valid', 'fluentformpro'),
+            'save_button_text' => __('Connect Google Sheets', 'fluentformpro'),
+            // Shown on a connection made before per-site credentials existed ($integration.version is unset).
+            'reconnect_notice' => __("This connection is using an older shared app credential that we're retiring for security reasons. Your feeds keep working as-is — no data is at risk — but we recommend reconnecting to switch to a secure, dedicated connection for your site. It only takes a minute and won't change your feed settings.", 'fluentformpro'),
+            'fields' => [],
             'hide_on_valid' => true,
+            // Disconnect leaves discard_settings.data in the screen's state; refetch so the next Connect posts fresh settings.
+            'reload_on_save' => true,
             'discard_settings' => [
-                'section_description' => __('Your Google Sheet integration is up and running', 'fluentformpro'),
-                'button_text' => __('Disconnect Google Sheet', 'fluentformpro'),
+                'section_description' => __('Your Google Sheets integration is up and running', 'fluentformpro'),
+                'button_text' => __('Disconnect Google Sheets', 'fluentformpro'),
                 'data' => [
-                    'access_code' => ''
+                    'connected' => ''
                 ],
                 'show_verify' => false
             ]
@@ -78,54 +94,26 @@ class Bootstrap extends IntegrationManagerController
         if (!$globalSettings) {
             $globalSettings = [];
         }
-        $defaults = [
-            'access_code' => ''
-        ];
 
-        return wp_parse_args($globalSettings, $defaults);
+        return wp_parse_args($globalSettings, ['status' => false]);
     }
 
     public function saveGlobalSettings($settings)
     {
-        if (empty($settings['access_code'])) {
-            $integrationSettings = [
-                'access_code' => '',
-                'status' => false
-            ];
-            // Update the reCaptcha details with siteKey & secretKey.
-            update_option($this->optionKey, $integrationSettings, 'no');
+        if (array_key_exists('connected', $settings) && empty($settings['connected'])) {
+            update_option($this->optionKey, ['status' => false], 'no');
+            RemoteAuth::resetClockState();
             wp_send_json_success([
-                'message' => __('Your settings has been updated', 'fluentformpro'),
+                'message' => __('Your Google Sheets connection has been removed', 'fluentformpro'),
                 'status' => false
             ], 200);
         }
 
-        // Verify API key now
-        try {
-            $accessCode = sanitize_textarea_field($settings['access_code']);
-            $api = new API();
-
-            $result = $api->generateAccessKey($accessCode);
-
-            if (is_wp_error($result)) {
-                throw new \Exception($result->get_error_message());
-            }
-
-            $result['access_code'] = $accessCode;
-            $result['created_at'] = time();
-            $result['status'] = true;
-            $result['version'] = 'latest';
-
-            update_option($this->optionKey, $result, 'no');
-        } catch (\Exception $exception) {
-            wp_send_json_error([
-                'message' => $exception->getMessage()
-            ], 400);
-        }
+        $connectUrl = RemoteAuth::prepareAuth('google', 'sheets', admin_url('?ff_gsheet_auth=1'));
 
         wp_send_json_success([
-            'message' => __('Your Google Sheet api key has been verified and successfully set', 'fluentformpro'),
-            'status' => true
+            'message' => __('You are being redirected to Google to authorize access', 'fluentformpro'),
+            'redirect_url' => $connectUrl
         ], 200);
     }
 

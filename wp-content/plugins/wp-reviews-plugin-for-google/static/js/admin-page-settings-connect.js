@@ -17,6 +17,14 @@ jQuery(document).ready(function($) {
 		}
 	};
 
+	let removeReviewPhotos = function(place) {
+		if (Array.isArray(place.reviews)) {
+			place.reviews.forEach(review => delete review.photos);
+		}
+
+		return place;
+	};
+
 	/*************************************************************************/
 	/* NO REG MODE */
 	TrustindexConnect = {
@@ -72,6 +80,10 @@ jQuery(document).ready(function($) {
 				event.preventDefault();
 
 				let button = $(this);
+				if (button.hasClass('ti-btn-loading')) {
+					return;
+				}
+
 				let token = $('#ti-noreg-connect-token').val();
 
 				button.addClass('ti-btn-loading').blur();
@@ -95,7 +107,7 @@ jQuery(document).ready(function($) {
 						return data.id;
 					},
 					onResponse: function(data) {
-						let jsonStr = JSON.stringify(data).replace(/[\u0080-\uffff]/g, c => {
+						let jsonStr = JSON.stringify(removeReviewPhotos(data)).replace(/[\u0080-\uffff]/g, c => {
 							return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4);
 						});
 
@@ -131,6 +143,11 @@ jQuery(document).ready(function($) {
 			event.preventDefault();
 
 			let btn = jQuery(this);
+			if (btn.hasClass('ti-btn-loading')) {
+				return;
+			}
+
+			btn.addClass('ti-btn-loading').blur();
 
 			TrustindexConnect.asyncRequest(function(token, request_id, manual_download, place) {
 				if (place) {
@@ -138,7 +155,7 @@ jQuery(document).ready(function($) {
 						type: 'POST',
 						data: {
 							_wpnonce: btn.data('nonce'),
-							download_data: JSON.stringify(place)
+							download_data: JSON.stringify(removeReviewPhotos(place))
 						}
 					}).always(() => location.reload());
 				}

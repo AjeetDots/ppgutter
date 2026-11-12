@@ -471,12 +471,23 @@ class WPCode_Snippet {
 			$this->load_from_id( $this->id );
 		}
 
+		/**
+		 * Whether this save comes from a trusted, user-independent writer such as the file importer.
+		 * A trusted writer skips the logged-in capability checks below and the post-type write gate; the filesystem
+		 * it reads from is its trust boundary.
+		 *
+		 * @param bool                $trusted Whether the current write is trusted. Default false.
+		 * @param WPCode_Snippet|null $snippet The snippet being saved, or null from the post-type write gate.
+		 */
+		$trusted = (bool) apply_filters( 'wpcode_snippet_save_trusted_context', false, $this );
+
 		// A user who cannot activate snippets may not edit an active snippet, since that would change
 		// what runs on the site without activation rights. They can still edit inactive snippets and
 		// create new ones. No-user contexts (cron, WP-CLI, importers) are trusted and skip this check.
 		// This mirrors how the plugin behaved before the edit/activate capability split.
 		if (
-			is_user_logged_in()
+			! $trusted
+			&& is_user_logged_in()
 			&& ! empty( $this->id )
 			&& 'publish' === get_post_status( $this->id )
 			&& ! current_user_can( 'wpcode_activate_snippets', $this )
@@ -499,7 +510,7 @@ class WPCode_Snippet {
 		}
 
 		// If the user is not allowed to activate/deactivate snippets, prevent it and show error.
-		if ( ! current_user_can( 'wpcode_activate_snippets', $this ) ) {
+		if ( ! $trusted && ! current_user_can( 'wpcode_activate_snippets', $this ) ) {
 			wpcode()->error->add_error(
 				array(
 					'message' => __( 'You are not allowed to change snippet status, please contact your webmaster.', 'insert-headers-and-footers' ),
@@ -665,6 +676,17 @@ class WPCode_Snippet {
 		}
 		if ( false === $this->active ) {
 			// If we're not trying to activate or the snippet is already active, bail.
+			return;
+		}
+
+		/**
+		 * Skip the activation test-run for this snippet. For callers that already test-ran the same code in
+		 * this request: running it a second time would redeclare its functions, which is a fatal error.
+		 *
+		 * @param bool           $skip    Whether to skip the test-run. Default false.
+		 * @param WPCode_Snippet $snippet The snippet being activated.
+		 */
+		if ( apply_filters( 'wpcode_skip_activation_checks', false, $this ) ) {
 			return;
 		}
 

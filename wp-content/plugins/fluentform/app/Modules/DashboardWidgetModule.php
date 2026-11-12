@@ -6,6 +6,7 @@ defined('ABSPATH') or die;
 
 use FluentForm\App\Helpers\Helper;
 use FluentForm\App\Models\Submission;
+use FluentForm\App\Services\Manager\FormManagerService;
 
 class DashboardWidgetModule
 {
@@ -28,28 +29,41 @@ class DashboardWidgetModule
 
     public function showStat()
     {
+        // A form-scoped manager must only see their own forms, so they never share the site-wide cache.
+        $allowedFormIds = FormManagerService::getUserAllowedFormsScope();
+        $isScoped = false !== $allowedFormIds;
+
         // Check cache first to avoid expensive query on every dashboard load
         $cacheKey = 'fluentform_dashboard_stats_v1';
-        $stats = get_transient($cacheKey);
+        $stats = $isScoped ? false : get_transient($cacheKey);
 
-        if (false === $stats) {
+        if ($isScoped && !$allowedFormIds) {
+            $stats = [];
+        } elseif (false === $stats) {
             global $wpdb;
 
-            $stats = Submission::select([
+            $query = Submission::select([
                 'fluentform_forms.title',
                 'fluentform_submissions.form_id',
                 wpFluent()->raw('COUNT(' . $wpdb->prefix . 'fluentform_submissions.id) as total'),
                 wpFluent()->raw('MAX(' . $wpdb->prefix . 'fluentform_submissions.id) as max_id'),
                 wpFluent()->raw("SUM(CASE WHEN {$wpdb->prefix}fluentform_submissions.status = 'unread' THEN 1 ELSE 0 END) as unread_count"),
             ])
-                   ->join('fluentform_forms', 'fluentform_forms.id', '=', 'fluentform_submissions.form_id')
-                   ->groupBy('fluentform_submissions.form_id')
+                   ->join('fluentform_forms', 'fluentform_forms.id', '=', 'fluentform_submissions.form_id');
+
+            if ($isScoped) {
+                $query->whereIn('fluentform_submissions.form_id', $allowedFormIds);
+            }
+
+            $stats = $query->groupBy('fluentform_submissions.form_id')
                    ->orderBy('max_id', 'DESC')
                    ->limit(10)
                    ->get();
 
-            // Cache for 5 minutes to reduce database load
-            set_transient($cacheKey, $stats, 10 * MINUTE_IN_SECONDS);
+            if (!$isScoped) {
+                // Cache for 5 minutes to reduce database load
+                set_transient($cacheKey, $stats, 10 * MINUTE_IN_SECONDS);
+            }
         }
 
         if (!$stats || count($stats) === 0) {

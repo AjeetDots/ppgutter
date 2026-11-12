@@ -47,7 +47,7 @@ $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $pluginManagerInstanc
 echo wp_kses($html, $pluginManager::$allowedAttributesForWidget);
 if (!is_file($pluginManagerInstance->getCssFile()) || get_option($pluginManagerInstance->get_option_name('load-css-inline'), 0)) {
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-echo $pluginManagerInstance->addOptimizerOptOutAttributes('<style type="text/css">'.get_option($pluginManagerInstance->get_option_name('css-content')).'</style>');
+echo $pluginManagerInstance->addOptimizerOptOutAttributes('<style type="text/css">'.$pluginManagerInstance->getWidgetCssContent().'</style>');
 }
 } else {
 /* translators: %s: URL */

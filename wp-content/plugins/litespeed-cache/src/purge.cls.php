@@ -682,6 +682,15 @@ class Purge extends Base {
 
 		self::debug( 'added ' . implode( ',', $tags ) . ( $purge2 ? ' [Purge2]' : '' ), 8 );
 
+		/**
+		 * Fires when _add() extends the public purge list, before header delivery or queue storage.
+		 *
+		 * @since 7.9.3
+		 * @param array<int,string> $tags   Requested tags, including existing tags, with the blog ID prefix ('*' for Purge All).
+		 * @param bool              $purge2 Whether they go out via X-LiteSpeed-Purge2.
+		 */
+		do_action( 'litespeed_purged', $tags, $purge2 );
+
 		// Send purge header immediately or queue if headers already sent or delayed.
 		$curr_built = $this->_build( $purge2 );
 
@@ -1364,25 +1373,35 @@ class Purge extends Base {
 	 * @return array<int,string>
 	 */
 	private function _get_purge_tags_by_post( $post_id ) {
-		if ( $this->conf( self::O_PURGE_POST_ALL ) ) {
+		// Built-in templates and styles can affect public pages without a public URL.
+		$the_post          = get_post( $post_id );
+		$post_type         = $the_post ? $the_post->post_type : '';
+		$post_type_obj     = $post_type ? get_post_type_object( $post_type ) : null;
+		$skip_non_viewable = false;
+		if ( $post_type_obj && ! $post_type_obj->_builtin && ! is_post_type_viewable( $post_type_obj ) ) {
+			// Non-public CPTs purge only their own tag; return false to purge related pages too.
+			$skip_non_viewable = apply_filters( 'litespeed_purge_post_skip_non_viewable', true, $post_id );
+		}
+
+		if ( ! $skip_non_viewable && $this->conf( self::O_PURGE_POST_ALL ) ) {
 			return [ '*' ];
 		}
 
+		// Integrations must still be able to invalidate their own dependencies.
 		do_action( 'litespeed_api_purge_post', $post_id );
 
 		$purge_tags = [];
 
 		// Post itself.
 		$purge_tags[] = Tag::TYPE_POST . $post_id;
-
-		$post_status = get_post_status( $post_id );
-		if ( function_exists( 'is_post_status_viewable' ) && is_post_status_viewable( $post_status ) ) {
-			$purge_tags[] = Tag::get_uri_tag( wp_make_link_relative( get_permalink( $post_id ) ) );
+		if ( $skip_non_viewable ) {
+			return $purge_tags;
 		}
 
-		// Avoid overriding global $post: use explicit post object.
-		$the_post  = get_post( $post_id );
-		$post_type = $the_post ? $the_post->post_type : '';
+		// Internal post permalinks can collapse to the homepage when query strings are removed.
+		if ( function_exists( 'is_post_publicly_viewable' ) && is_post_publicly_viewable( $post_id ) ) {
+			$purge_tags[] = Tag::get_uri_tag( wp_make_link_relative( get_permalink( $post_id ) ) );
+		}
 
 		// Widgets: recent posts.
 		global $wp_widget_factory;
@@ -1433,10 +1452,9 @@ class Purge extends Base {
 			$purge_tags[] = Tag::TYPE_AUTHOR . get_post_field( 'post_author', $post_id );
 		}
 
-		// Post type archives.
+		// Only purge archives here; the bare post type tag also matches every singular page.
 		if ( $this->conf( self::O_PURGE_POST_POSTTYPE ) && get_post_type_archive_link( $post_type ) ) {
 			$purge_tags[] = Tag::TYPE_ARCHIVE_POSTTYPE . $post_type;
-			$purge_tags[] = $post_type;
 		}
 
 		if ( $this->conf( self::O_PURGE_POST_FRONTPAGE ) ) {

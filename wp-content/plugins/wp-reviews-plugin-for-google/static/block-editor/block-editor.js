@@ -95,6 +95,7 @@
 			})
 		};
 		i("trustindex/block-selector", {
+			apiVersion: 3,
 			title: "Trustindex",
 			description: "Trustindex widget plugin",
 			icon: c(),
@@ -119,7 +120,46 @@
 			},
 			edit: function(e) {
 				var t = e.attributes
-				, n = e.setAttributes;
+				, n = e.setAttributes
+				, blockProps = wp.blockEditor.useBlockProps({
+					className: "components-placeholder"
+				});
+				// load the widget lists once per mounted block: fetching during render re-fetched on every attribute change
+				wp.element.useEffect((function() {
+					t.trustindex_widgets || wp.apiFetch({
+						path: "trustindex/v1/setup-complete"
+					}).then((function(e) {
+						return e.result && n({
+							free_widgets: e.result
+						}),
+						e.setup_url && n({
+							setup_url: e.setup_url
+						}),
+						wp.apiFetch({
+							path: "trustindex/v1/get-widgets"
+						})
+					}
+					)).then((function(e) {
+						return Array.isArray(e) ? e : []
+					}
+					), (function() {
+						// a failed request counts as "no connected account", so the block leaves the loading state
+						return []
+					}
+					)).then((function(e) {
+						n({
+							trustindex_widgets: e
+						}),
+						e.length || "admin" !== t.selected_type || n({
+							selected_type: "custom"
+						}),
+						e.length && !t.widget_id && n({
+							widget_id: e[0].widgets[0].id
+						})
+					}
+					))
+				}
+				), []);
 				function i(e) {
 					"type-select" === e.target.id && "custom-id" === e.target.selectedOptions[0].id ? (n({
 						selected_type: "custom"
@@ -137,34 +177,7 @@
 						widget_id: e.target.value
 					})
 				}
-				return t.trustindex_widgets || wp.apiFetch({
-					path: "trustindex/v1/setup-complete"
-				}).then((function(e) {
-					e.result && n({
-						free_widgets: e.result
-					}),
-					e.setup_url && n({
-						setup_url: e.setup_url
-					}),
-					wp.apiFetch({
-						path: "trustindex/v1/get-widgets"
-					}).then((function(e) {
-						n({
-							trustindex_widgets: e
-						}),
-						e && e.length || "admin" !== t.selected_type || n({
-							selected_type: "custom"
-						}),
-						e && e.length && !t.widget_id && n({
-							widget_id: e[0].widgets[0].id
-						})
-					}
-					))
-				}
-				)),
-				t.trustindex_widgets ? React.createElement("div", {
-					className: "components-placeholder"
-				}, React.createElement("table", null, React.createElement("tr", null, React.createElement("td", {style:{padding:"0",paddingBottom:"15px"}}, React.createElement("span", {
+				return t.trustindex_widgets ? React.createElement("div", blockProps, React.createElement("table", null, React.createElement("tr", null, React.createElement("td", {style:{padding:"0",paddingBottom:"15px"}}, React.createElement("span", {
 					style: {
 						fontSize: "32px"
 					}
@@ -195,7 +208,7 @@
 					id: "custom-id"
 				}, "Custom widget id")), React.createElement("optgroup", {
 					label: "Free widgets"
-				}, Object.keys(t.free_widgets).map((function(e) {
+				}, Object.keys(t.free_widgets || {}).map((function(e) {
 					return React.createElement("option", {
 						disabled: 0 === t.free_widgets[e],
 						selected: e === t.widget_id,
@@ -223,9 +236,7 @@
 						target: "_blank",
 						href: t.setup_url
 					}, "Connect account"))
-				) : React.createElement("div", {
-					class: "components-placeholder"
-				}, "Loading...")
+				) : React.createElement("div", blockProps, "Loading...")
 			},
 			save: function(e) {
 				return e.attributes,

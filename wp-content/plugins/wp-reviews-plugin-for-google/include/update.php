@@ -2,7 +2,8 @@
 defined('ABSPATH') or die('No script kiddies please!');
 require_once(ABSPATH . 'wp-admin' . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'upgrade.php');
 global $wpdb;
-if (version_compare($this->getVersion(), $this->getVersion('update-version-check'))) {
+$previousVersion = $this->getVersion('update-version-check');
+if (version_compare($this->getVersion(), $previousVersion)) {
 $tableName = $this->get_tablename('reviews');
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 $results = $wpdb->get_results($wpdb->prepare('SHOW FULL COLUMNS FROM %i', $tableName), ARRAY_A);
@@ -35,6 +36,11 @@ $columnCollations = array_column($results, 'Collation', 'Field');
 if (isset($columnCollations['user']) && 0 !== strpos((string)$columnCollations['user'], 'utf8mb4')) {
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
 $wpdb->query($wpdb->prepare('ALTER TABLE %i MODIFY `user` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci', $tableName));
+}
+
+if (version_compare($previousVersion, '14.3', '<')) {
+$this->setNotificationParam('gdpr-mode', 'active', true);
+$this->setNotificationParam('gdpr-mode', 'dashboard-active', true);
 }
 $oldRateUs = get_option('trustindex-'. $this->getShortName() .'-rate-us');
 if ($oldRateUs) {
@@ -69,6 +75,7 @@ if ($cssCdnVersion && version_compare($cssCdnVersion, $this->getVersion('widget-
 $this->noreg_save_css(true);
 $this->updateVersion('widget-css', $cssCdnVersion);
 }
+$this->handleCssFile();
 }
 if (get_option($this->get_option_name('review-content'))) {
 $htmlCdnVersion = $this->getCdnVersion('widget-html');

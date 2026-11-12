@@ -46,6 +46,10 @@ class MailChimp
                 throw new \Exception(sprintf('Invalid Mailchimp API key `%s` supplied.', esc_html($api_key)));
             }
             list(, $data_center) = explode('-', $this->api_key);
+            // The datacenter becomes the request host, so anything but a plain "us21"-style label could redirect it.
+            if (!preg_match('/^[a-z]{2,4}\d{1,3}$/', $data_center)) {
+                throw new \Exception(sprintf('Invalid Mailchimp API key `%s` supplied.', esc_html($api_key)));
+            }
             $this->api_endpoint = str_replace('<dc>', $data_center, $this->api_endpoint);
         } else {
             $this->api_endpoint = $api_endpoint;

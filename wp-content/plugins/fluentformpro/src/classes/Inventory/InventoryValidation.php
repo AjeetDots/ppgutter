@@ -18,14 +18,18 @@ class InventoryValidation
 {
     protected $form;
     protected $formData;
+    private $conditionData;
     private $quantityItems;
     private $usedGlobalItemsRecords;
     private $globalInventoryItems;
     private $globalInventoryFieldsName;
-    
-    public function __construct($formData, $form)
+
+    // $conditionData: what conditional logic is judged on. Core charges the sanitized data but judges
+    // visibility on the raw request, so the submission check passes both.
+    public function __construct($formData, $form, $conditionData = null)
     {
         $this->formData = $formData;
+        $this->conditionData = null === $conditionData ? $formData : $conditionData;
         $this->form = $form;
         $this->maybeSetItemQuantity();
     }
@@ -170,7 +174,7 @@ class InventoryValidation
         }
         $feed = ['conditionals' => $logic];
 
-        return \FluentForm\App\Services\ConditionAssesor::evaluate($feed, $this->formData, $this->form);
+        return \FluentForm\App\Services\ConditionAssesor::evaluate($feed, $this->conditionData, $this->form);
     }
 
     private function findFieldWithAncestors($fields, $targetName, $ancestors = [])

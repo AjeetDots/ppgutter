@@ -78,7 +78,7 @@ class Slack
             $value = str_replace('&', '&amp;', $value);
             $value = str_replace('<', '&lt;', $value);
             $value = str_replace('>', '&gt;', $value);
-            if (! isset($labels[$attribute]) || empty($value)) {
+            if (! isset($labels[$attribute]) || '' === $value) {
                 continue;
             }
             $fields[] = [

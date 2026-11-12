@@ -2,7 +2,7 @@
 
 namespace FluentFormPro\classes\Chat;
 
-defined('ABSPATH') or die;
+defined('ABSPATH') || die;
 
 use Exception;
 use FluentForm\App\Models\Form;
@@ -13,6 +13,8 @@ use FluentForm\App\Services\Form\FormService;
 use FluentForm\Framework\Helpers\ArrayHelper as Arr;
 
 /**
+ * Builds a form from a ChatGPT reply.
+ *
  * @todo after some release replace comment methods with FluentForm\App\Modules\Ai\AiFormBuilder
  */
 class ChatFormBuilder extends FormService
@@ -29,7 +31,7 @@ class ChatFormBuilder extends FormService
             Acl::verify('fluentform_forms_manager');
 
             $attributes = $this->app->request->all();
-            
+
             $form = $this->generateForm($attributes);
             $form = $this->prepareAndSaveForm($form);
             wp_send_json_success([
@@ -47,6 +49,8 @@ class ChatFormBuilder extends FormService
     }
 
     /**
+     * Map the AI fields to form elements and save the form.
+     *
      * @param array $form
      * @throws Exception
      * @return Form|\FluentForm\Framework\Database\Query\Builder
@@ -60,7 +64,8 @@ class ChatFormBuilder extends FormService
         $hasStep = false;
         $lastFieldIndex = count($fields) - 1;
         foreach ($fields as $index => $field) {
-            if ($inputKey = $this->resolveInput($field)) {
+            $inputKey = $this->resolveInput($field);
+            if ($inputKey) {
                 if (!$hasStep && 'form_step' === $inputKey) {
                     if (0 === $index || $lastFieldIndex === $index) {
                         continue;
@@ -80,22 +85,24 @@ class ChatFormBuilder extends FormService
     }
 
     /**
+     * Ask ChatGPT for the form and decode its JSON reply.
+     *
      * @param array $args
      * @throws Exception
      * @return array response form fields
      */
     protected function generateForm($args)
     {
-        $startingQuery = "Create a form for ";
+        $startingQuery = 'Create a form for ';
         $query = \FluentForm\Framework\Support\Sanitizer::sanitizeTextField(Arr::get($args, 'query'));
         if (empty($query)) {
             throw new Exception(__('Query is empty!', 'fluentformpro')); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
         }
-        
+
         $additionalQuery = \FluentForm\Framework\Support\Sanitizer::sanitizeTextField(Arr::get($args, 'additional_query'));
-        
+
         if ($additionalQuery) {
-            $query .= "\n including questions for information like  " . $additionalQuery . ".";
+            $query .= "\n including questions for information like  " . $additionalQuery . '.';
         }
 
         $query .= "\nField includes 'type', 'name', 'label', 'placeholder', 'required' status. 
@@ -112,26 +119,29 @@ class ChatFormBuilder extends FormService
         \nReturn the form data in JSON format, adhering to FluentForm's structure. Only include the form fields inside the 'fields' array.";
 
         $args = [
-            "role"    => 'system',
-            "content" => $startingQuery . $query,
+            'role'    => 'system',
+            'content' => $startingQuery . $query,
         ];
-        $result = (new ChatApi())->makeRequest($args);
-        $response = trim(Arr::get($result, 'choices.0.message.content'), '"');
-        $response = json_decode($response, true);
+        $api = new ChatApi();
+        $result = $api->makeRequest($args);
+        $content = trim(Arr::get($result, 'choices.0.message.content'), '"');
+        // Some models wrap the JSON in a ```json code fence
+        $content = $api->maybeExtractCodeFromResponse($content);
+        $response = json_decode($content, true);
 
         if (is_wp_error($response) || empty($response['fields'])) {
             throw new Exception(__('Invalid response: Please try again! :', 'fluentformpro')); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
         }
-        
+
         return $response;
     }
-    
+
     protected function getDefaultFields()
     {
         $components = wpFluentForm()->make('components')->toArray();
         //todo remove disabled elements
         $disabledComponents = $this->getDisabledComponents();
-        if(!(isset($components['payments']))){
+        if (!(isset($components['payments']))) {
             $components['payments'] = [];
         }
         $general = Arr::get($components, 'general', []);
@@ -140,19 +150,19 @@ class ChatFormBuilder extends FormService
         $payments = Arr::get($components, 'payments', []);
         return array_merge($general, $advanced, $payments, ['container' => $container]);
     }
-    
+
     protected function getElementByType($allFields, $type) {
         foreach ($allFields as $element) {
-                if (isset($element['element']) && $element['element'] === $type) {
-                    return $element;
-                }
+            if (isset($element['element']) && $element['element'] === $type) {
+                return $element;
+            }
         }
         return null;
     }
-    
+
     protected function processField($inputKey, $field, $allFields)
     {
-        if ('container' == $inputKey) {
+        if ('container' === $inputKey) {
             $fields = Arr::get($field, 'fields', []);
             return $this->resolveContainerFields($fields, $allFields);
         }
@@ -160,18 +170,20 @@ class ChatFormBuilder extends FormService
         if (!$matchedField) {
             return [];
         }
-        $matchedField['uniqElKey'] = "el_" . uniqid();
+        $matchedField['uniqElKey'] = 'el_' . uniqid();
         $matchedFieldType = Arr::get($matchedField, 'element');
 
         if ('form_step' === $inputKey) {
             return $matchedField;
         }
 
-        if ($fieldName = Arr::get($field, 'name')) {
+        $fieldName = Arr::get($field, 'name');
+        if ($fieldName) {
             $matchedField['attributes']['name'] = $fieldName;
         }
 
-        if ($label = Arr::get($field, 'label')) {
+        $label = Arr::get($field, 'label');
+        if ($label) {
             $required = Arr::isTrue($field, 'required');
             if (isset($matchedField['settings']['label'])) {
                 $matchedField['settings']['label'] = $label;
@@ -191,7 +203,7 @@ class ChatFormBuilder extends FormService
 
             if (isset($matchedField['fields'])) {
                 $subFields = $matchedField['fields'];
-                $subNames = explode(" ", $label);
+                $subNames = explode(' ', $label);
                 if (count($subNames) > 1) {
                     $counter = 0;
                     foreach ($subFields as $subFieldkey => $subFieldValue) {
@@ -203,44 +215,47 @@ class ChatFormBuilder extends FormService
                                 $subFields[$subFieldkey]['settings']['label'] = Arr::get($subNames, $counter);
                                 $subFields[$subFieldkey]['settings']['validation_rules']['required']['value'] = $required;
                             }
-                            $counter++;
+                            ++$counter;
                         }
                     }
                 }
                 $matchedField['fields'] = $subFields;
             }
         }
-        
-        if ($options = $this->getOptions(Arr::get($field, 'options'))) {
+
+        $options = $this->getOptions(Arr::get($field, 'options'));
+        if ($options) {
             if (isset($matchedField['settings']['advanced_options'])) {
                 $matchedField['settings']['advanced_options'] = $options;
             }
-            if ('ratings' == $matchedFieldType) {
+            if ('ratings' === $matchedFieldType) {
                 $matchedField['options'] = array_column($options, 'label', 'value');
             }
         }
 
-        if ('rangeslider' == $matchedFieldType) {
-            if ($min = Arr::get($field, 'min')) {
+        if ('rangeslider' === $matchedFieldType) {
+            $min = Arr::get($field, 'min');
+            if ($min) {
                 $matchedField['attributes']['min'] = intval($min);
             }
-            if ($max = intval(Arr::get($field, 'max', 10))) {
+            $max = intval(Arr::get($field, 'max', 10));
+            if ($max) {
                 $matchedField['attributes']['max'] = $max;
             }
         }
-        
+
         return $matchedField;
     }
-    
+
     protected function resolveInput($field)
     {
-        $type = Arr::get($field, 'type');
+        $type = (string) Arr::get($field, 'type');
         $searchTags = fluentformLoadFile('Services/FormBuilder/ElementSearchTags.php');
         $form = ['type'=>''];
-        $form = json_decode(json_encode($form));
+        $form = json_decode(wp_json_encode($form));
         $searchTags = apply_filters('fluentform/editor_element_search_tags', $searchTags, $form);
         foreach ($searchTags as $inputKey => $tags) {
-            if (array_search($type, $tags) !== false) {
+            if (array_search($type, $tags, true) !== false) {
                 return $inputKey;
             } else {
                 foreach ($tags as $tag) {
@@ -252,7 +267,7 @@ class ChatFormBuilder extends FormService
         }
         return false;
     }
-    
+
     protected function getOptions($options = [])
     {
         $formattedOptions = [];
@@ -280,20 +295,20 @@ class ChatFormBuilder extends FormService
                 'value' => $value,
             ];
         }
-        
+
         return $formattedOptions;
     }
-    
+
     protected function getBlankFormConfig()
     {
         $attributes = ['type' => 'form', 'predefined' => 'blank_form'];
         $customForm = Form::resolvePredefinedForm($attributes);
         $customForm['form_fields'] = json_decode($customForm['form_fields'], true);
         $customForm['form_fields']['submitButton'] = $customForm['form']['submitButton'];
-        $customForm['form_fields'] = json_encode($customForm['form_fields']);
+        $customForm['form_fields'] = wp_json_encode($customForm['form_fields']);
         return $customForm;
     }
-    
+
     protected function saveForm($formattedInputs, $title, $isStepFrom = false, $isConversational = false)
     {
         $customForm = $this->getBlankFormConfig();
@@ -304,10 +319,13 @@ class ChatFormBuilder extends FormService
         if ($isStepFrom) {
             $fields['form_fields']['stepsWrapper'] = $this->getStepWrapper();
         }
-        $customForm['form_fields'] = json_encode($fields['form_fields']);
+        $customForm['form_fields'] = wp_json_encode($fields['form_fields']);
         $data = Form::prepare($customForm);
         $form = $this->model->create($data);
-        $form->title = $title ?: $form->title . ' (ChatGPT#' . $form->id . ')';
+        if (!$title) {
+            $title = $form->title . ' (ChatGPT#' . $form->id . ')';
+        }
+        $form->title = $title;
         if ($isConversational) {
             $formMeta = FormMeta::prepare(['type' => 'form', 'predefined' => 'conversational'], $customForm);
             $form->fill([
@@ -318,7 +336,7 @@ class ChatFormBuilder extends FormService
             $formMeta = FormMeta::prepare(['type' => 'form', 'predefined' => 'blank_form'], $customForm);
         }
         FormMeta::store($form, $formMeta);
-        
+
         do_action('fluentform/inserted_new_form', $form->id, $data);
         return $form;
     }
@@ -331,11 +349,10 @@ class ChatFormBuilder extends FormService
             return [];
         }
         foreach ($fluentFormFields as $item) {
-            if (in_array(Arr::get($item, "element", []), $paymentElements)) {
-                $foundElements[] = $item["element"];
+            if (in_array(Arr::get($item, 'element', []), $paymentElements, true)) {
+                $foundElements[] = $item['element'];
             }
         }
-        // Find the elements in $paymentElements that are not in $foundElements
         $remainingElements = array_diff($paymentElements, $foundElements);
         $formPaymentElm = [];
         if ($foundElements && !empty($remainingElements)) {
@@ -360,8 +377,10 @@ class ChatFormBuilder extends FormService
         $columnWidth = round(100 / $fieldsCount, 2);
         $formattedColumnsFields = [];
         foreach ($fields as $field) {
-            if ($fieldKey = $this->resolveInput($field)) {
-                if ($columnField = $this->processField($fieldKey, $field, $allFields)) {
+            $fieldKey = $this->resolveInput($field);
+            if ($fieldKey) {
+                $columnField = $this->processField($fieldKey, $field, $allFields);
+                if ($columnField) {
                     $formattedColumnsFields[] = [
                         'width' => $columnWidth,
                         'fields' => [$columnField],
@@ -378,6 +397,8 @@ class ChatFormBuilder extends FormService
     }
 
     /**
+     * Step start and end settings for a multi-step form.
+     *
      * @return array
      */
     protected function getStepWrapper()
@@ -398,7 +419,7 @@ class ChatFormBuilder extends FormService
                     'enable_step_page_resume'      => 'no',
                 ],
                 'editor_options' => [
-                    'title' => 'Start Paging'
+                    'title' => 'Start Paging',
                 ],
             ],
             'stepEnd'   => [
@@ -411,14 +432,13 @@ class ChatFormBuilder extends FormService
                     'prev_btn' => [
                         'type'    => 'default',
                         'text'    => 'Previous',
-                        'img_url' => ''
-                    ]
+                        'img_url' => '',
+                    ],
                 ],
                 'editor_options' => [
-                    'title' => 'End Paging'
+                    'title' => 'End Paging',
                 ],
-            ]
+            ],
         ];
     }
-    
 }

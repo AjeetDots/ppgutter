@@ -2,7 +2,7 @@
 
 namespace FluentFormPro\classes\Chat;
 
-defined('ABSPATH') or die;
+defined('ABSPATH') || die;
 
 use FluentForm\App\Models\FormMeta;
 use FluentForm\App\Services\FormBuilder\ShortCodeParser;
@@ -52,7 +52,7 @@ class ChatFieldController
 
         add_filter('fluentform/global_integration_fields_' . $this->integrationKey, [$this, 'getGlobalFields'], 11, 1);
 
-        add_action('fluentform/save_global_integration_settings_' . $this->integrationKey, [$this, 'saveGlobalSettings'], 11,1);
+        add_action('fluentform/save_global_integration_settings_' . $this->integrationKey, [$this, 'saveGlobalSettings'], 11, 1);
 
         add_filter('fluentform/global_notification_types', [$this, 'addNotificationType'], 11, 1);
 
@@ -76,18 +76,18 @@ class ChatFieldController
 
         add_filter('fluentform/all_editor_shortcodes', [$this, 'insertAllEditorShortcode'], 10, 1);
 
-//        add_action('wp_ajax_fluentform_openai_chat_completion', [$this, 'chatCompletion'], 11, 0);
+        //        add_action('wp_ajax_fluentform_openai_chat_completion', [$this, 'chatCompletion'], 11, 0);
 
-//        add_action('wp_ajax_nopriv_fluentform_openai_chat_completion', [$this, 'chatCompletion'], 11, 0);
+        //        add_action('wp_ajax_nopriv_fluentform_openai_chat_completion', [$this, 'chatCompletion'], 11, 0);
 
-//        new ChatField();
+        //        new ChatField();
     }
 
     public function setWaitingMessage($message, $form)
     {
         $feeds = FormMeta::where('meta_key', $this->settingsKey)
-                         ->where('form_id', $form->id)
-                         ->get();
+                        ->where('form_id', $form->id)
+                        ->get();
 
         if (!count($feeds)) {
             return $message;
@@ -110,7 +110,7 @@ class ChatFieldController
     }
     public function loadScripts($form)
     {
-        $message = apply_filters('fluentform/chat_gpt_waiting_message','', $form);
+        $message = apply_filters('fluentform/chat_gpt_waiting_message', '', $form);
 
         wp_register_script(
             'fluentform-chat-field-script',
@@ -119,7 +119,7 @@ class ChatFieldController
             FLUENTFORMPRO_VERSION,
             true
         );
-        
+
         wp_localize_script(
             'fluentform-chat-field-script',
             'fluentform_chat',
@@ -133,7 +133,7 @@ class ChatFieldController
 
     public function enableIntegration($isEnabled)
     {
-        add_filter('fluentform/global_addons', function($addOns) use ($isEnabled) {
+        add_filter('fluentform/global_addons', function ($addOns) use ($isEnabled) {
             $addOns[$this->integrationKey] = [
                 'title'       => 'OpenAI ChatGPT',
                 'description' => __('Connect OpenAI ChatGPT to add integrations or create forms using AI prompts', 'fluentformpro'),
@@ -165,7 +165,7 @@ class ChatFieldController
             $globalSettings = [];
         }
         $defaults = [
-            'access_token' => ''
+            'access_token' => '',
         ];
 
         return wp_parse_args($globalSettings, $defaults);
@@ -193,17 +193,17 @@ class ChatFieldController
                     'placeholder' => __('API Keys', 'fluentformpro'),
                     'label_tips'  => __("Please find API Keys by clicking 'Get OpenAI ChatGPT API Keys' Button then paste it here", 'fluentformpro'),
                     'label'       => __('Access Code', 'fluentformpro'),
-                ]
+                ],
             ],
             'hide_on_valid'    => true,
             'discard_settings' => [
                 'section_description' => __('Your OpenAI ChatGPT integration is up and running', 'fluentformpro'),
                 'button_text'         => __('Disconnect OpenAI ChatGPT', 'fluentformpro'),
                 'data'                => [
-                    'access_token' => ''
+                    'access_token' => '',
                 ],
-                'show_verify'         => true
-            ]
+                'show_verify'         => true,
+            ],
         ];
     }
 
@@ -213,13 +213,13 @@ class ChatFieldController
         if (empty($token)) {
             $integrationSettings = [
                 'access_token' => '',
-                'status'       => false
+                'status'       => false,
             ];
             // Update the reCaptcha details with siteKey & secretKey.
             update_option($this->optionKey, $integrationSettings, 'no');
             wp_send_json_success([
                 'message' => __('Your settings has been updated', 'fluentformpro'),
-                'status'  => false
+                'status'  => false,
             ], 200);
         }
 
@@ -230,7 +230,7 @@ class ChatFieldController
             if ($isAuth && !is_wp_error($isAuth)) {
                 $token = [
                     'status'       => true,
-                    'access_token' => $settings['access_token']
+                    'access_token' => $settings['access_token'],
                 ];
             } else {
                 throw new \Exception($isAuth->get_error_message(), $isAuth->get_error_code());
@@ -239,13 +239,13 @@ class ChatFieldController
             update_option($this->optionKey, $token, 'no');
         } catch (\Exception $exception) {
             wp_send_json_error([
-                'message' => $exception->getMessage()
+                'message' => $exception->getMessage(),
             ], 400);
         }
 
         wp_send_json_success([
             'message' => __('Your OpenAI ChatGPT API key has been verified and successfully set', 'fluentformpro'),
-            'status'  => true
+            'status'  => true,
         ], 200);
     }
 
@@ -265,7 +265,7 @@ class ChatFieldController
             'global_configure_url'  => admin_url('admin.php?page=fluent_forms_settings#general-openai-settings'),
             'configure_message'     => __('OpenAI ChatGPT is not configured yet! Please configure your OpenAI api first',
                 'fluentformpro'),
-            'configure_button_text' => __('Set OpenAI ChatGPT API', 'fluentformpro')
+            'configure_button_text' => __('Set OpenAI ChatGPT API', 'fluentformpro'),
         ];
 
         return $integrations;
@@ -289,9 +289,9 @@ class ChatFieldController
             'conditionals'    => [
                 'conditions' => [],
                 'status'     => false,
-                'type'       => 'all'
+                'type'       => 'all',
             ],
-            'enabled'         => true
+            'enabled'         => true,
         ];
     }
 
@@ -304,7 +304,7 @@ class ChatFieldController
                     'label'       => __('Feed Name', 'fluentformpro'),
                     'required'    => true,
                     'placeholder' => __('Your Feed Name', 'fluentformpro'),
-                    'component'   => 'text'
+                    'component'   => 'text',
                 ],
                 [
                     'key'       => 'role',
@@ -315,8 +315,8 @@ class ChatFieldController
                     'options'   => [
                         'system'    => __('System', 'fluentformpro'),
                         'assistant' => __('Assistant', 'fluentformpro'),
-                        'user'      => __('User', 'fluentformpro')
-                    ]
+                        'user'      => __('User', 'fluentformpro'),
+                    ],
                 ],
                 [
                     'key'         => 'prompt_field',
@@ -341,18 +341,18 @@ class ChatFieldController
                     'label'        => __('Conditional Logics', 'fluentformpro'),
                     'tips'         => __('Allow this integration conditionally based on your submission values',
                         'fluentformpro'),
-                    'component'    => 'conditional_block'
+                    'component'    => 'conditional_block',
                 ],
                 [
                     'require_list'   => false,
                     'key'            => 'enabled',
                     'label'          => __('Status', 'fluentformpro'),
                     'component'      => 'checkbox-single',
-                    'checkbox_label' => __('Enable this feed', 'fluentformpro')
-                ]
+                    'checkbox_label' => __('Enable this feed', 'fluentformpro'),
+                ],
             ],
             'button_require_list' => false,
-            'integration_title'   => 'OpenAI ChatGPT'
+            'integration_title'   => 'OpenAI ChatGPT',
         ];
     }
 
@@ -367,14 +367,14 @@ class ChatFieldController
         $defaults = $this->getIntegrationDefaults([], $formId);
 
         foreach ($setting as $settingKey => $settingValue) {
-            if ('true' == $settingValue) {
+            if ('true' === $settingValue) {
                 $setting[$settingKey] = true;
-            } elseif ('false' == $settingValue) {
+            } elseif ('false' === $settingValue) {
                 $setting[$settingKey] = false;
-            } elseif ('conditionals' == $settingKey) {
-                if ('true' == $settingValue['status']) {
+            } elseif ('conditionals' === $settingKey) {
+                if ('true' === $settingValue['status']) {
                     $settingValue['status'] = true;
-                } elseif ('false' == $settingValue['status']) {
+                } elseif ('false' === $settingValue['status']) {
                     $settingValue['status'] = false;
                 }
                 $setting['conditionals'] = $settingValue;
@@ -382,7 +382,7 @@ class ChatFieldController
         }
 
         if (!empty($setting['list_id'])) {
-            $setting['list_id'] = (string)$setting['list_id'];
+            $setting['list_id'] = (string) $setting['list_id'];
         }
 
         return wp_parse_args($setting, $defaults);
@@ -406,7 +406,7 @@ class ChatFieldController
         if ($error) {
             wp_send_json_error([
                 'message' => __('Validation Failed', 'fluentformpro'),
-                'errors'  => $errors
+                'errors'  => $errors,
             ], 423);
         }
 
@@ -417,7 +417,7 @@ class ChatFieldController
     {
         $globalModules = get_option('fluentform_global_modules_status');
         $openAiModule = ArrayHelper::get($globalModules, $this->integrationKey);
-        if ($openAiModule == 'yes') {
+        if ('yes' === $openAiModule) {
             return true;
         }
         return false;
@@ -431,7 +431,7 @@ class ChatFieldController
         }
         $feeds = [];
         if ($formId) {
-            $feeds = FormMeta::when($formId, function($q) use ($formId) {
+            $feeds = FormMeta::when($formId, function ($q) use ($formId) {
                 return $q->where('form_id', $formId);
             })->where('meta_key', $this->settingsKey)->get()->toArray();
         }
@@ -439,8 +439,8 @@ class ChatFieldController
         return $feeds;
     }
 
-     public function insertAllEditorShortcode($data = [])
-     {
+    public function insertAllEditorShortcode($data = [])
+    {
         $feeds = $this->getFeeds();
 
         if (!$feeds) {
@@ -449,7 +449,7 @@ class ChatFieldController
 
         $chatGPTShortCodesContainer = [
             'title'     => __('ChatGPT', 'fluentformpro'),
-            'shortcodes' => []
+            'shortcodes' => [],
         ];
 
         foreach ($feeds as $feed) {
@@ -461,7 +461,7 @@ class ChatFieldController
             $formId = ArrayHelper::get($feed, 'form_id');
             $feedName = ArrayHelper::get($value, 'name');
             // phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- Dynamic string from API/config
-            $chatGPTShortCodesContainer['shortcodes']['{chat_gpt_response.'. $formId . '_' . $feedId . '}'] = __(sprintf('ChatGPT Response for %s', $feedName), 'fluentformpro');
+            $chatGPTShortCodesContainer['shortcodes']['{chat_gpt_response.' . $formId . '_' . $feedId . '}'] = __(sprintf('ChatGPT Response for %s', $feedName), 'fluentformpro');
         }
 
         $data[] = $chatGPTShortCodesContainer;
@@ -471,8 +471,7 @@ class ChatFieldController
 
     public function chatGPTSubmissionMessageHandler($formId, $feedId, $parser)
     {
-        $feed = FormMeta
-                ::where('id', $feedId)
+        $feed = FormMeta::where('id', $feedId)
                 ->where('form_id', $formId)
                 ->where('meta_key', $this->settingsKey)
                 ->first();
@@ -504,12 +503,11 @@ class ChatFieldController
         );
 
         $args = [
-            "role"    => $role,
-            "content" => $content
+            'role'    => $role,
+            'content' => $content,
         ];
 
-
-        $result = $this->api->makeRequest($args);
+        $result = $this->api->makeRequest($args, '', (int) $formId);
 
         if (is_wp_error($result)) {
             return '';
@@ -518,22 +516,21 @@ class ChatFieldController
         $content = trim(ArrayHelper::get($result, 'choices.0.message.content'), '"');
         $content = fluentform_sanitize_html($content);
 
-        // Extract code from response if html code blocks exist
         return $this->api->maybeExtractCodeFromResponse($content);
     }
 
-    public function beforeFormRenderCss($class, $form)
+    public function beforeFormRenderCss($formClass, $form)
     {
         $formSettings = $form->settings;
         $message = ArrayHelper::get($formSettings, 'confirmation.messageToShow');
         $hasChatGpt = ArrayHelper::get($formSettings, 'confirmation.redirectTo') === 'samePage' && strpos($message, '{chat_gpt_response.') !== false;
 
         if ($hasChatGpt) {
-            $class .= ' ff-has-chat-gpt';
+            $formClass .= ' ff-has-chat-gpt';
             $this->loadScripts($form);
         }
 
-        return $class;
+        return $formClass;
     }
 
     // ajax handler for chat field

@@ -2,14 +2,14 @@
 # This file is distributed under the GPLv3.
 msgid ""
 msgstr ""
-"Project-Id-Version: LiteSpeed Cache 7.9.2\n"
+"Project-Id-Version: LiteSpeed Cache 7.9.3\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/litespeed-cache\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-20T18:05:27+00:00\n"
+"POT-Creation-Date: 2026-11-03T20:17:06+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: litespeed-cache\n"
@@ -477,11 +477,11 @@ msgstr ""
 msgid "Congratulations, %s successfully set this domain up for the online services with CDN service."
 msgstr ""
 
-#: src/cloud-auth-callback.trait.php:625
+#: src/cloud-auth-callback.trait.php:626
 msgid "Site not recognized. QUIC.cloud deactivated automatically. Please reactivate your QUIC.cloud account."
 msgstr ""
 
-#: src/cloud-auth-callback.trait.php:626
+#: src/cloud-auth-callback.trait.php:627
 msgid "Click here to proceed."
 msgstr ""
 
@@ -519,7 +519,7 @@ msgstr ""
 msgid "Cert or key file does not exist."
 msgstr ""
 
-#: src/cloud-auth.trait.php:347
+#: src/cloud-auth.trait.php:348
 msgid "Reset %s activation successfully."
 msgstr ""
 
@@ -637,11 +637,11 @@ msgstr ""
 msgid "Changed setting successfully."
 msgstr ""
 
-#: src/core.cls.php:359
+#: src/core.cls.php:361
 msgid "Notified LiteSpeed Web Server to purge everything."
 msgstr ""
 
-#: src/core.cls.php:364
+#: src/core.cls.php:366
 msgid "Notified LiteSpeed Web Server to purge the list."
 msgstr ""
 
@@ -669,23 +669,23 @@ msgstr ""
 msgid "Started async crawling"
 msgstr ""
 
-#: src/crawler.cls.php:1265
+#: src/crawler.cls.php:1267
 msgid "Guest"
 msgstr ""
 
-#: src/crawler.cls.php:1453
+#: src/crawler.cls.php:1455
 msgid "Manually added to blocklist"
 msgstr ""
 
-#: src/crawler.cls.php:1456
+#: src/crawler.cls.php:1458
 msgid "Previously existed in blocklist"
 msgstr ""
 
-#: src/crawler.cls.php:1462
+#: src/crawler.cls.php:1464
 msgid "Failed %1$s time(s) (HTTP %2$s), still retrying"
 msgstr ""
 
-#: src/crawler.cls.php:1463
+#: src/crawler.cls.php:1465
 msgid "Failed %s time(s), still retrying"
 msgstr ""
 
@@ -819,7 +819,7 @@ msgstr ""
 #: src/error.cls.php:73
 #: tpl/crawler/settings.tpl.php:123
 #: tpl/crawler/settings.tpl.php:144
-#: tpl/crawler/summary.tpl.php:218
+#: tpl/crawler/summary.tpl.php:230
 msgid "Click here to set."
 msgstr ""
 
@@ -954,32 +954,32 @@ msgid "Unknown error"
 msgstr ""
 
 #. translators: %s: full path to the .htaccess file LiteSpeed Cache failed to create.
-#: src/file.cls.php:127
+#: src/file.cls.php:128
 msgid "LiteSpeed Cache could not create %s. Sensitive files (configuration backups, debug logs) under this folder may be publicly accessible. Fix the directory permissions to restore protection."
 msgstr ""
 
-#: src/file.cls.php:309
+#: src/file.cls.php:310
 msgid "Filename is empty!"
 msgstr ""
 
-#: src/file.cls.php:318
+#: src/file.cls.php:319
 msgid "Folder does not exist: %s"
 msgstr ""
 
-#: src/file.cls.php:326
+#: src/file.cls.php:327
 msgid "Can not create folder: %1$s. Error: %2$s"
 msgstr ""
 
-#: src/file.cls.php:338
+#: src/file.cls.php:339
 msgid "Folder is not writable: %s."
 msgstr ""
 
-#: src/file.cls.php:344
-#: src/file.cls.php:349
+#: src/file.cls.php:345
+#: src/file.cls.php:350
 msgid "File %s is not writable."
 msgstr ""
 
-#: src/file.cls.php:359
+#: src/file.cls.php:360
 msgid "Failed to write to %s."
 msgstr ""
 
@@ -2052,118 +2052,118 @@ msgstr ""
 msgid "Batch rescale completed."
 msgstr ""
 
-#: src/media.cls.php:497
+#: src/media.cls.php:504
 msgid "Could not move the image file."
 msgstr ""
 
-#: src/media.cls.php:513
+#: src/media.cls.php:520
 msgid "LiteSpeed Optimization"
 msgstr ""
 
-#: src/media.cls.php:568
-#: src/media.cls.php:607
-#: src/media.cls.php:636
-#: src/media.cls.php:681
+#: src/media.cls.php:575
+#: src/media.cls.php:614
+#: src/media.cls.php:643
+#: src/media.cls.php:688
 msgid "(optm)"
 msgstr ""
 
-#: src/media.cls.php:569
+#: src/media.cls.php:576
 msgid "Currently using optimized version of file."
 msgstr ""
 
-#: src/media.cls.php:569
-#: src/media.cls.php:640
+#: src/media.cls.php:576
+#: src/media.cls.php:647
 msgid "Click to switch to original (unoptimized) version."
 msgstr ""
 
-#: src/media.cls.php:572
-#: src/media.cls.php:643
+#: src/media.cls.php:579
+#: src/media.cls.php:650
 msgid "(non-optm)"
 msgstr ""
 
-#: src/media.cls.php:573
+#: src/media.cls.php:580
 msgid "Currently using original (unoptimized) version of file."
 msgstr ""
 
-#: src/media.cls.php:573
-#: src/media.cls.php:647
+#: src/media.cls.php:580
+#: src/media.cls.php:654
 msgid "Click to switch to optimized version."
 msgstr ""
 
-#: src/media.cls.php:581
+#: src/media.cls.php:588
 msgid "Original file reduced by %1$s (%2$s)"
 msgstr ""
 
-#: src/media.cls.php:591
+#: src/media.cls.php:598
 msgid "Orig saved %s"
 msgstr ""
 
-#: src/media.cls.php:606
-#: src/media.cls.php:679
+#: src/media.cls.php:613
+#: src/media.cls.php:686
 msgid "Using optimized version of file. "
 msgstr ""
 
-#: src/media.cls.php:606
+#: src/media.cls.php:613
 msgid "No backup of original file exists."
 msgstr ""
 
-#: src/media.cls.php:611
+#: src/media.cls.php:618
 msgid "Congratulation! Your file was already optimized"
 msgstr ""
 
-#: src/media.cls.php:613
+#: src/media.cls.php:620
 msgid "Orig %s"
 msgstr ""
 
-#: src/media.cls.php:614
+#: src/media.cls.php:621
 msgid "(no savings)"
 msgstr ""
 
-#: src/media.cls.php:617
+#: src/media.cls.php:624
 msgid "Orig"
 msgstr ""
 
-#: src/media.cls.php:638
+#: src/media.cls.php:645
 msgid "Currently using optimized version of AVIF file."
 msgstr ""
 
-#: src/media.cls.php:639
+#: src/media.cls.php:646
 msgid "Currently using optimized version of WebP file."
 msgstr ""
 
-#: src/media.cls.php:645
+#: src/media.cls.php:652
 msgid "Currently using original (unoptimized) version of AVIF file."
 msgstr ""
 
-#: src/media.cls.php:646
+#: src/media.cls.php:653
 msgid "Currently using original (unoptimized) version of WebP file."
 msgstr ""
 
-#: src/media.cls.php:655
+#: src/media.cls.php:662
 msgid "AVIF file reduced by %1$s (%2$s)"
 msgstr ""
 
-#: src/media.cls.php:655
+#: src/media.cls.php:662
 msgid "WebP file reduced by %1$s (%2$s)"
 msgstr ""
 
-#: src/media.cls.php:664
+#: src/media.cls.php:671
 msgid "AVIF saved %s"
 msgstr ""
 
-#: src/media.cls.php:664
+#: src/media.cls.php:671
 msgid "WebP saved %s"
 msgstr ""
 
-#: src/media.cls.php:680
+#: src/media.cls.php:687
 msgid "No backup of unoptimized AVIF file exists."
 msgstr ""
 
-#: src/media.cls.php:680
+#: src/media.cls.php:687
 msgid "No backup of unoptimized WebP file exists."
 msgstr ""
 
-#: src/media.cls.php:695
+#: src/media.cls.php:702
 msgid "Restore from backup"
 msgstr ""
 
@@ -2267,27 +2267,27 @@ msgstr ""
 msgid "Purge all object caches successfully."
 msgstr ""
 
-#: src/purge.cls.php:854
+#: src/purge.cls.php:863
 msgid "Notified LiteSpeed Web Server to purge the front page."
 msgstr ""
 
-#: src/purge.cls.php:870
+#: src/purge.cls.php:879
 msgid "Notified LiteSpeed Web Server to purge all pages."
 msgstr ""
 
-#: src/purge.cls.php:893
+#: src/purge.cls.php:902
 msgid "Notified LiteSpeed Web Server to purge error pages."
 msgstr ""
 
-#: src/purge.cls.php:924
+#: src/purge.cls.php:933
 msgid "Purge category %s"
 msgstr ""
 
-#: src/purge.cls.php:955
+#: src/purge.cls.php:964
 msgid "Purge tag %s"
 msgstr ""
 
-#: src/purge.cls.php:997
+#: src/purge.cls.php:1006
 msgid "Purge url %s"
 msgstr ""
 
@@ -2312,15 +2312,15 @@ msgstr ""
 msgid "Failed to detect IP"
 msgstr ""
 
-#: src/utility.cls.php:455
+#: src/utility.cls.php:458
 msgid "right now"
 msgstr ""
 
-#: src/utility.cls.php:455
+#: src/utility.cls.php:458
 msgid "just now"
 msgstr ""
 
-#: src/utility.cls.php:458
+#: src/utility.cls.php:461
 msgid " %s ago"
 msgstr ""
 
@@ -2348,7 +2348,7 @@ msgstr ""
 #: thirdparty/woocommerce.content.tpl.php:24
 #: tpl/cache/settings-advanced.tpl.php:21
 #: tpl/cache/settings_inc.browser.tpl.php:23
-#: tpl/toolbox/beta_test.tpl.php:48
+#: tpl/toolbox/beta_test.tpl.php:49
 #: tpl/toolbox/heartbeat.tpl.php:24
 #: tpl/toolbox/report.tpl.php:46
 msgid "NOTICE:"
@@ -2457,7 +2457,7 @@ msgstr ""
 
 #: tpl/banner/new_version.php:77
 #: tpl/banner/new_version_dev.tpl.php:41
-#: tpl/toolbox/beta_test.tpl.php:94
+#: tpl/toolbox/beta_test.tpl.php:95
 msgid "Upgrade"
 msgstr ""
 
@@ -2686,7 +2686,7 @@ msgstr ""
 #: tpl/cache/settings-cache.tpl.php:42
 #: tpl/crawler/settings.tpl.php:113
 #: tpl/crawler/settings.tpl.php:133
-#: tpl/crawler/summary.tpl.php:208
+#: tpl/crawler/summary.tpl.php:220
 #: tpl/page_optm/entry.tpl.php:42
 #: tpl/toolbox/settings-debug.tpl.php:47
 msgid "NOTICE"
@@ -2777,6 +2777,7 @@ msgstr ""
 #: tpl/cache/settings-esi.tpl.php:46
 #: tpl/cdn/cf.tpl.php:100
 #: tpl/crawler/summary.tpl.php:60
+#: tpl/crawler/summary.tpl.php:77
 #: tpl/inc/check_cache_disabled.php:38
 #: tpl/inc/check_if_network_disable_all.php:28
 #: tpl/page_optm/settings_css.tpl.php:77
@@ -3191,7 +3192,7 @@ msgstr ""
 
 #: tpl/cache/settings_inc.object.tpl.php:54
 #: tpl/crawler/blacklist.tpl.php:42
-#: tpl/crawler/summary.tpl.php:153
+#: tpl/crawler/summary.tpl.php:165
 msgid "Status"
 msgstr ""
 
@@ -3608,8 +3609,8 @@ msgstr ""
 #: tpl/crawler/blacklist.tpl.php:89
 #: tpl/crawler/map.tpl.php:64
 #: tpl/crawler/map.tpl.php:104
-#: tpl/crawler/summary.tpl.php:199
-#: tpl/crawler/summary.tpl.php:247
+#: tpl/crawler/summary.tpl.php:211
+#: tpl/crawler/summary.tpl.php:259
 msgid "Blocklisted"
 msgstr ""
 
@@ -3702,7 +3703,7 @@ msgid "To crawl the site as a logged-in user, enter the user ids to be simulated
 msgstr ""
 
 #: tpl/crawler/settings.tpl.php:116
-#: tpl/crawler/summary.tpl.php:211
+#: tpl/crawler/summary.tpl.php:223
 msgid "You must set %s before using this feature."
 msgstr ""
 
@@ -3735,139 +3736,147 @@ msgstr ""
 msgid "See %sIntroduction for Enabling the Crawler%s for detailed information."
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:77
+#: tpl/crawler/summary.tpl.php:79
+msgid "The crawler is using plain HTTP on port 80 because the HTTPS (443) test on the Server IP failed."
+msgstr ""
+
+#: tpl/crawler/summary.tpl.php:81
+msgid "On OpenLiteSpeed the cache key includes the port, so pages crawled on port 80 may not be served to HTTPS visitors."
+msgstr ""
+
+#: tpl/crawler/summary.tpl.php:89
 msgid "Current sitemap crawl started at"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:82
+#: tpl/crawler/summary.tpl.php:94
 msgid "The next complete sitemap crawl will start at"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:90
+#: tpl/crawler/summary.tpl.php:102
 msgid "Last complete run time for all crawlers"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:91
-#: tpl/crawler/summary.tpl.php:98
+#: tpl/crawler/summary.tpl.php:103
+#: tpl/crawler/summary.tpl.php:110
 msgid "%d seconds"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:97
+#: tpl/crawler/summary.tpl.php:109
 msgid "Run time for previous crawler"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:104
+#: tpl/crawler/summary.tpl.php:116
 #: tpl/dash/dashboard.tpl.php:91
 #: tpl/dash/dashboard.tpl.php:811
 msgid "Current crawler started at"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:110
+#: tpl/crawler/summary.tpl.php:122
 msgid "Current server load"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:116
+#: tpl/crawler/summary.tpl.php:128
 #: tpl/dash/dashboard.tpl.php:97
 #: tpl/dash/dashboard.tpl.php:817
 msgid "Last interval"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:123
+#: tpl/crawler/summary.tpl.php:135
 #: tpl/dash/dashboard.tpl.php:103
 #: tpl/dash/dashboard.tpl.php:823
 msgid "Ended reason"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:130
+#: tpl/crawler/summary.tpl.php:142
 msgid "Last crawled"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:133
+#: tpl/crawler/summary.tpl.php:145
 msgid "%d item(s)"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:141
+#: tpl/crawler/summary.tpl.php:153
 msgid "Reset position"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:142
+#: tpl/crawler/summary.tpl.php:154
 msgid "Manually run"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:151
+#: tpl/crawler/summary.tpl.php:163
 msgid "Cron Name"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:152
+#: tpl/crawler/summary.tpl.php:164
 msgid "Run Frequency"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:154
+#: tpl/crawler/summary.tpl.php:166
 msgid "Activate"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:155
+#: tpl/crawler/summary.tpl.php:167
 msgid "Running"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:184
+#: tpl/crawler/summary.tpl.php:196
 msgid "Waiting"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:189
+#: tpl/crawler/summary.tpl.php:201
 msgid "Hit"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:194
+#: tpl/crawler/summary.tpl.php:206
 msgid "Miss"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:230
+#: tpl/crawler/summary.tpl.php:242
 msgid "Position: "
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:232
+#: tpl/crawler/summary.tpl.php:244
 msgid "running"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:244
+#: tpl/crawler/summary.tpl.php:256
 msgid "Waiting to be Crawled"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:245
+#: tpl/crawler/summary.tpl.php:257
 msgid "Already Cached"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:246
+#: tpl/crawler/summary.tpl.php:258
 msgid "Successfully Crawled"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:251
+#: tpl/crawler/summary.tpl.php:263
 msgid "Run frequency is set by the Interval Between Runs setting."
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:254
+#: tpl/crawler/summary.tpl.php:266
 msgid "Crawlers cannot run concurrently. If both the cron and a manual run start at similar times, the first to be started will take precedence."
 msgstr ""
 
 #. translators: %s: Link tags
-#: tpl/crawler/summary.tpl.php:261
+#: tpl/crawler/summary.tpl.php:273
 msgid "Please see %sHooking WP-Cron Into the System Task Scheduler%s to learn how to create the system cron task."
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:272
+#: tpl/crawler/summary.tpl.php:284
 msgid "Watch Crawler Status"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:278
+#: tpl/crawler/summary.tpl.php:290
 msgid "Show crawler status"
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:288
+#: tpl/crawler/summary.tpl.php:300
 msgid "Start watching..."
 msgstr ""
 
-#: tpl/crawler/summary.tpl.php:293
+#: tpl/crawler/summary.tpl.php:305
 msgid "No crawler meta file generated yet"
 msgstr ""
 
@@ -5473,7 +5482,7 @@ msgid "Comments are supported. Start a line with a %s to turn it into a comment 
 msgstr ""
 
 #: tpl/page_optm/settings_localization.tpl.php:147
-#: tpl/toolbox/beta_test.tpl.php:57
+#: tpl/toolbox/beta_test.tpl.php:58
 msgid "Example"
 msgstr ""
 
@@ -5984,52 +5993,52 @@ msgstr ""
 msgid "Restore Settings"
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:42
+#: tpl/toolbox/beta_test.tpl.php:43
 msgid "Try GitHub Version"
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:49
+#: tpl/toolbox/beta_test.tpl.php:50
 msgid "LiteSpeed Cache is disabled. This functionality will not work."
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:54
+#: tpl/toolbox/beta_test.tpl.php:55
 msgid "Use this section to switch plugin versions. To beta test a GitHub commit, enter the commit URL in the field below."
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:63
+#: tpl/toolbox/beta_test.tpl.php:64
 msgid "Use latest GitHub Dev commit"
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:67
+#: tpl/toolbox/beta_test.tpl.php:68
 msgid "Use latest GitHub Master commit"
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:71
-#: tpl/toolbox/beta_test.tpl.php:87
+#: tpl/toolbox/beta_test.tpl.php:72
+#: tpl/toolbox/beta_test.tpl.php:88
 msgid "Use latest WordPress release version"
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:71
+#: tpl/toolbox/beta_test.tpl.php:72
 msgid "OR"
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:79
+#: tpl/toolbox/beta_test.tpl.php:80
 msgid "Downgrade not recommended. May cause fatal error due to refactored code."
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:84
+#: tpl/toolbox/beta_test.tpl.php:85
 msgid "Press the %s button to use the most recent GitHub commit. Master is for release candidate & Dev is for experimental testing."
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:84
+#: tpl/toolbox/beta_test.tpl.php:85
 msgid "Use latest GitHub Dev/Master commit"
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:87
+#: tpl/toolbox/beta_test.tpl.php:88
 msgid "Press the %s button to stop beta testing and go back to the current release from the WordPress Plugin Directory."
 msgstr ""
 
-#: tpl/toolbox/beta_test.tpl.php:91
+#: tpl/toolbox/beta_test.tpl.php:92
 msgid "In order to avoid an upgrade error, you must be using %1$s or later before you can upgrade to %2$s versions."
 msgstr ""
 

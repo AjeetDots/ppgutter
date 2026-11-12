@@ -85,6 +85,7 @@ function whatsappchat_phone_number_render() {
     $options = get_option('whatsappchat_settings');
     ?>
     <input id="whatsappchat_phone_number" type='text' name='whatsappchat_settings[whatsappchat_phone_number]' value='<?= $options['whatsappchat_phone_number'] ?? ''; ?>' placeholder="e.g. +447786364040" style="width:100%;max-width:500px">
+    <p class="description">Use a private number that is NOT shown anywhere else on the site. It is only given out after a Cloudflare Turnstile check.</p>
     <?php
         $errors = get_settings_errors('whatsappchat_settings');
         if (isset($errors)) foreach ($errors as $error) if (array_search('invalid_phone_number', $error)) $has_error = true;

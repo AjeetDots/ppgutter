@@ -256,6 +256,14 @@ function wpcode_save_generated_snippet() {
 	$new_snippet = new WPCode_Snippet( $snippet_data );
 
 	$new_snippet_id = $new_snippet->save();
+	if ( ! $new_snippet_id ) {
+		$message = wpcode()->error->get_last_error_message();
+		wp_send_json_error(
+			array(
+				'message' => $message ? $message : __( 'The snippet could not be saved.', 'insert-headers-and-footers' ),
+			)
+		);
+	}
 
 	wp_send_json_success(
 		array(

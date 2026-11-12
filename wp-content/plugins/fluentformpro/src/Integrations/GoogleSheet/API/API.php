@@ -2,28 +2,15 @@
 
 namespace FluentFormPro\Integrations\GoogleSheet\API;
 
+use FluentFormPro\Services\RemoteAuth;
+
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
 class API
 {
-    private $clientId = '157785030834-7bkpc1olhgp9kd683c78dclei5elhoku.apps.googleusercontent.com';
-    private $clientSecret = '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';
-    private $redirect = 'https://fluentforms.com/gapi/';
-
     private $optionKey = '_fluentform_google_sheet_settings';
-
-    public function __construct()
-    {
-        if (defined('FF_GSHEET_CLIENT_ID')) {
-            $this->clientId = FF_GSHEET_CLIENT_ID;
-        }
-
-        if (defined('FF_GSHEET_CLIENT_SECRET')) {
-            $this->clientSecret = FF_GSHEET_CLIENT_SECRET;
-        }
-    }
 
     public function makeRequest($url, $bodyArgs, $type = 'GET', $headers = false)
     {
@@ -36,12 +23,11 @@ class API
         }
 
         $args = [
-            'headers' => $headers
+            'headers' => $headers,
         ];
         if ($bodyArgs) {
             $args['body'] = json_encode($bodyArgs);
         }
-
 
         $args['method'] = $type;
         $request = wp_remote_request($url, $args);
@@ -66,76 +52,86 @@ class API
         return $body;
     }
 
-    public function generateAccessKey($token)
-    {
-        $body = [
-            'code'          => $token,
-            'grant_type'    => 'authorization_code',
-            'redirect_uri'  => $this->redirect,
-            'client_id'     => $this->clientId,
-            'client_secret' => $this->clientSecret
-        ];
-        return $this->makeRequest('https://accounts.google.com/o/oauth2/token', $body, 'POST');
-    }
-
     public function getAccessToken()
     {
         $tokens = get_option($this->optionKey);
 
-        if (!$tokens) {
+        if (empty($tokens['access_token'])) {
             return false;
         }
 
         if (($tokens['created_at'] + $tokens['expires_in'] - 30) < time()) {
-            // It's expired so we have to re-issue again
-            $refreshTokens = $this->refreshToken($tokens);
+            $refreshed = $this->refreshToken($tokens);
 
-            if (!is_wp_error($refreshTokens)) {
-                $tokens['access_token'] = $refreshTokens['access_token'];
-                $tokens['expires_in'] = $refreshTokens['expires_in'];
-                $tokens['created_at'] = time();
-                update_option($this->optionKey, $tokens, 'no');
-            } else {
+            if (is_wp_error($refreshed)) {
+                if ('ff_auth_reconnect' === $refreshed->get_error_code()) {
+                    update_option($this->optionKey, ['status' => false], 'no');
+                    RemoteAuth::resetClockState();
+                }
+
                 return false;
             }
+
+            $tokens['access_token'] = $refreshed['access_token'];
+            $tokens['expires_in'] = $refreshed['expires_in'];
+            $tokens['created_at'] = time();
+            // A wrapped token replaces the raw one; a site refreshing with its own Google app keeps the raw one.
+            if (!empty($refreshed['wrapped_refresh_token'])) {
+                $tokens['wrapped_refresh_token'] = $refreshed['wrapped_refresh_token'];
+                unset($tokens['refresh_token']);
+            }
+            update_option($this->optionKey, $tokens, 'no');
         }
 
         return $tokens['access_token'];
     }
 
-    public function getAUthUrl()
-    {
-        return 'https://accounts.google.com/o/oauth2/auth?access_type=offline&approval_prompt=force&client_id=' . $this->clientId . '&redirect_uri=' . urlencode($this->redirect) . '&response_type=code&scope=https%3A%2F%2Fspreadsheets.google.com%2Ffeeds%2F';
-    }
-
     private function refreshToken($tokens)
     {
-        $clientId = $this->clientId;
-        $clientSecret = $this->clientSecret;
-
-        // To support previous Google Authentication Process we must use the Previous App
-        if (!isset($tokens['version'])) {
-            $clientId = '157785030834-inhccvqk9nib57i6i326q3aaecgpnctl.apps.googleusercontent.com';
-            $clientSecret = 'Rnw-FlDRRXkp0QlFSV6h1HHs';
-            // SECURITY (PRO-19): allow the committed legacy secret to be overridden per-site so an
-            // operator can migrate off the shared vendor credential. NOTE: the committed default is
-            // a confidential client secret present in every plugin copy and must be rotated by the
-            // vendor — a constant override alone does not neutralise the leaked value.
-            if (defined('FF_GSHEET_LEGACY_CLIENT_ID')) {
-                $clientId = FF_GSHEET_LEGACY_CLIENT_ID;
-            }
-            if (defined('FF_GSHEET_LEGACY_CLIENT_SECRET')) {
-                $clientSecret = FF_GSHEET_LEGACY_CLIENT_SECRET;
-            }
+        if (!empty($tokens['wrapped_refresh_token'])) {
+            return RemoteAuth::refreshAuth('google', 'sheets', $tokens['wrapped_refresh_token']);
         }
 
-        $args = [
-            'client_id' => $clientId,
-            'client_secret' => $clientSecret,
-            'refresh_token' => $tokens['refresh_token'],
-            'grant_type' => 'refresh_token'
-        ];
+        if (empty($tokens['refresh_token'])) {
+            return new \WP_Error('ff_auth_reconnect', __('Your Google Sheets connection needs to be reconnected.', 'fluentformpro'));
+        }
 
-        return $this->makeRequest('https://accounts.google.com/o/oauth2/token', $args, 'POST');
+        $ownClient = $this->siteOwnClient($tokens);
+        if ($ownClient) {
+            return $this->refreshWithOwnClient($tokens['refresh_token'], $ownClient);
+        }
+
+        // Pre-update connection on a Fluent Forms app: migrated once (worker docs/CONTRACT.md §8).
+        return RemoteAuth::migrateGoogleAuth($tokens['refresh_token'], home_url());
+    }
+
+    // A site that set its own Google app in wp-config keeps refreshing with it; the service doesn't hold that secret.
+    // Same constants the old plugin read: tokens with 'version' came from FF_GSHEET_*, older ones from FF_GSHEET_LEGACY_*.
+    private function siteOwnClient($tokens)
+    {
+        $prefix = isset($tokens['version']) ? 'FF_GSHEET_' : 'FF_GSHEET_LEGACY_';
+        $id = defined($prefix . 'CLIENT_ID') ? constant($prefix . 'CLIENT_ID') : '';
+        $secret = defined($prefix . 'CLIENT_SECRET') ? constant($prefix . 'CLIENT_SECRET') : '';
+
+        return ($id && $secret) ? [$id, $secret] : null;
+    }
+
+    private function refreshWithOwnClient($refreshToken, $client)
+    {
+        $result = $this->makeRequest('https://accounts.google.com/o/oauth2/token', [
+            'client_id'     => $client[0],
+            'client_secret' => $client[1],
+            'refresh_token' => $refreshToken,
+            'grant_type'    => 'refresh_token',
+        ], 'POST');
+
+        if (is_wp_error($result) || empty($result['access_token'])) {
+            return new \WP_Error(423, __('Could not refresh the Google Sheets connection.', 'fluentformpro'));
+        }
+
+        return [
+            'access_token' => $result['access_token'],
+            'expires_in'   => isset($result['expires_in']) ? $result['expires_in'] : 3600,
+        ];
     }
 }

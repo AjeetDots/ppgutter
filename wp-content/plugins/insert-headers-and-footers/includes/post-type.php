@@ -66,7 +66,8 @@ function wpcode_block_unauthorized_snippet_writes( $maybe_empty, $postarr ) {
 		return true;
 	}
 
-	if ( ! current_user_can( 'wpcode_edit_snippets' ) ) {
+	/** This filter is documented in includes/class-wpcode-snippet.php */
+	if ( ! current_user_can( 'wpcode_edit_snippets' ) && ! apply_filters( 'wpcode_snippet_save_trusted_context', false, null ) ) {
 		return true;
 	}
 

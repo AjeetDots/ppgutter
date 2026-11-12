@@ -399,14 +399,16 @@ class EmailNotification
             'Content-Type: text/html; charset=utf-8',
         ];
 
-        $fromEmail = $notification['fromEmail'];
+        $fromEmail = $notification['fromEmail'] ?? '';
+        $fromName = $notification['fromName'] ?? '';
+        $replyTo = $notification['replyTo'] ?? '';
 
         if (!is_string($fromEmail) || ! is_email($fromEmail)) {
             $fromEmail = false;
         }
 
-        if ($notification['fromName'] && $fromEmail) {
-            $headers[] = "From: {$notification['fromName']} <{$fromEmail}>";
+        if ($fromName && $fromEmail) {
+            $headers[] = "From: {$fromName} <{$fromEmail}>";
         } elseif ($fromEmail) {
             $headers[] = "From: <{$fromEmail}>";
         }
@@ -421,8 +423,8 @@ class EmailNotification
             $headers[] = 'cc: ' . $ccEmail;
         }
 
-        if ($notification['replyTo'] && is_email($notification['replyTo'])) {
-            $headers[] = 'Reply-To: <' . $notification['replyTo'] . '>';
+        if ($replyTo && is_email($replyTo)) {
+            $headers[] = 'Reply-To: <' . $replyTo . '>';
         }
 
         $headers = apply_filters_deprecated(

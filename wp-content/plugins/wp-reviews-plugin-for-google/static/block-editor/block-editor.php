@@ -18,6 +18,7 @@ wp_enqueue_script(
 plugins_url('block-editor.js', __FILE__),
 [
 'wp-api-fetch',
+'wp-block-editor',
 'wp-components',
 'wp-compose',
 'wp-blocks',
@@ -31,6 +32,7 @@ filemtime(plugin_dir_path(__FILE__) . 'block-editor.js'),
 function register_block()
 {
 register_block_type('trustindex/block-selector', [
+'api_version' => 3,
 'render_callback' => [ $this, 'render_block' ],
 'attributes' => [
 'widget_id' => [ 'type' => 'string' ],

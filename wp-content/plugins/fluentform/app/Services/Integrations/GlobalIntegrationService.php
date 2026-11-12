@@ -24,6 +24,25 @@ class GlobalIntegrationService
             'Use fluentform/global_integration_settings_' . $settingsKey . ' instead of fluentform_global_integration_settings_' . $settingsKey
         );
         $settings = apply_filters('fluentform/global_integration_settings_' . $settingsKey, $settings);
+
+        // OAuth tokens and legacy credentials may not have a UI field declaration.
+        // Mask the response only, including failed connections that retain secrets.
+        // unmaskCredentials() restores posted masks before a provider saves settings.
+        if (is_array($settings)) {
+            $credentialKeys = [
+                'access_token', 'refresh_token', 'wrapped_refresh_token', 'client_secret',
+                'apiKey', 'apiSecret', 'apiToken', 'api_key', 'secret_key',
+                'accessToken', 'authToken', 'appKey', 'apiPassword', 'bot_token',
+            ];
+            // Add-on integrations can append their own top-level credential names.
+            $credentialKeys = apply_filters('fluentform/integration_credential_keys', $credentialKeys, $settingsKey);
+            foreach ((array) $credentialKeys as $credentialKey) {
+                if (is_string($credentialKey) && isset($settings[$credentialKey]) && is_string($settings[$credentialKey]) && '' !== $settings[$credentialKey]) {
+                    $settings[$credentialKey] = self::REDACTION_MASK;
+                }
+            }
+        }
+
         $fieldSettings = apply_filters_deprecated(
             'fluentform_global_integration_fields_' . $settingsKey,
             [

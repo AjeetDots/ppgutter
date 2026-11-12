@@ -22,6 +22,7 @@ check_admin_referer('ti-notification');
 $type = sanitize_text_field(wp_unslash($_GET['notification']));
 $action = sanitize_text_field(wp_unslash($_GET['action']));
 $options = $pluginManagerInstance->getNotificationOptions($type);
+$activeParam = isset($_GET['dashboard']) ? 'dashboard-active' : 'active';
 switch ($action) {
 case 'later':
 $remindDays = isset($_GET['remind-days']) ? (int)$_GET['remind-days'] : 14;
@@ -29,12 +30,12 @@ $pluginManagerInstance->setNotificationParam($type, 'timestamp', time() + ($remi
 break;
 case 'close':
 if ($options['hide-on-close']) {
-$pluginManagerInstance->setNotificationParam($type, 'active', false);
+$pluginManagerInstance->setNotificationParam($type, $activeParam, false);
 }
 break;
 case 'open':
 if ($options['hide-on-open']) {
-$pluginManagerInstance->setNotificationParam($type, 'active', false);
+$pluginManagerInstance->setNotificationParam($type, $activeParam, false);
 }
 if ($options['redirect']) {
 header('Location: '. $options['redirect']);

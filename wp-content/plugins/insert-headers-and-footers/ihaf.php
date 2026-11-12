@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WPCode Lite
  * Plugin URI: https://www.wpcode.com/
- * Version: 2.4.0
+ * Version: 2.4.1
  * Requires at least: 5.0
  * Requires PHP: 7.0
  * Tested up to: 7.1
@@ -246,6 +246,13 @@ class WPCode {
 	public $admin_page_loader;
 
 	/**
+	 * The rotating cross-promo submenu slot.
+	 *
+	 * @var WPCode_Promo_Rotation
+	 */
+	public $promo_rotation;
+
+	/**
 	 * The library auth instance.
 	 *
 	 * @var WPCode_Library_Auth
@@ -363,6 +370,14 @@ class WPCode {
 		require_once WPCODE_PLUGIN_PATH . 'includes/class-wpcode-admin-bar-info.php';
 		// Preview frame handler for live CSS preview.
 		require_once WPCODE_PLUGIN_PATH . 'includes/admin/class-wpcode-preview-frame.php';
+		// Shared snippet input preparation.
+		require_once WPCODE_PLUGIN_PATH . 'includes/class-wpcode-snippet-input.php';
+		// Shared guards for write abilities.
+		require_once WPCODE_PLUGIN_PATH . 'includes/abilities/trait-wpcode-abilities-guards.php';
+		// Snippet write abilities.
+		require_once WPCODE_PLUGIN_PATH . 'includes/abilities/class-wpcode-abilities-snippets.php';
+		// Header and footer write abilities.
+		require_once WPCODE_PLUGIN_PATH . 'includes/abilities/class-wpcode-abilities-headers-footers.php';
 		// Abilities API Integration (WordPress 6.9+).
 		require_once WPCODE_PLUGIN_PATH . 'includes/class-wpcode-abilities-api.php';
 
@@ -398,6 +413,7 @@ class WPCode {
 			require_once WPCODE_PLUGIN_PATH . 'includes/admin/class-wpcode-review.php';
 			// Suggest free plugins.
 			require_once WPCODE_PLUGIN_PATH . 'includes/admin/class-wpcode-suggested-plugins.php';
+			require_once WPCODE_PLUGIN_PATH . 'includes/admin/class-wpcode-promo-rotation.php';
 			// Highlight features.
 			require_once WPCODE_PLUGIN_PATH . 'includes/admin/class-wpcode-features-notices.php';
 		}
@@ -438,6 +454,7 @@ class WPCode {
 			$this->library_auth      = new WPCode_Library_Auth();
 			$this->importers         = new WPCode_Importers();
 			$this->notifications     = new WPCode_Notifications();
+			$this->promo_rotation    = new WPCode_Promo_Rotation();
 			$this->admin_page_loader = new WPCode_Admin_Page_Loader_Lite();
 			$this->notice            = new WPCode_Notice();
 			$this->smart_tags        = new WPCode_Smart_Tags_Lite();

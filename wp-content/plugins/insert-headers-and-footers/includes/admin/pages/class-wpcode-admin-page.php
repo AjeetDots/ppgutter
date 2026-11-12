@@ -440,9 +440,16 @@ abstract class WPCode_Admin_Page {
 		// Add the "Check for Updates" button before the testing mode toggle.
 		$this->add_check_for_updates_button();
 
-		echo '<span class="wpcode-toggle-testing-mode-wrap">';
-		echo $this->get_checkbox_toggle( wpcode_testing_mode_enabled(), 'wpcode-toggle-testing-mode', '', '', esc_html__( 'Testing Mode', 'insert-headers-and-footers' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		echo '</span>';
+		/**
+		 * Filter whether the Testing Mode toggle is shown in the header.
+		 *
+		 * @param bool $show Whether to show the toggle.
+		 */
+		if ( apply_filters( 'wpcode_show_testing_mode_toggle', true ) ) {
+			echo '<span class="wpcode-toggle-testing-mode-wrap">';
+			echo $this->get_checkbox_toggle( wpcode_testing_mode_enabled(), 'wpcode-toggle-testing-mode', '', '', esc_html__( 'Testing Mode', 'insert-headers-and-footers' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo '</span>';
+		}
 		?>
 			<button
 					type="button"
@@ -709,11 +716,12 @@ abstract class WPCode_Admin_Page {
 	 * @param string     $description Field description (optional).
 	 * @param string|int $value Field value (optional).
 	 * @param string     $label Field label (optional).
+	 * @param bool       $disabled Render the toggle locked (optional).
 	 *
 	 * @return string
 	 */
-	public function get_checkbox_toggle( $checked, $name, $description = '', $value = '', $label = '' ) {
-		return wpcode_get_checkbox_toggle( $checked, $name, $description, $value, $label );
+	public function get_checkbox_toggle( $checked, $name, $description = '', $value = '', $label = '', $disabled = false ) {
+		return wpcode_get_checkbox_toggle( $checked, $name, $description, $value, $label, $disabled );
 	}
 
 	/**
