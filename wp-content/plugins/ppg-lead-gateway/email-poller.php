@@ -177,7 +177,6 @@ function ppg_poll_mailbox_run() {
 		}
 	}
 	$matches            = array_unique( $matches );
-	$stats['matched']   = count( $matches );
 	foreach ( $matches as $num ) {
 		$header = imap_headerinfo( $imap, $num );
 		$from   = isset( $header->from[0] ) ? strtolower( $header->from[0]->host ?? '' ) : '';
@@ -193,7 +192,7 @@ function ppg_poll_mailbox_run() {
 		}
 
 		if ( empty( $header->udate ) || (int) $header->udate < $go_live ) {
-			continue; // Received before go-live: never imported.
+			continue; // Received before go-live: never imported, and not counted as matched.
 		}
 
 		$subject = isset( $header->subject ) ? imap_utf8( $header->subject ) : '';
@@ -201,12 +200,15 @@ function ppg_poll_mailbox_run() {
 		// Cheap subject check first, so non-lead mail from these senders (login alerts, invoices,
 		// verification codes, reminders, replies) is never even downloaded.
 		if ( null === ppg_parse_lead_email( $source, $subject, '' ) ) {
+			$stats['detail'] = 'Skipped, not a lead subject: "' . substr( $subject, 0, 80 ) . '" (' . gmdate( 'Y-m-d H:i', (int) $header->udate ) . ' UTC)';
 			continue;
 		}
+		$stats['matched']++; // Only lead emails received after go-live count.
 
 		$body = ppg_email_text( $imap, $num );
 		$lead = ppg_parse_lead_email( $source, $subject, $body );
 		if ( null === $lead ) {
+			$stats['detail'] = 'Skipped, lead body could not be parsed: "' . substr( $subject, 0, 80 ) . '"';
 			continue;
 		}
 		$stats['considered']++;
