@@ -97,6 +97,15 @@ function wpcode_filter_snippets_by_type() {
 	$snippet_type = isset( $_POST['snippet_type'] ) ? sanitize_text_field( wp_unslash( $_POST['snippet_type'] ) ) : '';
 	$location     = isset( $_POST['location'] ) ? sanitize_text_field( wp_unslash( $_POST['location'] ) ) : '';
 	$search_term  = isset( $_POST['s'] ) ? sanitize_text_field( wp_unslash( $_POST['s'] ) ) : '';
+	$view         = isset( $_POST['view'] ) ? sanitize_key( wp_unslash( $_POST['view'] ) ) : '';
+	$tag          = isset( $_POST['tag'] ) ? sanitize_text_field( wp_unslash( $_POST['tag'] ) ) : '';
+	$order_by     = isset( $_POST['orderby'] ) ? sanitize_key( wp_unslash( $_POST['orderby'] ) ) : '';
+	$order        = isset( $_POST['order'] ) ? sanitize_key( wp_unslash( $_POST['order'] ) ) : '';
+
+	// The table reads the view when it is created, so set it first.
+	if ( $view ) {
+		$_GET['view'] = $view;
+	}
 
 	$screen_id      = 'toplevel_page_wpcode';
 	$current_screen = convert_to_screen( $screen_id );
@@ -110,6 +119,14 @@ function wpcode_filter_snippets_by_type() {
 	$_GET['type']     = $snippet_type;
 	$_GET['location'] = $location;
 	$_GET['s']        = $search_term;
+	$_GET['tag']      = $tag;
+	// Only a sort from the URL; without one the table uses the user's saved sort.
+	if ( $order_by ) {
+		$_GET['orderby'] = $order_by;
+	}
+	if ( $order ) {
+		$_GET['order'] = $order;
+	}
 
 	$snippets_table->prepare_items();
 	$count = $snippets_table->get_total_items();
@@ -232,12 +249,13 @@ function wpcode_save_generated_snippet() {
 	$snippet_data = array(
 		// Translators: this an auto-generated title for when a snippet is saved from the generator.
 		'title'          => sprintf( __( 'Generated Snippet %s', 'insert-headers-and-footers' ), $generator->get_title() ),
-		'code'           => $snippet_code,
+		// The generator builds unslashed values and save() unslashes them.
+		'code'           => wp_slash( $snippet_code ),
 		'code_type'      => $generator->get_code_type(),
 		'tags'           => $generator->get_tags(),
 		'location'       => $generator->get_location(),
 		'generator'      => $generator->get_name(),
-		'generator_data' => $generator->get_generator_data(),
+		'generator_data' => wp_slash( $generator->get_generator_data() ),
 		'auto_insert'    => $generator->get_auto_insert(),
 	);
 

@@ -90,8 +90,7 @@ class WPCode_Admin_Page_Headers_Footers extends WPCode_Admin_Page {
 	 * @return void
 	 */
 	public function page_hooks() {
-		// The Header & Footer content is always live, so editing it requires activation rights too.
-		$this->can_edit = current_user_can( 'unfiltered_html', 'wpcode-editor' ) && current_user_can( 'wpcode_activate_snippets' );
+		$this->can_edit = wpcode_current_user_can_edit_header_footer();
 		add_action( 'admin_init', array( $this, 'submit_listener' ) );
 		$this->process_message();
 	}
@@ -204,7 +203,7 @@ class WPCode_Admin_Page_Headers_Footers extends WPCode_Admin_Page {
 			echo $this->get_checkbox_toggle( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				wpcode()->settings->get_option( 'abilities_write_enabled' ),
 				'wpcode-abilities-write',
-				esc_html__( 'Let AI assistants and automation tools connected through the WordPress Abilities API create and edit snippets and header & footer code. They can only do what the connected user is allowed to do.', 'insert-headers-and-footers' ),
+				esc_html__( 'Let AI assistants and automation tools connected through the WordPress Abilities API create and edit snippets and header & footer code. Read-only access to snippets, error logs and settings is always on, even when this is off. Tools can only do what the connected user is allowed to do.', 'insert-headers-and-footers' ),
 				1
 			);
 			?>

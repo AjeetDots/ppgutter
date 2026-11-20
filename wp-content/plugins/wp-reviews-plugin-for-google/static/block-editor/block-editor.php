@@ -9,6 +9,7 @@ function init()
 {
 add_action('enqueue_block_editor_assets', [ $this, 'gutenberg_enqueue_block_editor_assets' ]);
 add_action('init', [ $this, 'register_block' ]);
+add_filter('render_block_core/shortcode', [$this, 'render_shortcode_block']);
 }
 
 function gutenberg_enqueue_block_editor_assets()
@@ -50,12 +51,28 @@ if ($this->is_gutenberg_page()) {
 return "";
 }
 if (isset($attributes['free_widgets'][ $attributes['widget_id'] ])) {
-$shortCode = 'no-registration=' . $attributes['widget_id'];
+$shortCodeAttribute = 'no-registration=' . $attributes['widget_id'];
 }
 else {
-$shortCode = 'data-widget-id="'. $attributes['widget_id'] .'"';
+$shortCodeAttribute = 'data-widget-id="'. $attributes['widget_id'] .'"';
 }
-return '[trustindex '. $shortCode .']';
+$shortCode = '[trustindex '. $shortCodeAttribute .']';
+return $this->is_shortcode_run_after_blocks() ? $shortCode : do_shortcode($shortCode);
+}
+
+function render_shortcode_block($blockContent)
+{
+if ($this->is_shortcode_run_after_blocks() || !has_shortcode($blockContent, 'trustindex')) {
+return $blockContent;
+}
+return preg_replace_callback('/'.get_shortcode_regex(['trustindex']).'/', function ($shortcodeMatch) {
+return do_shortcode($shortcodeMatch[0]);
+}, shortcode_unautop($blockContent));
+}
+
+private function is_shortcode_run_after_blocks()
+{
+return doing_filter('the_content') || doing_filter('widget_block_content');
 }
 function is_gutenberg_page()
 {

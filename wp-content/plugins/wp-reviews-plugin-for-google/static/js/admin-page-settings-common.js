@@ -158,7 +158,7 @@ jQuery(document).ready(function() {
 		if (button.data('command') && !button.data('ajax-run')) {
 			button.data('ajax-run', 1); // prevent multiple triggers
 
-			jQuery.post('', { command: button.data('command') });
+			jQuery.post('', { command: button.data('command'), _wpnonce: button.data('nonce') });
 		}
 	});
 
@@ -314,7 +314,7 @@ jQuery(document).ready(function() {
 				jQuery.ajax({
 					method: 'POST',
 					url: window.location.href,
-					data: { 'save-reply-generated': 1 }
+					data: { 'save-reply-generated': 1, _wpnonce: btn.data('nonce') }
 				});
 			});
 		}

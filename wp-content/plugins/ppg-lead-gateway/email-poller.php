@@ -43,6 +43,50 @@ function ppg_go_live_timestamp() {
 	return $ts ? (int) $ts : 0;
 }
 
+/**
+ * Anti-spoofing. The "From" line of an email is trivially forged, so anyone could email info@ pretending to be
+ * Checkatrade and fill HubSpot with junk. Gmail checks who really sent each message (SPF/DKIM/DMARC) and records the
+ * verdict in the topmost Authentication-Results header; we trust only that header (lower ones can be forged by the
+ * sender) and accept a message only when the check passed for the platform's own domain.
+ * Emergency switch: define( 'PPG_REQUIRE_SENDER_AUTH', false ) in wp-config.php turns this off.
+ */
+function ppg_auth_results( $raw_headers ) {
+	$raw = preg_replace( '/\r?\n[ \t]+/', ' ', (string) $raw_headers ); // unfold wrapped header lines
+	return preg_match( '/^Authentication-Results:\s*(.+)$/im', $raw, $m ) ? trim( $m[1] ) : '';
+}
+
+function ppg_domain_matches( $value, $domain ) {
+	$host = strtolower( trim( (string) $value, " \t\"'<>" ) );
+	$at   = strrpos( $host, '@' );
+	if ( false !== $at ) {
+		$host = substr( $host, $at + 1 );
+	}
+	return $host === $domain || substr( $host, -strlen( '.' . $domain ) ) === '.' . $domain;
+}
+
+function ppg_sender_verified( $raw_headers, $domain ) {
+	if ( defined( 'PPG_REQUIRE_SENDER_AUTH' ) && false === PPG_REQUIRE_SENDER_AUTH ) {
+		return true;
+	}
+	$ar = ppg_auth_results( $raw_headers );
+	if ( '' === $ar || 0 !== stripos( $ar, 'mx.google.com' ) ) {
+		return false; // missing, or not written by Gmail itself
+	}
+	foreach ( explode( ';', $ar ) as $segment ) {
+		if ( ! preg_match( '/^\s*(?:dkim|spf|dmarc)=pass\b(.*)$/is', $segment, $m ) ) {
+			continue;
+		}
+		if ( preg_match_all( '/(?:header\.(?:i|d|from)|smtp\.mailfrom)=("?)([^\s;"]+)\1/i', $m[1], $vals ) ) {
+			foreach ( $vals[2] as $v ) {
+				if ( ppg_domain_matches( $v, $domain ) ) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
 /** Returns plain text for a message (prefers text/plain, falls back to stripped HTML). */
 function ppg_email_text( $imap, $num ) {
 	$structure = imap_fetchstructure( $imap, $num );
@@ -50,6 +94,9 @@ function ppg_email_text( $imap, $num ) {
 	$html      = '';
 
 	$walk = function ( $part, $path ) use ( &$walk, $imap, $num, &$plain, &$html ) {
+		if ( substr_count( $path, '.' ) > 6 || strlen( $plain ) + strlen( $html ) > 400000 ) {
+			return; // absurdly nested or huge: a lead notification is never like this
+		}
 		if ( ! empty( $part->parts ) ) {
 			foreach ( $part->parts as $i => $sub ) {
 				$walk( $sub, '' === $path ? (string) ( $i + 1 ) : $path . '.' . ( $i + 1 ) );
@@ -79,7 +126,7 @@ function ppg_email_text( $imap, $num ) {
 	$walk( $structure, '' );
 
 	// HTML-only emails (all the older Checkatrade ones) are converted to text for the parsers.
-	return '' !== trim( $plain ) ? $plain : ppg_html_to_text( $html );
+	return substr( '' !== trim( $plain ) ? $plain : ppg_html_to_text( $html ), 0, 100000 );
 }
 
 /** Atomic lock so two overlapping cron runs cannot import the same lead twice. */
@@ -101,6 +148,9 @@ function ppg_poll_lock_acquire() {
  */
 function ppg_poll_mailbox() {
 	$started = time();
+	if ( function_exists( 'set_time_limit' ) ) {
+		@set_time_limit( 120 );
+	}
 	if ( ! ppg_poll_lock_acquire() ) {
 		ppg_poll_record( $started, array( 'outcome' => 'locked', 'detail' => 'Another run was already in progress.' ) );
 		return;
@@ -116,13 +166,27 @@ function ppg_poll_mailbox() {
 	ppg_poll_record( $started, $stats );
 }
 
-/** Keep the last run and the last 30 runs. */
+/**
+ * Keeps the last run (the status page's heartbeat) and a tiny per-day counter for today and yesterday.
+ * Nothing else is stored per run or per lead, so the database footprint never grows.
+ */
 function ppg_poll_record( $started, array $stats ) {
-	$entry = array_merge( array( 'matched' => 0, 'considered' => 0, 'imported' => 0, 'duplicates' => 0, 'held' => 0, 'failed' => 0, 'detail' => '' ), $stats, array( 'started' => $started, 'finished' => time() ) );
+	$entry = array_merge( array( 'matched' => 0, 'considered' => 0, 'imported' => 0, 'duplicates' => 0, 'held' => 0, 'failed' => 0, 'ignored' => 0, 'detail' => '' ), $stats, array( 'started' => $started, 'finished' => time() ) );
 	update_option( 'ppg_poll_status', $entry, false );
-	$log   = (array) get_option( 'ppg_poll_log', array() );
-	$log[] = $entry;
-	update_option( 'ppg_poll_log', array_slice( $log, -30 ), false );
+
+	$day     = wp_date( 'Y-m-d', time(), new DateTimeZone( 'Europe/London' ) );
+	$daily   = (array) get_option( 'ppg_poll_daily', array() );
+	$new_day = ! isset( $daily[ $day ] );
+	$cur     = is_array( $daily[ $day ] ?? null ) ? $daily[ $day ] : array( 'sent' => (int) ( $daily[ $day ] ?? 0 ), 'ignored' => 0 );
+	$daily[ $day ] = array(
+		'sent'    => (int) ( $cur['sent'] ?? 0 ) + (int) $entry['imported'],
+		'ignored' => (int) ( $cur['ignored'] ?? 0 ) + (int) $entry['ignored'],
+	);
+	krsort( $daily );
+	update_option( 'ppg_poll_daily', array_slice( $daily, 0, 2, true ), false ); // WordPress skips the write when nothing changed
+	if ( $new_day ) {
+		delete_option( 'ppg_poll_log' ); // the old rolling run log is no longer kept
+	}
 }
 
 /**
@@ -130,7 +194,7 @@ function ppg_poll_record( $started, array $stats ) {
  * outcome: ok | no_imap | not_configured | connect_failed | no_go_live.
  */
 function ppg_poll_mailbox_run() {
-	$stats = array( 'outcome' => 'ok', 'detail' => '', 'matched' => 0, 'considered' => 0, 'imported' => 0, 'duplicates' => 0, 'held' => 0, 'failed' => 0 );
+	$stats = array( 'outcome' => 'ok', 'detail' => '', 'matched' => 0, 'considered' => 0, 'imported' => 0, 'duplicates' => 0, 'held' => 0, 'failed' => 0, 'ignored' => 0 );
 
 	if ( ! function_exists( 'imap_open' ) ) {
 		error_log( '[ppg-lead-gateway] PHP imap extension is not enabled; mailbox polling skipped.' );
@@ -176,14 +240,26 @@ function ppg_poll_mailbox_run() {
 			$matches = array_merge( $matches, $found );
 		}
 	}
-	$matches            = array_unique( $matches );
+	$matches = array_unique( $matches );
+
+	// Safety limits so a flood of mail can never make one run heavy: at most N leads sent to HubSpot per run and about
+	// 40 seconds of work; the rest is simply picked up on the next 5-minute check.
+	$max_per_run = defined( 'PPG_MAX_PER_RUN' ) ? max( 1, (int) PPG_MAX_PER_RUN ) : 40;
+	$handled     = 0;
+	$t0          = microtime( true );
 	foreach ( $matches as $num ) {
+		if ( $handled >= $max_per_run || microtime( true ) - $t0 > 40 ) {
+			$stats['detail'] = 'More enquiries are waiting; they will be picked up on the next check.';
+			break;
+		}
 		$header = imap_headerinfo( $imap, $num );
 		$from   = isset( $header->from[0] ) ? strtolower( $header->from[0]->host ?? '' ) : '';
-		$source = '';
+		$source     = '';
+		$src_domain = '';
 		foreach ( ppg_email_sources() as $domain => $slug ) {
 			if ( $from === $domain || substr( $from, -strlen( '.' . $domain ) ) === '.' . $domain ) {
-				$source = $slug;
+				$source     = $slug;
+				$src_domain = $domain;
 				break;
 			}
 		}
@@ -194,6 +270,9 @@ function ppg_poll_mailbox_run() {
 		if ( empty( $header->udate ) || (int) $header->udate < $go_live ) {
 			continue; // Received before go-live: never imported, and not counted as matched.
 		}
+		if ( (int) ( $header->Size ?? 0 ) > 524288 ) {
+			continue; // half a megabyte: far larger than any lead notification, so not one
+		}
 
 		$subject = isset( $header->subject ) ? imap_utf8( $header->subject ) : '';
 
@@ -203,7 +282,21 @@ function ppg_poll_mailbox_run() {
 			$stats['detail'] = 'Skipped, not a lead subject: "' . substr( $subject, 0, 80 ) . '" (' . gmdate( 'Y-m-d H:i', (int) $header->udate ) . ' UTC)';
 			continue;
 		}
+
+		// Only mail Gmail confirms really came from the platform is accepted (see ppg_sender_verified()).
+		if ( ! ppg_sender_verified( imap_fetchheader( $imap, $num ), $src_domain ) ) {
+			$stats['ignored']++;
+			continue;
+		}
 		$stats['matched']++; // Only lead emails received after go-live count.
+
+		// Cheap duplicate check by Message-ID BEFORE downloading the body, so re-reading the last three days of
+		// mail on every run costs almost nothing.
+		$mid = isset( $header->message_id ) ? 'm' . substr( md5( (string) $header->message_id ), 0, 12 ) : '';
+		if ( '' !== $mid && ppg_seen_has( array( $mid ) ) ) {
+			$stats['duplicates']++;
+			continue;
+		}
 
 		$body = ppg_email_text( $imap, $num );
 		$lead = ppg_parse_lead_email( $source, $subject, $body );
@@ -227,17 +320,34 @@ function ppg_poll_mailbox_run() {
 
 		// The mailbox is never modified (no read flags). HubSpot failures are not remembered, so the next run
 		// retries them. ppg_lead_process() logs failures itself and queues the ones that cannot be retried.
+		$handled++;
 		$result = ppg_lead_process( $source, $lead );
 		if ( is_wp_error( $result ) ) {
 			// Held in the review queue (nothing identifies the lead, or HubSpot refused it) versus a failure that will be retried.
 			$http   = (int) ( $result->get_error_data()['http'] ?? 0 );
 			$bucket = ( 'ppg_unprocessable' === $result->get_error_code() || ( $http >= 400 && $http < 500 && 429 !== $http ) ) ? 'held' : 'failed';
 			$stats[ $bucket ]++;
-		} elseif ( 'duplicate_ignored' === ( $result['status'] ?? '' ) ) {
-			$stats['duplicates']++;
+			if ( 'failed' === $bucket ) {
+				// HubSpot is down, slow or rate-limiting us: stop now instead of hammering it; retried on the next check.
+				$stats['detail'] = 'HubSpot is not responding properly; the remaining enquiries will be retried on the next check.';
+				break;
+			}
+			if ( '' !== $mid ) {
+				ppg_seen_add( array( $mid ) ); // permanently refused: do not re-download it every run
+			}
 		} else {
-			$stats['imported']++;
+			if ( 'duplicate_ignored' === ( $result['status'] ?? '' ) ) {
+				$stats['duplicates']++;
+			} else {
+				$stats['imported']++;
+			}
+			if ( '' !== $mid ) {
+				ppg_seen_add( array( $mid ) );
+			}
 		}
+	}
+	if ( $stats['ignored'] && '' === $stats['detail'] ) {
+		$stats['detail'] = $stats['ignored'] . ' email(s) claiming to be from the platform failed sender verification and were ignored.';
 	}
 	imap_close( $imap );
 	return $stats;

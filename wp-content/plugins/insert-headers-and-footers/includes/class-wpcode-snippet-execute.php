@@ -389,11 +389,6 @@ class WPCode_Snippet_Execute {
 
 		$error = false;
 
-		// Don't allow executing suspicious code.
-		if ( self::is_code_not_allowed( $code ) ) {
-			$code = '';
-		}
-
 		$this->line_reference = $line_reference;
 
 		try {
@@ -721,21 +716,16 @@ class WPCode_Snippet_Execute {
 	}
 
 	/**
-	 * Add a method to detect suspicious code.
+	 * Kept for code that still calls it. Snippets are no longer checked for restricted code.
+	 *
+	 * @deprecated 2.4.2
 	 *
 	 * @param string $code The code to check.
 	 *
-	 * @return bool
+	 * @return bool Always false.
 	 */
-	public static function is_code_not_allowed( $code ) {
-		if ( preg_match_all( '/(base64_decode|error_reporting|ini_set|eval)\s*\(/i', $code, $matches ) ) {
-			if ( count( $matches[0] ) > 5 ) {
-				return true;
-			}
-		}
-		if ( preg_match( '/dns_get_record/i', $code ) ) {
-			return true;
-		}
+	public static function is_code_not_allowed( $code ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
+		_deprecated_function( __METHOD__, '2.4.2' );
 
 		return false;
 	}

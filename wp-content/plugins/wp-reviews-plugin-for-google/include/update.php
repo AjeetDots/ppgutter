@@ -3,7 +3,9 @@ defined('ABSPATH') or die('No script kiddies please!');
 require_once(ABSPATH . 'wp-admin' . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'upgrade.php');
 global $wpdb;
 $previousVersion = $this->getVersion('update-version-check');
-if (version_compare($this->getVersion(), $previousVersion)) {
+$isNewInstall = '1.0' === $previousVersion;
+$updateRetryTransient = 'ti-update-retry-'.$this->getShortName();
+if (0 !== version_compare($this->getVersion(), $previousVersion) && false === get_transient($updateRetryTransient)) {
 $tableName = $this->get_tablename('reviews');
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 $results = $wpdb->get_results($wpdb->prepare('SHOW FULL COLUMNS FROM %i', $tableName), ARRAY_A);
@@ -38,9 +40,35 @@ if (isset($columnCollations['user']) && 0 !== strpos((string)$columnCollations['
 $wpdb->query($wpdb->prepare('ALTER TABLE %i MODIFY `user` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci', $tableName));
 }
 
-if (version_compare($previousVersion, '14.3', '<')) {
+if (!in_array('photos', $columns)) {
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+$wpdb->query($wpdb->prepare('ALTER TABLE %i ADD photos TEXT NULL AFTER reply', $tableName));
+}
+
+if (!$isNewInstall && version_compare($previousVersion, '14.3', '<')) {
 $this->setNotificationParam('gdpr-mode', 'active', true);
 $this->setNotificationParam('gdpr-mode', 'dashboard-active', true);
+}
+
+
+if (!$isNewInstall && version_compare($previousVersion, '14.4', '<')) {
+$this->setNotificationParam('ai-setup-review-photos', 'active', true);
+$this->setNotificationParam('ai-setup-review-photos', 'dashboard-active', true);
+}
+
+if (version_compare($previousVersion, '14.4', '<')) {
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+$wpdb->query($wpdb->prepare(
+'DELETE FROM %i WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s',
+$wpdb->options,
+$wpdb->esc_like('ti-online-users-').'%',
+$wpdb->esc_like('_transient_ti_uid_').'%',
+$wpdb->esc_like('_transient_timeout_ti_uid_').'%'
+));
+}
+
+if (version_compare($previousVersion, '14.4', '<')) {
+$this->getAssetProxy()->restoreUrls($this->getReviewImageUrls());
 }
 $oldRateUs = get_option('trustindex-'. $this->getShortName() .'-rate-us');
 if ($oldRateUs) {
@@ -72,7 +100,10 @@ $wpdb->delete($wpdb->options, ['option_name' => $optName]);
 if (get_option($this->get_option_name('css-content'))) {
 $cssCdnVersion = $this->getCdnVersion('widget-css');
 if ($cssCdnVersion && version_compare($cssCdnVersion, $this->getVersion('widget-css'))) {
-$this->noreg_save_css(true);
+if (is_wp_error($this->saveWidgetCss(true))) {
+set_transient($updateRetryTransient, 1, 10 * MINUTE_IN_SECONDS);
+return;
+}
 $this->updateVersion('widget-css', $cssCdnVersion);
 }
 $this->handleCssFile();

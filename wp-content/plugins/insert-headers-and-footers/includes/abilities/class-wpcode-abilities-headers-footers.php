@@ -224,16 +224,6 @@ class WPCode_Abilities_Headers_Footers {
 			);
 		}
 
-		foreach ( $provided as $code ) {
-			if ( WPCode_Snippet_Execute::is_code_not_allowed( $code ) ) {
-				return new WP_Error(
-					'wpcode_restricted_code',
-					__( 'The code contains restricted functions and was not saved.', 'insert-headers-and-footers' ),
-					array( 'status' => 400 )
-				);
-			}
-		}
-
 		$append = ! isset( $input['mode'] ) || 'replace' !== $input['mode'];
 		$values = $this->read_all();
 		foreach ( $provided as $section => $code ) {

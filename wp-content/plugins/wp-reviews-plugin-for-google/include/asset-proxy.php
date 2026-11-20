@@ -35,6 +35,7 @@ private static $jsonUrlKeys = [ 'src', 'thumbnail', 'images' ];
 private static $googleImageSizes = [ 'src' => 1200, 'thumbnail' => 240 ];
 private $plugin;
 private $filesystem = null;
+private $signatureContext = "";
 public function __construct($plugin)
 {
 $this->plugin = $plugin;
@@ -63,6 +64,15 @@ return $html;
 $html = $this->rewriteHtml($html);
 $html = $this->rewriteTagContents($html, 'style', [ $this, 'rewriteCss' ]);
 return $this->rewriteTagContents($html, 'script', [ $this, 'rewriteJson' ]);
+}
+public function rewriteProWidgetHtml($html)
+{
+$this->signatureContext = 'pro';
+try {
+return $this->rewriteWidgetHtml($html);
+} finally {
+$this->signatureContext = "";
+}
 }
 public function rewriteHtml($html)
 {
@@ -95,7 +105,8 @@ return $url;
 }
 $query = 'trustindex-asset='.str_replace('%2F', '/', rawurlencode($asset));
 if (!$this->isPublicAsset($asset)) {
-$query = 's='.$this->sign($asset).'&'.$query;
+$contextQuery = "" === $this->signatureContext ? "" : 'c='.$this->signatureContext.'&';
+$query = $contextQuery.'s='.$this->sign($this->getSignedName($asset, $this->signatureContext)).'&'.$query;
 }
 return $this->getSiteUrl().'/?'.$query;
 }
@@ -105,7 +116,9 @@ public function handleRequest()
 $asset = isset($_GET['trustindex-asset']) ? wp_unslash($_GET['trustindex-asset']) : "";
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public file endpoint, the signature is the verification
 $signature = isset($_GET['s']) ? sanitize_key(wp_unslash($_GET['s'])) : "";
-if (!$this->isEnabled() || !is_string($asset) || !$this->isRequestedAssetValid($asset, $signature)) {
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public file endpoint, the signature covers the context
+$context = isset($_GET['c']) ? sanitize_key(wp_unslash($_GET['c'])) : "";
+if (!$this->isEnabled() || !is_string($asset) || !$this->isRequestedAssetValid($asset, $signature, $context)) {
 status_header(404);
 exit;
 }
@@ -130,9 +143,9 @@ delete_option(self::$secretOption);
 delete_option(self::$revokedOption);
 delete_transient(self::$garbageCollectionTransient);
 }
-public function revokeUrls($urls)
+public function revokeUrls($urls, $keptUrls = [])
 {
-$keys = $this->getRevocationKeys($urls);
+$keys = array_values(array_diff($this->getRevocationKeys($urls), $this->getRevocationKeys($keptUrls)));
 if ([] === $keys) {
 return;
 }
@@ -153,7 +166,7 @@ private function getRevocationKeys($urls)
 $keys = [];
 foreach ($urls as $url) {
 $asset = is_string($url) ? $this->getAssetName($url) : null;
-if (null !== $asset) {
+if (null !== $asset && !$this->isGoogleImage($asset)) {
 $keys []= $this->getRevocationKey($asset);
 }
 }
@@ -161,8 +174,11 @@ return $keys;
 }
 private function getRevocationKey($asset)
 {
-$isGoogleImage = 1 === preg_match('/^[^\/]*googleusercontent\.com\//i', $asset);
-return hash('sha256', $isGoogleImage ? preg_replace('/=[^\/]*$/', '', $asset) : $asset);
+return hash('sha256', $asset);
+}
+private function isGoogleImage($asset)
+{
+return 1 === preg_match('/^(?:[a-z0-9-]+\.)*googleusercontent\.com\//i', $asset);
 }
 private function getRevokedKeys()
 {
@@ -171,7 +187,7 @@ return is_array($keys) ? $keys : [];
 }
 private function isRevoked($asset)
 {
-return in_array($this->getRevocationKey($asset), $this->getRevokedKeys(), true);
+return !$this->isGoogleImage($asset) && in_array($this->getRevocationKey($asset), $this->getRevokedKeys(), true);
 }
 private function rewriteTagContents($html, $tag, $callback)
 {
@@ -202,7 +218,7 @@ return $value;
 }
 return $this->getProxyUrl($this->getSizedGoogleImageUrl($value, $key));
 }
-private function getSizedGoogleImageUrl($url, $key)
+public function getSizedGoogleImageUrl($url, $key)
 {
 if (!isset(self::$googleImageSizes[$key]) || !preg_match('/^(?:https?:)?\\/\\/[^\\/]*googleusercontent\\.com\\//i', $url)) {
 return $url;
@@ -251,12 +267,19 @@ private function getAssetKind($asset)
 $kind = $this->getPublicAssetKind($asset);
 return null === $kind ? 'file' : $kind;
 }
-private function isRequestedAssetValid($asset, $signature)
+private function isRequestedAssetValid($asset, $signature, $context)
 {
 if (!preg_match('/^[a-z0-9.-]+(?::\d+)?\/[^\s\\\\]*$/i', $asset) || false !== strpos($asset, '..')) {
 return false;
 }
-return $this->isPublicAsset($asset) || (hash_equals($this->sign($asset), $signature) && !$this->isRevoked($asset));
+if ($this->isPublicAsset($asset)) {
+return true;
+}
+return hash_equals($this->sign($this->getSignedName($asset, $context)), $signature) && ('pro' === $context || !$this->isRevoked($asset));
+}
+private function getSignedName($asset, $context)
+{
+return "" === $context ? $asset : $context.'|'.$asset;
 }
 private function getCdnAssetPrefix()
 {
@@ -334,7 +357,7 @@ private function rewriteBody($kind, $body)
 if ('css' === $kind) {
 return $this->rewriteCss($body);
 }
-return 'view' === $kind || 'html' === $kind ? $this->rewriteWidgetHtml($body) : $body;
+return 'view' === $kind || 'html' === $kind ? $this->rewriteProWidgetHtml($body) : $body;
 }
 private function getContentType($response, $asset)
 {

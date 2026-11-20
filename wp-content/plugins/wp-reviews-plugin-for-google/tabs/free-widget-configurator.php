@@ -30,172 +30,58 @@ $ti_command_list = [
 if (!in_array($ti_command, $ti_command_list)) {
 $ti_command = null;
 }
-function trustindex_plugin_disconnect_page($settingsDelete = true)
-{
-global $pluginManagerInstance;
-$pluginManagerInstance->delete_async_request();
-delete_option($pluginManagerInstance->get_option_name('review-download-inprogress'));
-delete_option($pluginManagerInstance->get_option_name('review-download-request-id'));
-delete_option($pluginManagerInstance->get_option_name('review-manual-download'));
-delete_option($pluginManagerInstance->get_option_name('page-details'));
-delete_option($pluginManagerInstance->get_option_name('review-content'));
-delete_option($pluginManagerInstance->get_option_name('css-content'));
-if (is_file($pluginManagerInstance->getCssFile())) {
-wp_delete_file($pluginManagerInstance->getCssFile());
-}
-if ($settingsDelete) {
-delete_option($pluginManagerInstance->get_option_name('style-id'));
-delete_option($pluginManagerInstance->get_option_name('scss-set'));
-delete_option($pluginManagerInstance->get_option_name('filter'));
-delete_option($pluginManagerInstance->get_option_name('lang'));
-delete_option($pluginManagerInstance->get_option_name('dateformat'));
-delete_option($pluginManagerInstance->get_option_name('nameformat'));
-delete_option($pluginManagerInstance->get_option_name('no-rating-text'));
-delete_option($pluginManagerInstance->get_option_name('verified-icon'));
-delete_option($pluginManagerInstance->get_option_name('enable-animation'));
-delete_option($pluginManagerInstance->get_option_name('show-arrows'));
-delete_option($pluginManagerInstance->get_option_name('show-header-button'));
-delete_option($pluginManagerInstance->get_option_name('reviews-load-more'));
-delete_option($pluginManagerInstance->get_option_name('show-reviewers-photo'));
-delete_option($pluginManagerInstance->get_option_name('widget-setted-up'));
-delete_option($pluginManagerInstance->get_option_name('show-review-replies'));
-delete_option($pluginManagerInstance->get_option_name('verified-by-trustindex'));
-}
-$pluginManagerInstance->save_reviews([]);
-$pluginManagerInstance->setNotificationParam('not-using-no-connection', 'active', true);
-$pluginManagerInstance->setNotificationParam('not-using-no-connection', 'timestamp', time() + 86400);
-$pluginManagerInstance->setNotificationParam('not-using-no-widget', 'active', false);
-}
-function trustindex_plugin_change_step($step = 5)
-{
-global $pluginManagerInstance;
-if ($step < 5) {
-$optionsToDelete = [
-'widget-setted-up',
-'align',
-'review-text-mode',
-'verified-icon',
-'enable-animation',
-'no-rating-text',
-'disable-font',
-'show-reviewers-photo',
-'show-logos',
-'show-stars',
-'footer-filter-text',
-'top-rated-type',
-'top-rated-date',
-'show-arrows',
-'show-header-button',
-'reviews-load-more',
-'dateformat',
-'nameformat',
-'show-review-replies',
-'verified-by-trustindex',
-'fomo-open',
-'fomo-link',
-'fomo-border',
-'fomo-arrow',
-'fomo-icon',
-'fomo-color',
-'fomo-icon-background',
-'fomo-margin',
-'fomo-title',
-'fomo-text',
-'fomo-url',
-'fomo-day',
-'fomo-hide-count',
+$widgetSettings = $pluginManagerInstance->getWidgetSettings();
+$ti_option_commands = [
+'save-filter-stars' => ['stars', 'stars'],
+'save-language' => ['lang', 'lang'],
+'save-dateformat' => ['dateformat', 'dateformat'],
+'save-nameformat' => ['nameformat', 'nameformat'],
+'save-top-rated-type' => ['type', 'top-rated-type'],
+'save-top-rated-date' => ['date', 'top-rated-date'],
+'save-align' => ['align', 'align'],
+'save-fomo-icon' => ['fomo-icon', 'fomo-icon'],
+'save-fomo-color' => ['fomo-color', 'fomo-color'],
+'save-fomo-margin' => ['fomo-margin', 'fomo-margin'],
+'save-fomo-title' => ['fomo-title', 'fomo-title'],
+'save-fomo-text' => ['fomo-text', 'fomo-text'],
+'save-fomo-url' => ['fomo-url', 'fomo-url'],
+'save-fomo-day' => ['fomo-day', 'fomo-day'],
+'save-fomo-hide-count' => ['fomo-hide-count', 'fomo-hide-count'],
+'save-review-text-mode' => ['review_text_mode', 'review-text-mode'],
+'save-verified-by-trustindex' => ['verified-by-trustindex', 'verified-by-trustindex'],
 ];
-foreach ($optionsToDelete as $name) {
-delete_option($pluginManagerInstance->get_option_name($name));
-}
-$pluginManagerInstance->emptyViews();
-}
-if ($step < 4) {
-delete_option($pluginManagerInstance->get_option_name('scss-set'));
-}
-if ($step < 3) {
-delete_option($pluginManagerInstance->get_option_name('style-id'));
-}
-if ($step < 2) {
-trustindex_plugin_disconnect_page();
+function trustindex_plugin_exit_on_error($result)
+{
+if (is_wp_error($result)) {
+echo wp_kses_post(TrustindexPlugin_google::get_alertbox('error', $result->get_error_message()));
+die;
 }
 }
 if ($ti_command === 'save-page') {
 check_admin_referer('ti-save-page');
 // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-$pageDetails = isset($_POST['page_details']) ? $pluginManagerInstance->sanitizePageDetails(json_decode(wp_unslash($_POST['page_details']), true)) : null;
+$pageDetails = isset($_POST['page_details']) ? $pluginManagerInstance->sanitizePageDetails($pluginManagerInstance->decodePlaceData(wp_unslash($_POST['page_details']))) : null;
 $reviewDownload = isset($_POST['review_download']) ? sanitize_text_field(wp_unslash($_POST['review_download'])) : 0;
-if ($pageDetails['name']) {
-$pageDetails['name'] = json_encode($pageDetails['name']);
+$pageDetails = is_array($pageDetails) ? $pageDetails : [];
+if (!isset($pageDetails['request_id']) && isset($_REQUEST['review_request_id'])) {
+$pageDetails['request_id'] = sanitize_text_field(wp_unslash($_REQUEST['review_request_id']));
 }
-$pluginManagerInstance->setNotificationParam('not-using-no-connection', 'active', false);
-$pluginManagerInstance->setNotificationParam('not-using-no-widget', 'active', true);
-$pluginManagerInstance->setNotificationParam('not-using-no-widget', 'timestamp', time() + (2 * 3600));
-$reviews = null;
-if (isset($pageDetails['reviews'])) {
-$reviews = $pageDetails['reviews'];
-unset($pageDetails['reviews']);
+if (!isset($pageDetails['manual_download']) && isset($_REQUEST['manual_download'])) {
+$pageDetails['manual_download'] = (int)$_REQUEST['manual_download'];
 }
-$requestId = null;
-if (isset($pageDetails['request_id'])) {
-$requestId = $pageDetails['request_id'];
-unset($pageDetails['request_id']);
-}
-else if (isset($_REQUEST['review_request_id'])) {
-$requestId = sanitize_text_field(wp_unslash($_REQUEST['review_request_id']));
-}
-if ($requestId) {
-update_option($pluginManagerInstance->get_option_name('review-download-request-id'), $requestId, false);
-}
-$manualDownload = 0;
-if (isset($pageDetails['manual_download'])) {
-$manualDownload = (int)$pageDetails['manual_download'];
-unset($pageDetails['manual_download']);
-}
-else if (isset($_REQUEST['manual_download'])) {
-$manualDownload = (int)$_REQUEST['manual_download'];
-}
-delete_option($pluginManagerInstance->get_option_name('review-download-token'));
-if ($reviewDownload) {
-update_option($pluginManagerInstance->get_option_name('review-download-inprogress'), $reviewDownload, false);
-update_option($pluginManagerInstance->get_option_name('review-manual-download'), $manualDownload, false);
-update_option($pluginManagerInstance->get_option_name('review-download-is-connecting'), 1, false);
-}
-else {
-delete_option($pluginManagerInstance->get_option_name('review-download-inprogress'));
-delete_option($pluginManagerInstance->get_option_name('review-manual-download'));
-delete_option($pluginManagerInstance->get_option_name('review-download-is-connecting'));
-}
-$pluginManagerInstance->save_reviews(is_array($reviews) ? $reviews : []);
-if (is_array($reviews)) {
-update_option($pluginManagerInstance->get_option_name('download-timestamp'), time() + (86400 * 10), false);
-delete_option($pluginManagerInstance->get_option_name('review-download-inprogress'));
-delete_option($pluginManagerInstance->get_option_name('review-manual-download'));
-}
-update_option($pluginManagerInstance->get_option_name('page-details'), $pageDetails, false);
-$GLOBALS['wp_object_cache']->delete( $pluginManagerInstance->get_option_name('page-details'), 'options' );
-$lang = $pluginManager::getWidgetLanguage(get_locale());
-update_option($pluginManagerInstance->get_option_name('lang'), $lang, false);
+$pluginManagerInstance->connectPage($pageDetails, $reviewDownload);
 header('Location: admin.php?page='.esc_attr($_page).'&tab=free-widget-configurator');
 exit;
 }
 else if ($ti_command === 'delete-page') {
 check_admin_referer('ti-delete-page');
-trustindex_plugin_disconnect_page();
+$widgetSettings->disconnect();
 header('Location: admin.php?page='.esc_attr($_page).'&tab=free-widget-configurator');
 exit;
 }
 else if ($ti_command === 'save-style') {
 check_admin_referer('ti-save-style');
-$styleId = isset($_REQUEST['style_id']) ? (int)$_REQUEST['style_id'] : 4;
-if (14 !== $styleId) {
-update_option($pluginManagerInstance->get_option_name('style-id'), $styleId, false);
-delete_option($pluginManagerInstance->get_option_name('review-content'));
-trustindex_plugin_change_step(3);
-if (in_array($pluginManager::$widget_templates['templates'][$styleId]['type'], ['floating', 'fomo'])) {
-$pluginManagerInstance->noreg_save_css();
-}
-}
+trustindex_plugin_exit_on_error($widgetSettings->selectLayout(isset($_REQUEST['style_id']) ? (int)$_REQUEST['style_id'] : 4));
 if (isset($_GET['style_id'])) {
 header('Location: admin.php?page='.esc_attr($_page).'&tab=free-widget-configurator');
 }
@@ -204,225 +90,32 @@ exit;
 else if ($ti_command === 'save-set') {
 check_admin_referer('ti-save-set');
 $setId = isset($_REQUEST['set_id']) ? sanitize_text_field(wp_unslash($_REQUEST['set_id'])) : 'light-background';
-update_option($pluginManagerInstance->get_option_name('scss-set'), $setId, false);
-trustindex_plugin_change_step(4);
-$pluginManagerInstance->noreg_save_css(true);
+trustindex_plugin_exit_on_error($widgetSettings->selectStyle($setId));
 if (isset($_GET['verified_by_trustindex'])) {
-update_option($pluginManagerInstance->get_option_name('verified-by-trustindex'), 1, false);
+$widgetSettings->saveOption('verified-by-trustindex', 1);
 }
 if (isset($_GET['set_id'])) {
 header('Location: admin.php?page='.esc_attr($_page).'&tab=free-widget-configurator');
 }
 exit;
 }
-else if ($ti_command === 'save-filter-stars') {
-check_admin_referer('ti-save-filter-stars');
-$filter = $pluginManagerInstance->getWidgetOption('filter');
-$filter['stars'] = isset($_POST['stars']) ? explode(',', sanitize_text_field(wp_unslash($_POST['stars']))) : $pluginManagerInstance->getWidgetOption('filter', false, true)['stars'];
-update_option($pluginManagerInstance->get_option_name('filter'), $filter, false);
-exit;
-}
-else if ($ti_command === 'save-language') {
-check_admin_referer('ti-save-language');
-$value = isset($_POST['lang']) ? sanitize_text_field(wp_unslash($_POST['lang'])) : 'en';
-update_option($pluginManagerInstance->get_option_name('lang'), $value, false);
-delete_option($pluginManagerInstance->get_option_name('review-content'));
-if ($pluginManagerInstance->isRtlLanguage()) {
-update_option($pluginManagerInstance->get_option_name('align'), 'right', false);
-}
-exit;
-}
-else if ($ti_command === 'save-dateformat') {
-check_admin_referer('ti-save-dateformat');
-$value = isset($_POST['dateformat']) ? sanitize_text_field(wp_unslash($_POST['dateformat'])) : '';
-update_option($pluginManagerInstance->get_option_name('dateformat'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-nameformat') {
-check_admin_referer('ti-save-nameformat');
-$value = isset($_POST['nameformat']) ? sanitize_text_field(wp_unslash($_POST['nameformat'])) : '';
-update_option($pluginManagerInstance->get_option_name('nameformat'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-top-rated-type') {
-check_admin_referer('ti-save-top-rated-type');
-$value = isset($_POST['type']) ? sanitize_text_field(wp_unslash($_POST['type'])) : '';
-update_option($pluginManagerInstance->get_option_name('top-rated-type'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-top-rated-date') {
-check_admin_referer('ti-save-top-rated-date');
-$value = isset($_POST['date']) ? sanitize_text_field(wp_unslash($_POST['date'])) : '';
-update_option($pluginManagerInstance->get_option_name('top-rated-date'), $value, false);
-exit;
-}
 else if ($ti_command === 'save-options') {
-$scssSet = get_option($pluginManagerInstance->get_option_name('scss-set'));
 check_admin_referer('ti-save-options');
-$r = 0;
-if (isset($_POST['verified-icon'])) {
-$r = sanitize_text_field(wp_unslash($_POST['verified-icon']));
-}
-update_option($pluginManagerInstance->get_option_name('verified-icon'), $r, false);
-$r = 1;
-if (isset($_POST['enable-animation'])) {
-$r = sanitize_text_field(wp_unslash($_POST['enable-animation']));
-}
-update_option($pluginManagerInstance->get_option_name('enable-animation'), $r, false);
-$r = 1;
-if (isset($_POST['show-arrows'])) {
-$r = sanitize_text_field(wp_unslash($_POST['show-arrows']));
-}
-update_option($pluginManagerInstance->get_option_name('show-arrows'), $r, false);
-$r = 1;
-if (isset($_POST['show-header-button'])) {
-$r = sanitize_text_field(wp_unslash($_POST['show-header-button']));
-}
-update_option($pluginManagerInstance->get_option_name('show-header-button'), $r, false);
-$r = 1;
-if (isset($_POST['reviews-load-more'])) {
-$r = sanitize_text_field(wp_unslash($_POST['reviews-load-more']));
-}
-update_option($pluginManagerInstance->get_option_name('reviews-load-more'), $r, false);
-$r = 1;
-if (isset($_POST['show-reviewers-photo'])) {
-$r = sanitize_text_field(wp_unslash($_POST['show-reviewers-photo']));
-}
-update_option($pluginManagerInstance->get_option_name('show-reviewers-photo'), $r, false);
-$r = 0;
-if (isset($_POST['no-rating-text'])) {
-$r = sanitize_text_field(wp_unslash($_POST['no-rating-text']));
-}
-update_option($pluginManagerInstance->get_option_name('no-rating-text'), $r, false);
-$r = 0;
-if (isset($_POST['disable-font'])) {
-$r = sanitize_text_field(wp_unslash($_POST['disable-font']));
-}
-update_option($pluginManagerInstance->get_option_name('disable-font'), $r, false);
-$r = 1;
-if (isset($_POST['show-logos'])) {
-$r = sanitize_text_field(wp_unslash($_POST['show-logos']));
-}
-update_option($pluginManagerInstance->get_option_name('show-logos'), $r, false);
-$r = 1;
-if (isset($_POST['show-stars'])) {
-$r = sanitize_text_field(wp_unslash($_POST['show-stars']));
-}
-update_option($pluginManagerInstance->get_option_name('show-stars'), $r, false);
-$r = 0;
-if (isset($_POST['footer-filter-text'])) {
-$r = sanitize_text_field(wp_unslash($_POST['footer-filter-text']));
-}
-update_option($pluginManagerInstance->get_option_name('footer-filter-text'), $r, false);
-$r = 0;
-if (isset($_POST['show-review-replies'])) {
-$r = sanitize_text_field(wp_unslash($_POST['show-review-replies']));
-}
-update_option($pluginManagerInstance->get_option_name('show-review-replies'), $r, false);
-$filter = $pluginManagerInstance->getWidgetOption('filter');
-$filter['only-ratings'] = isset($_POST['only-ratings']) ? (bool)$_POST['only-ratings'] : $pluginManagerInstance->getWidgetOption('filter', false, true)['only-ratings'];
-update_option($pluginManagerInstance->get_option_name('filter'), $filter, false);
-$r = 1;
-if (isset($_POST['fomo-open'])) {
-$r = sanitize_text_field(wp_unslash($_POST['fomo-open']));
-}
-update_option($pluginManagerInstance->get_option_name('fomo-open'), $r, false);
-$r = 0;
-if (isset($_POST['fomo-link'])) {
-$r = sanitize_text_field(wp_unslash($_POST['fomo-link']));
-}
-update_option($pluginManagerInstance->get_option_name('fomo-link'), $r, false);
-$r = 1;
-if (isset($_POST['fomo-border'])) {
-$r = sanitize_text_field(wp_unslash($_POST['fomo-border']));
-}
-update_option($pluginManagerInstance->get_option_name('fomo-border'), $r, false);
-$r = 1;
-if (isset($_POST['fomo-arrow'])) {
-$r = sanitize_text_field(wp_unslash($_POST['fomo-arrow']));
-}
-update_option($pluginManagerInstance->get_option_name('fomo-arrow'), $r, false);
-$r = 0;
-if (isset($_POST['fomo-icon-background'])) {
-$r = sanitize_text_field(wp_unslash($_POST['fomo-icon-background']));
-}
-update_option($pluginManagerInstance->get_option_name('fomo-icon-background'), $r, false);
+$widgetSettings->saveCheckboxOptions(array_map('sanitize_text_field', wp_unslash($_POST)));
 exit;
 }
-else if ($ti_command === 'save-align') {
-check_admin_referer('ti-save-align');
-$value = isset($_POST['align']) ? sanitize_text_field(wp_unslash($_POST['align'])) : '';
-update_option($pluginManagerInstance->get_option_name('align'), $value, false);
-exit;
+else if (isset($ti_option_commands[$ti_command])) {
+check_admin_referer('ti-'.$ti_command);
+list($ti_field, $ti_option) = $ti_option_commands[$ti_command];
+$value = isset($_POST[$ti_field]) ? sanitize_text_field(wp_unslash($_POST[$ti_field])) : '';
+if (in_array($ti_option, ['fomo-title', 'fomo-text'], true)) {
+$value = html_entity_decode($value);
 }
-else if ($ti_command === 'save-fomo-icon') {
-check_admin_referer('ti-save-fomo-icon');
-$value = isset($_POST['fomo-icon']) ? sanitize_text_field(wp_unslash($_POST['fomo-icon'])) : '';
-update_option($pluginManagerInstance->get_option_name('fomo-icon'), $value, false);
-if ('hide' === $value) {
-update_option($pluginManagerInstance->get_option_name('fomo-open'), 1, false);
-}
-exit;
-}
-else if ($ti_command === 'save-fomo-color') {
-check_admin_referer('ti-save-fomo-color');
-$value = isset($_POST['fomo-color']) ? sanitize_text_field(wp_unslash($_POST['fomo-color'])) : '';
-update_option($pluginManagerInstance->get_option_name('fomo-color'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-fomo-margin') {
-check_admin_referer('ti-save-fomo-margin');
-$value = isset($_POST['fomo-margin']) ? sanitize_text_field(wp_unslash($_POST['fomo-margin'])) : '';
-update_option($pluginManagerInstance->get_option_name('fomo-margin'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-fomo-title') {
-check_admin_referer('ti-save-fomo-title');
-$value = isset($_POST['fomo-title']) ? sanitize_text_field(wp_unslash($_POST['fomo-title'])) : '';
-update_option($pluginManagerInstance->get_option_name('fomo-title'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-fomo-text') {
-check_admin_referer('ti-save-fomo-text');
-$value = isset($_POST['fomo-text']) ? sanitize_text_field(wp_unslash($_POST['fomo-text'])) : '';
-update_option($pluginManagerInstance->get_option_name('fomo-text'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-fomo-url') {
-check_admin_referer('ti-save-fomo-url');
-$value = isset($_POST['fomo-url']) ? sanitize_text_field(wp_unslash($_POST['fomo-url'])) : '';
-if ($value) {
-update_option($pluginManagerInstance->get_option_name('fomo-url'), $value, false);
-} else {
-delete_option($pluginManagerInstance->get_option_name('fomo-url'));
-}
-exit;
-}
-else if ($ti_command === 'save-fomo-day') {
-check_admin_referer('ti-save-fomo-day');
-$value = isset($_POST['fomo-day']) ? (int)sanitize_text_field(wp_unslash($_POST['fomo-day'])) : 0;
-update_option($pluginManagerInstance->get_option_name('fomo-day'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-fomo-hide-count') {
-check_admin_referer('ti-save-fomo-hide-count');
-$value = isset($_POST['fomo-hide-count']) ? (int)sanitize_text_field(wp_unslash($_POST['fomo-hide-count'])) : 0;
-update_option($pluginManagerInstance->get_option_name('fomo-hide-count'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-review-text-mode') {
-check_admin_referer('ti-save-review-text-mode');
-$value = isset($_POST['review_text_mode']) ? sanitize_text_field(wp_unslash($_POST['review_text_mode'])) : '';
-update_option($pluginManagerInstance->get_option_name('review-text-mode'), $value, false);
-exit;
-}
-else if ($ti_command === 'save-verified-by-trustindex') {
-check_admin_referer('ti-save-verified-by-trustindex');
-$value = isset($_POST['verified-by-trustindex']) ? sanitize_text_field(wp_unslash($_POST['verified-by-trustindex'])) : '';
-update_option($pluginManagerInstance->get_option_name('verified-by-trustindex'), $value, false);
+$widgetSettings->saveOption($ti_option, $value);
 exit;
 }
 else if ($ti_command === 'save-amp-notice-hide') {
+check_admin_referer('ti-save-amp-notice-hide');
 update_option($pluginManagerInstance->get_option_name('amp-hidden-notification'), 1, false);
 exit;
 }
@@ -435,18 +128,16 @@ exit;
 }
 if (isset($_GET['setup_widget'])) {
 check_admin_referer('ti-setup-widget');
-update_option($pluginManagerInstance->get_option_name('widget-setted-up'), 1, false);
+$widgetSettings->completeSetup();
 header('Location: admin.php?page='.esc_attr($_page).'&tab=free-widget-configurator');
 }
 $reviews = $pluginManagerInstance->getReviews();
 $isReviewDownloadInProgress = $pluginManagerInstance->is_review_download_in_progress();
 $styleId = (int)$pluginManagerInstance->getWidgetOption('style-id', true);
 $scssSet = $pluginManagerInstance->getWidgetOption('scss-set', true);
-$widgetSettedUp = $pluginManagerInstance->getWidgetOption('widget-setted-up');
 if (!$pluginManagerInstance->is_noreg_linked()) {
 $styleId = null;
 $scssSet = null;
-$widgetSettedUp = null;
 } else {
 $pageDetails = $pluginManagerInstance->getPageDetails();
 $isTopRatedBadge = $styleId ? $pluginManager::$widget_templates['templates'][$styleId]['is-top-rated-badge'] : false;
@@ -466,25 +157,10 @@ __('Select Style', 'wp-reviews-plugin-for-google'),
 __('Set up widget', 'wp-reviews-plugin-for-google'),
 __('Insert code', 'wp-reviews-plugin-for-google')
 ];
-$stepDone = 0;
+$stepDone = $widgetSettings->getCompletedStep();
 $stepCurrent = isset($_GET['step']) ? (int)sanitize_text_field(wp_unslash($_GET['step'])) : 0;
 if ($stepCurrent === 3 && in_array($pluginManager::$widget_templates['templates'][$styleId]['type'], ['floating', 'fomo'])) {
 $stepCurrent = 4;
-}
-if ($widgetSettedUp) {
-$stepDone = 4;
-}
-else if ($scssSet) {
-$stepDone = 3;
-}
-else if ($styleId) {
-$stepDone = 2;
-}
-else if ($pluginManagerInstance->is_noreg_linked()) {
-$stepDone = 1;
-}
-if ($stepDone >= 4 && $isTopRatedBadge && !$isTopRatedBadgeValid) {
-$stepDone = 3;
 }
 if (!$stepCurrent) {
 $stepCurrent = $stepDone + 1;
@@ -516,7 +192,7 @@ echo wp_kses_post(sprintf(__("You have connected your Trustindex account, so you
  <a href="https://www.trustindex.io/?a=sys&c=wp-amp" target="_blank"><?php echo esc_html(__('Try premium features (like AMP) for free', 'wp-reviews-plugin-for-google')); ?></a>
 <?php endif; ?>
 </p>
-<button type="button" class="notice-dismiss" data-command="save-amp-notice-hide"></button>
+<button type="button" class="notice-dismiss" data-command="save-amp-notice-hide" data-nonce="<?php echo esc_attr(wp_create_nonce('ti-save-amp-notice-hide')); ?>"></button>
 </div>
 <?php endif; ?>
 <?php if ($stepCurrent === 1): ?>
@@ -805,7 +481,6 @@ $isFirstLayout = false;
 endforeach; ?>
 </div>
 <?php elseif ($stepCurrent === 4): ?>
-<?php $widgetType = $pluginManager::$widget_templates['templates'][$styleId]['type']; ?>
 <h1 class="ti-header-title"><?php echo esc_html(__('Set up widget', 'wp-reviews-plugin-for-google')); ?></h1>
 <?php if (!count($reviews) && !$isReviewDownloadInProgress): ?>
 <div class="ti-notice ti-notice-warning" style="margin: 0 0 15px 0">
@@ -854,6 +529,7 @@ echo esc_html(sprintf(__('Our exclusive "Top Rated" badge is awarded to service 
 </div>
 </div>
 <?php $filter = $pluginManagerInstance->getWidgetOption('filter'); ?>
+<?php $applicableOptions = $widgetSettings->getApplicableOptions(); ?>
 <div class="ti-preview-boxes-container">
 <div class="ti-full-width">
 <div class="ti-box">
@@ -958,7 +634,7 @@ echo esc_html($pluginManagerInstance->renderNameFormat('Firstname Lastname', $fo
 </select>
 </form>
 </div>
-<?php if (!in_array($styleId, [17, 21, 52, 53, 112, 114])): ?>
+<?php if (in_array('review-text-mode', $applicableOptions, true)): ?>
 <div class="ti-form-group">
 <label><?php echo esc_html(__('Align', 'wp-reviews-plugin-for-google')); ?></label>
 <form method="post" action="">
@@ -1141,7 +817,7 @@ break;
 </div>
 </div>
 <div class="ti-form-row">
-<?php if (isset($pluginManager::$widget_templates['templates'][$styleId]['params']['fomo-days'])): ?>
+<?php if (in_array('fomo-day', $applicableOptions, true)): ?>
 <div class="ti-form-group">
 <label><?php echo esc_html(__('Number of days', 'wp-reviews-plugin-for-google')); ?></label>
 <form method="post" action="">
@@ -1163,7 +839,7 @@ $name = sprintf(__('%d hours', 'wp-reviews-plugin-for-google'), 24);
 </form>
 </div>
 <?php endif; ?>
-<?php if ($pluginManagerInstance->isFomoHideCountAvailable()): ?>
+<?php if (in_array('fomo-hide-count', $applicableOptions, true)): ?>
 <div class="ti-form-group">
 <label><?php echo esc_html(__('Hide until count reaches', 'wp-reviews-plugin-for-google')); ?></label>
 <form method="post" action="">
@@ -1180,55 +856,55 @@ $name = sprintf(__('%d hours', 'wp-reviews-plugin-for-google'), 24);
 <form method="post" id="ti-widget-options">
 <input type="hidden" name="command" value="save-options" />
 <?php wp_nonce_field('ti-save-options'); ?>
-<?php if ($pluginManagerInstance->isLayoutHasReviews()): ?>
+<?php if (in_array('only-ratings', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="only-ratings" value="1"<?php if ($filter['only-ratings']): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Hide reviews without comments', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if (in_array($styleId, [ 4, 6, 7, 15, 16, 19, 31, 33, 36, 37, 38, 39, 44 ])): ?>
+<?php if (in_array('no-rating-text', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="no-rating-text" value="1"<?php if ($pluginManagerInstance->getWidgetOption('no-rating-text')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Hide rating text', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if ($pluginManagerInstance->isLayoutHasReviews() && (!in_array($widgetType, ['floating']) || $styleId === 53)): ?>
+<?php if (in_array('footer-filter-text', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="footer-filter-text" value="1"<?php if ($pluginManagerInstance->getWidgetOption('footer-filter-text')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Show minimum review filter condition', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if ($pluginManagerInstance->isLayoutHasReviews()): ?>
+<?php if (in_array('show-review-replies', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="show-review-replies" value="1"<?php if ($pluginManagerInstance->getWidgetOption('show-review-replies')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Show review reply', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if (in_array($styleId, [ 8, 10, 13 ])): ?>
+<?php if (in_array('show-header-button', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="show-header-button" value="1"<?php if ($pluginManagerInstance->getWidgetOption('show-header-button')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Show write review button', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if (in_array($styleId, [ 8, 16, 18, 31, 33 ])): ?>
+<?php if (in_array('reviews-load-more', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="reviews-load-more" value="1"<?php if ($pluginManagerInstance->getWidgetOption('reviews-load-more')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Show "Load more" button', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if ($pluginManagerInstance->isLayoutHasReviews() && !in_array($styleId, [53,54])): ?>
+<?php if (in_array('verified-icon', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="verified-icon" value="1"<?php if ($pluginManagerInstance->getWidgetOption('verified-icon')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Show verified review icon', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if (in_array($widgetType, [ 'slider', 'sidebar' ]) && !in_array($styleId, [ 8, 9, 10, 18, 19, 37, 54 ])): ?>
+<?php if (in_array('show-arrows', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="show-arrows" value="1"<?php if ($pluginManagerInstance->getWidgetOption('show-arrows')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Show navigation arrows', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if ($pluginManagerInstance->isLayoutHasReviews() && $styleId != 52): ?>
+<?php if (in_array('show-reviewers-photo', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="show-reviewers-photo" value="1"<?php if ($pluginManagerInstance->getWidgetOption('show-reviewers-photo')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__("Show reviewer's profile picture", 'wp-reviews-plugin-for-google')); ?></label>
@@ -1240,27 +916,27 @@ $name = sprintf(__('%d hours', 'wp-reviews-plugin-for-google'), 24);
 <span class="ti-tooltip-message"><?php echo esc_html(__('Paid package feature', 'wp-reviews-plugin-for-google')); ?></span>
 </label>
 </span>
-<span class="ti-checkbox ti-checkbox-row ti-disabled">
-<input type="checkbox" value="1" disabled />
-<label class="ti-tooltip">
-<?php echo esc_html(__('Show photos in reviews', 'wp-reviews-plugin-for-google')); ?>
-<span class="ti-tooltip-message"><?php echo esc_html(__('Paid package feature', 'wp-reviews-plugin-for-google')); ?></span>
-</label>
+
+<?php if (in_array('show-review-images', $applicableOptions, true)): ?>
+<span class="ti-checkbox ti-checkbox-row">
+<input type="checkbox" name="show-review-images" value="1"<?php if ($pluginManagerInstance->getWidgetOption('show-review-images')): ?> checked<?php endif; ?> />
+<label><?php echo esc_html(__('Show photos in reviews', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if (!in_array($widgetType, [ 'floating', 'fomo' ]) && !$isTopRatedBadge && $scssSet !== 'drop-shadow' && $styleId != 54): ?>
+<?php endif; ?>
+<?php if (in_array('enable-animation', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="enable-animation" value="1"<?php if ($pluginManagerInstance->getWidgetOption('enable-animation')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Enable mouseover animation', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if (!$pluginManagerInstance->isFomoWidget()): ?>
+<?php if (in_array('disable-font', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="disable-font" value="1"<?php if ($pluginManagerInstance->getWidgetOption('disable-font')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__("Use site's font", 'wp-reviews-plugin-for-google')); ?></label>
 </span>
 <?php endif; ?>
-<?php if ($pluginManagerInstance->isLayoutHasReviews()): ?>
+<?php if (in_array('show-logos', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="show-logos" value="1"<?php if ($pluginManagerInstance->getWidgetOption('show-logos')): ?> checked<?php endif;?> />
 <label><?php echo esc_html(__('Show platform logos', 'wp-reviews-plugin-for-google')); ?></label>
@@ -1268,7 +944,7 @@ $name = sprintf(__('%d hours', 'wp-reviews-plugin-for-google'), 24);
 
 <?php endif; ?>
 <?php if ($pluginManagerInstance->isFomoWidget()): ?>
-<?php if ('hide' !== $pluginManagerInstance->getWidgetOption('fomo-icon')): ?>
+<?php if (in_array('fomo-open', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="fomo-open" value="1"<?php if ($pluginManagerInstance->getWidgetOption('fomo-open')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Default open', 'wp-reviews-plugin-for-google')); ?></label>
@@ -1278,7 +954,7 @@ $name = sprintf(__('%d hours', 'wp-reviews-plugin-for-google'), 24);
 <input type="checkbox" name="fomo-border" value="1"<?php if ($pluginManagerInstance->getWidgetOption('fomo-border')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Show border', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
-<?php if ('hide' !== $pluginManagerInstance->getWidgetOption('fomo-icon') && 'platform-images' !== $pluginManagerInstance->getWidgetOption('fomo-icon')): ?>
+<?php if (in_array('fomo-icon-background', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="fomo-icon-background" value="1"<?php if ($pluginManagerInstance->getWidgetOption('fomo-icon-background')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Show icon background', 'wp-reviews-plugin-for-google')); ?></label>
@@ -1288,7 +964,7 @@ $name = sprintf(__('%d hours', 'wp-reviews-plugin-for-google'), 24);
 <input type="checkbox" name="fomo-link" value="1"<?php if ($pluginManagerInstance->getWidgetOption('fomo-link')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Enable link', 'wp-reviews-plugin-for-google')); ?></label>
 </span>
-<?php if ($pluginManagerInstance->getWidgetOption('fomo-link')): ?>
+<?php if (in_array('fomo-arrow', $applicableOptions, true)): ?>
 <span class="ti-checkbox ti-checkbox-row">
 <input type="checkbox" name="fomo-arrow" value="1"<?php if ($pluginManagerInstance->getWidgetOption('fomo-arrow')): ?> checked<?php endif; ?> />
 <label><?php echo esc_html(__('Show arrow', 'wp-reviews-plugin-for-google')); ?></label>
@@ -1297,7 +973,7 @@ $name = sprintf(__('%d hours', 'wp-reviews-plugin-for-google'), 24);
 <?php endif; ?>
 </form>
 <div class="clear"></div>
-<?php if ($pluginManagerInstance->getWidgetOption('fomo-link') && $pluginManagerInstance->isFomoCustomWidget()): ?>
+<?php if (in_array('fomo-url', $applicableOptions, true)): ?>
 <div class="ti-form-group ti-mt-4">
 <label>URL</label>
 <form method="post" action="">

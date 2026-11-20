@@ -19,24 +19,15 @@ $highlight = "";
 if (!is_null($start)) {
 $highlight = $start . ',' . $length;
 }
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-$wpdb->update($pluginManagerInstance->get_tablename('reviews'), ['highlight' => $highlight], ['id' => $id]);
-wp_cache_delete('ti-reviews-cache-'.$pluginManagerInstance->getShortName());
+$pluginManagerInstance->setReviewHighlight($id, $highlight);
 }
 exit;
 }
 if (isset($_GET['toggle-hide'])) {
 check_admin_referer('ti-toggle-hide');
-$id = (int)$_GET['toggle-hide'];
-if ($id) {
-$hidden = 1;
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-if ($wpdb->get_var($wpdb->prepare('SELECT hidden FROM %i WHERE id = %s', $pluginManagerInstance->get_tablename('reviews'), $id))) {
-$hidden = 0;
-}
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-$wpdb->update($pluginManagerInstance->get_tablename('reviews'), ['hidden' => $hidden], ['id' => $id]);
-wp_cache_delete('ti-reviews-cache-'.$pluginManagerInstance->getShortName());
+$review = $pluginManagerInstance->getReview((int)$_GET['toggle-hide']);
+if (null !== $review) {
+$pluginManagerInstance->setReviewHidden($review->id, !$review->hidden);
 }
 header('Location: admin.php?page='.esc_attr($_page).'&tab=my-reviews');
 exit;
@@ -68,6 +59,7 @@ wp_cache_delete('ti-reviews-cache-'.$pluginManagerInstance->getShortName());
 exit;
 }
 if (isset($_POST['save-reply-generated'])) {
+check_admin_referer('ti-save-reply-generated');
 update_option($pluginManagerInstance->get_option_name('reply-generated'), 1, false);
 exit;
 }
@@ -75,7 +67,7 @@ exit;
 if (isset($_POST['download_data'])) {
 check_admin_referer('ti-download-reviews');
 // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-$data = json_decode(wp_unslash($_POST['download_data']), true);
+$data = $pluginManagerInstance->decodePlaceData(wp_unslash($_POST['download_data']));
 $downloadedReviews = isset($data['reviews']) && is_array($data['reviews']) ? $data['reviews'] : [];
 $isNewReviews = isset($data['is_new_reviews']) && $data['is_new_reviews'];
 $isEmptyListInvalid = $isNewReviews && [] === $downloadedReviews && 0 < (int)($data['rating_number'] ?? 0);
@@ -258,9 +250,9 @@ $hideReplyButton = get_option($pluginManagerInstance->get_option_name('review-do
 <?php if (!$review->hidden): ?>
 <?php if (!$hideReplyButton): ?>
 <?php if ($review->reply): ?>
-<a href="#" class="ti-btn ti-btn-default ti-btn-sm ti-btn-default-disabled btn-show-ai-reply"><?php echo esc_html(__('Reply', 'wp-reviews-plugin-for-google')); ?></a>
+<a href="#" class="ti-btn ti-btn-default ti-btn-sm ti-btn-default-disabled btn-show-ai-reply" data-nonce="<?php echo esc_attr(wp_create_nonce('ti-save-reply-generated')); ?>"><?php echo esc_html(__('Reply', 'wp-reviews-plugin-for-google')); ?></a>
 <?php else: ?>
-<a href="#" class="ti-btn ti-btn-sm btn-show-ai-reply" data-edit-reply-text="<?php echo esc_html(__('Reply', 'wp-reviews-plugin-for-google')); ?>"><?php echo esc_html(__('Reply with ChatGPT', 'wp-reviews-plugin-for-google')); ?></a>
+<a href="#" class="ti-btn ti-btn-sm btn-show-ai-reply" data-nonce="<?php echo esc_attr(wp_create_nonce('ti-save-reply-generated')); ?>" data-edit-reply-text="<?php echo esc_html(__('Reply', 'wp-reviews-plugin-for-google')); ?>"><?php echo esc_html(__('Reply with ChatGPT', 'wp-reviews-plugin-for-google')); ?></a>
 <?php endif; ?>
 <?php endif; ?>
 <?php if ($review->text): ?>

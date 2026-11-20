@@ -1,4 +1,5 @@
 <?php
+if ( 'cli' !== PHP_SAPI ) { exit; } // never runnable from the web
 /**
  * Regression tests. Run:  php tests/run.php
  *
@@ -75,6 +76,7 @@ function esc_url_raw( $u ) { return filter_var( $u, FILTER_SANITIZE_URL ); }
 function wp_get_environment_type() { return $GLOBALS['env_type'] ?? 'production'; }
 $GLOBALS['req_headers'] = array();
 
+function is_admin() { return true; }
 require dirname( __DIR__ ) . '/ppg-lead-gateway.php';
 
 $pass = 0;
@@ -164,7 +166,7 @@ check( 'a previously rejected lead leaves the queue once HubSpot accepts it', 'o
 // 6b. ppg_lead_id NOT created as a unique property: HubSpot refuses the upsert -> search-then-create fallback
 echo "HubSpot property without 'Require unique values' (fallback)\n";
 $nonunique = '{"status":"error","message":"Unable to perform update/upsert by non-unique 0-1 property ppg_lead_id in portal ID 1"}';
-$GLOBALS['t'] = array(); // fresh duplicate memory
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] ); // fresh duplicate memory
 $GLOBALS['calls'] = array();
 $GLOBALS['script'] = array( array( 400, $nonunique ), array( 200, '{"total":0,"results":[]}' ), array( 201, '{"id":"777"}' ), array( 201, '{"id":"8"}' ) );
 $r  = ppg_lead_process( 'checkatrade', array( 'name' => 'Fallback Fran', 'message' => 'm', 'lead_id' => 'checkatrade:FallbackLead0001', 'dedupe_key' => '<fb-1@x>' ) );
@@ -186,7 +188,7 @@ unset( $GLOBALS['script'], $GLOBALS['t']['ppg_upsert_unsupported'] );
 
 // 6c. timeline note (the details must be easy to see in HubSpot)
 echo "HubSpot timeline note\n";
-$GLOBALS['t'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] );
 $GLOBALS['calls'] = array();
 $r = ppg_lead_process( 'checkatrade', array( 'name' => 'Nina Note', 'message' => "Checkatrade quote request: gutter cleaning\nHow tall is your home? 1 story\nLead on Checkatrade: https://www.checkatrade.com/leads_center/B1/leads/L1<script>", 'lead_id' => 'checkatrade:NoteLead000001', 'dedupe_key' => '<note-1@x>' ) );
 $nn = $notes();
@@ -211,26 +213,26 @@ unset( $GLOBALS['script'] );
 
 // 6d. dedicated answer fields
 echo "Dedicated answer fields in HubSpot\n";
-$GLOBALS['t'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] );
 $GLOBALS['calls'] = array();
 $fields = array( 'how_tall_is_your_home' => '1 story', 'in_what_location_do_you_need_the_service' => '60622' );
 $r = ppg_lead_process( 'checkatrade', array( 'name' => 'Fiona Fields', 'message' => 'm', 'lead_id' => 'checkatrade:FieldsLead00001', 'dedupe_key' => '<f-1@x>', 'fields' => $fields ) );
 $p = $last();
 check( 'answers are sent as their own HubSpot properties alongside the standard fields', '1 story' === ( $p['properties']['how_tall_is_your_home'] ?? '' ) && '60622' === ( $p['properties']['in_what_location_do_you_need_the_service'] ?? '' ) && 'Fiona' === ( $p['properties']['firstname'] ?? '' ) );
-$GLOBALS['t'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] );
 $GLOBALS['calls'] = array();
 $GLOBALS['script'] = array( array( 400, '{"message":"Property \"how_tall_is_your_home\" does not exist"}' ), array( 200, json_encode( array( 'results' => array( array( 'id' => '66', 'new' => true ) ) ) ) ), array( 201, '{"id":"1"}' ) );
 $r = ppg_lead_process( 'checkatrade', array( 'name' => 'Gina Gone', 'message' => 'm', 'lead_id' => 'checkatrade:FieldsLead00002', 'dedupe_key' => '<f-2@x>', 'fields' => $fields ) );
 $uc = array_values( array_filter( $GLOBALS['calls'], function ( $c ) { return false !== strpos( $c[0], 'upsert' ); } ) );
 check( 'a deleted/renamed HubSpot field does not block the lead: retried without the dedicated fields', 'ok' === ( $r['status'] ?? '' ) && 2 === count( $uc ) && isset( $uc[0][1]['inputs'][0]['properties']['how_tall_is_your_home'] ) && ! isset( $uc[1][1]['inputs'][0]['properties']['how_tall_is_your_home'] ) );
 check( 'the retry keeps the standard fields (name, platform, lead id)', 'Gina' === ( $uc[1][1]['inputs'][0]['properties']['firstname'] ?? '' ) && 'checkatrade' === ( $uc[1][1]['inputs'][0]['properties']['lead_source_platform'] ?? '' ) );
-$GLOBALS['t'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] );
 $GLOBALS['calls'] = array();
 $GLOBALS['script'] = array( array( 400, '{"message":"some other validation problem"}' ) );
 $r = ppg_lead_process( 'checkatrade', array( 'name' => 'Harry Held', 'message' => 'm', 'lead_id' => 'checkatrade:FieldsLead00003', 'dedupe_key' => '<f-3@x>', 'fields' => $fields ) );
 check( 'any other HubSpot 400 is NOT retried blindly (held for review instead)', is_wp_error( $r ) && 1 === count( array_filter( $GLOBALS['calls'], function ( $c ) { return false !== strpos( $c[0], 'upsert' ); } ) ) );
 unset( $GLOBALS['script'] );
-$GLOBALS['t'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] );
 $GLOBALS['calls'] = array();
 ppg_lead_process( 'checkatrade', array( 'name' => 'Ivy Injection', 'message' => 'm', 'lead_id' => 'checkatrade:FieldsLead00004', 'dedupe_key' => '<f-4@x>', 'fields' => array( 'bad name;drop' => 'x', 'lifecyclestage' => 'customer', 'how_tall_is_your_home' => '2 storey' ) ) );
 $pp = $last()['properties'] ?? array();
@@ -239,7 +241,7 @@ check( 'only well-formed property names are accepted', ! isset( $pp['bad name;dr
 // 6e. "Lead Source" (lead_page_url) and "How can we help?" (the customer's own words)
 echo "Lead Source and customer description\n";
 $sent = function ( $source, $lead ) use ( $last ) {
-	$GLOBALS['t'] = array();
+	$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] );
 	ppg_lead_process( $source, $lead + array( 'dedupe_key' => '<ls-' . $source . '-' . mt_rand() . '@x>' ) );
 	return $last()['properties'] ?? array();
 };
@@ -248,7 +250,7 @@ check( 'the internal platform tag (lead_source_platform) is still set', 'checkat
 $pp = $sent( 'checkatrade', array( 'name' => 'A B', 'message' => 'm', 'description' => "Gutters leaking\non the left side" ) );
 check( "customer's own words go to 'How can we help?' (as on the website forms), on one line", 'Gutters leaking on the left side' === ( $pp['how_can_we_help'] ?? '' ) );
 check( 'no description => How can we help? is not sent (nothing invented)', ! isset( $sent( 'checkatrade', array( 'name' => 'A B', 'message' => 'm' ) )['how_can_we_help'] ) );
-$GLOBALS['t'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] );
 $GLOBALS['calls'] = array();
 $GLOBALS['script'] = array( array( 400, '{"message":"Property \"how_can_we_help\" does not exist"}' ), array( 200, json_encode( array( 'results' => array( array( 'id' => '81', 'new' => true ) ) ) ) ), array( 201, '{"id":"1"}' ) );
 $r  = ppg_lead_process( 'checkatrade', array( 'name' => 'Missing Mo', 'message' => 'm', 'description' => 'd', 'dedupe_key' => '<ls-missing@x>' ) );
@@ -322,7 +324,7 @@ check( 'the same email always gets the same reference (re-reading it never creat
 check( 'a lead without a postcode still gets a reference', false !== strpos( ppg_checkatrade_ref( $ts, '', '<m>' ), '-NOPOSTCODE-' ) );
 check( 'reference lines carry the reference and the UK received time', "Lead reference: $a\nEmail received (UK time): Sun 18 Oct 2026, 20:57\n" === ppg_checkatrade_reference_lines( $a, $ts ) );
 
-$GLOBALS['t'] = array(); $GLOBALS['calls'] = array(); $GLOBALS['script'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] ); $GLOBALS['calls'] = array(); $GLOBALS['script'] = array();
 foreach ( array( '<msg-1@mail.example>', '<msg-2@mail.example>' ) as $i => $mid ) {
 	$ref = ppg_checkatrade_ref( $ts, 'RG4 7HL', $mid );
 	$GLOBALS['script'] = array( array( 200, json_encode( array( 'results' => array( array( 'id' => (string) ( 900 + $i ), 'new' => true ) ) ) ) ), array( 200, '{}' ), array( 200, '{"properties":{}}' ), array( 200, '{}' ), array( 201, '{"id":"1"}' ) );
@@ -336,7 +338,7 @@ foreach ( array( '<msg-1@mail.example>', '<msg-2@mail.example>' ) as $i => $mid 
 $r = parse( 'checkatrade', 'Gutter Cleaning & Clearance in RG12 1AH - respond now',
 	"Hey,\nGutter Cleaning & Clearance in RG12 1AH\nCustomer\nAjeet Tester\nStart date\nI'm flexible on start date\nAjeet's message\nThis is testing form\nI'm interested ( https://clicks.checkatrade.com/f/a/x~~ )" );
 check( 'fields for the HubSpot list columns: Services, Start date, Post Code', array( 'services' => 'Gutter Cleaning & Clearance', 'start_date' => "I'm flexible on start date", 'post_code' => 'RG12 1AH' ) === $r['fields'] );
-$GLOBALS['t'] = array(); $GLOBALS['calls'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] ); $GLOBALS['calls'] = array();
 $GLOBALS['script'] = array( array( 200, json_encode( array( 'results' => array( array( 'id' => '700', 'new' => true ) ) ) ) ), array( 200, '{}' ), array( 200, '{"properties":{}}' ), array( 200, '{}' ), array( 201, '{"id":"1"}' ) );
 ppg_lead_process( 'checkatrade', $r + array( 'lead_id' => 'CT-X', 'dedupe_key' => '<cols@x>', 'message' => "Lead reference: CT-X\nChecktrade details" ) );
 $up = array_values( array_filter( $GLOBALS['calls'], function ( $c ) { return false !== strpos( $c[0], 'batch/upsert' ); } ) );
@@ -352,16 +354,16 @@ check( 'Yelp / Yell emails are ignored by the parser', null === parse( 'yelp', '
 
 echo "Default Lead Status 'New'\n";
 $status_calls = function () { return array_values( array_filter( $GLOBALS['calls'], function ( $c ) { return 'PATCH' === ( $c[2] ?? '' ) && array( 'hs_lead_status' ) === array_keys( $c[1]['properties'] ?? array( 'x' => 1 ) ); } ) ); };
-$GLOBALS['t'] = array(); $GLOBALS['calls'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] ); $GLOBALS['calls'] = array();
 ppg_lead_process( 'checkatrade', array( 'name' => 'Sam Status', 'email' => 'sam@example.org', 'message' => 'm', 'dedupe_key' => '<st-1@x>' ) );
 $sc = $status_calls();
 check( "a contact the plugin creates gets Lead Status 'New' (HubSpot value NEW)", 1 === count( $sc ) && 'NEW' === ( $sc[0][1]['properties']['hs_lead_status'] ?? '' ) && false !== strpos( $sc[0][0], '/contacts/1' ) );
-$GLOBALS['t'] = array(); $GLOBALS['calls'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] ); $GLOBALS['calls'] = array();
 $GLOBALS['script'] = array( array( 200, json_encode( array( 'results' => array( array( 'id' => '55', 'new' => false ) ) ) ) ), array( 201, '{"id":"9"}' ) );
 ppg_lead_process( 'checkatrade', array( 'name' => 'Sam Status', 'email' => 'sam@example.org', 'message' => 'a second lead from a returning customer', 'dedupe_key' => '<st-2@x>' ) );
 check( "a returning customer's contact is NOT reset to New (their status is left alone)", 0 === count( $status_calls() ) );
 unset( $GLOBALS['script'] );
-$GLOBALS['t'] = array(); $GLOBALS['calls'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] ); $GLOBALS['calls'] = array();
 $GLOBALS['script'] = array( array( 200, json_encode( array( 'results' => array( array( 'id' => '56', 'new' => true ) ) ) ) ), array( 400, '{"message":"bad option"}' ), array( 201, '{"id":"9"}' ) );
 $r = ppg_lead_process( 'checkatrade', array( 'name' => 'Opt Out', 'email' => 'opt@example.org', 'message' => 'm', 'dedupe_key' => '<st-3@x>' ) );
 check( 'if HubSpot refuses the status the lead is still imported (only logged)', 'ok' === ( $r['status'] ?? '' ) );
@@ -388,7 +390,7 @@ check( "the filter is registered on Fluent Forms' fluentform/hubspot_field_data 
 
 /* ------------------------------------------------------------------ automatic running */
 echo "Lead Sources\n";
-$GLOBALS['t'] = array(); $GLOBALS['source_calls'] = array(); $GLOBALS['existing_sources'] = null;
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] ); $GLOBALS['source_calls'] = array(); $GLOBALS['existing_sources'] = null;
 ppg_lead_process( 'checkatrade', array( 'name' => 'Sam Source', 'message' => 'm', 'dedupe_key' => '<src-1@x>' ) );
 $sp = array_values( array_filter( $GLOBALS['source_calls'], function ( $c ) { return 'PATCH' === $c[2]; } ) );
 check( 'platform lead: Lead Sources gets the platform name (Checkatrade)', 1 === count( $sp ) && 'Checkatrade' === ( $sp[0][1]['properties']['lead_sources'] ?? '' ) );
@@ -401,7 +403,7 @@ ppg_lead_process( 'checkatrade', array( 'name' => 'Sam Third', 'message' => 'm',
 $sp = array_values( array_filter( $GLOBALS['source_calls'], function ( $c ) { return 'PATCH' === $c[2]; } ) );
 check( 'returning contact: the new platform is appended, existing ticks kept', 'Request a Quote;Contact Form;Checkatrade' === ( $sp[0][1]['properties']['lead_sources'] ?? '' ) );
 
-$GLOBALS['t'] = array(); $GLOBALS['gets'] = array();
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] ); $GLOBALS['gets'] = array();
 $form = (object) array( 'title' => 'Make an Appointment' );
 $opts = array( 200, json_encode( array( 'options' => array( array( 'value' => 'Request a Quote' ), array( 'value' => 'Make an Appointment' ), array( 'value' => 'Contact Form' ) ) ) ) );
 $GLOBALS['get_script'] = array( $opts, array( 404, '{}' ) );
@@ -416,9 +418,112 @@ check( 'website form: form name already ticked is not duplicated', 'Make an Appo
 $GLOBALS['get_script'] = array();
 $f = ppg_website_lead_source( array( 'email' => 'w@example.org' ), null, null, (object) array( 'title' => 'Unknown Form' ) );
 check( 'form name that is not an option of the property: not sent (HubSpot would reject the whole push)', ! isset( $f['lead_sources'] ) );
-$GLOBALS['t'] = array(); $GLOBALS['get_script'] = array( array( 500, '{}' ) );
+$GLOBALS['t'] = array(); unset( $GLOBALS['o']['ppg_seen'] ); $GLOBALS['get_script'] = array( array( 500, '{}' ) );
 $f = ppg_website_lead_source( array( 'email' => 'w@example.org' ), null, null, $form );
 check( 'property lookup fails: the form push is untouched', ! isset( $f['lead_sources'] ) );
+
+/* ------------------------------------------------------------------ security & robustness */
+echo "Sender verification (anti-spoofing)\n";
+$ar_ok   = "Received: from x\r\nAuthentication-Results: mx.google.com;\r\n       dkim=pass header.i=@checkatrade.com header.s=s1 header.b=abc;\r\n       spf=pass (google.com: domain of bounce@mail.checkatrade.com designates 1.2.3.4 as permitted sender) smtp.mailfrom=bounce@mail.checkatrade.com;\r\n       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=checkatrade.com\r\nFrom: Checkatrade <no-reply@checkatrade.com>\r\n";
+$ar_fake = "Authentication-Results: mx.google.com;\r\n       dkim=none;\r\n       spf=fail (google.com: domain of x@evil.test does not designate 5.6.7.8 as permitted sender) smtp.mailfrom=x@evil.test;\r\n       dmarc=fail (p=REJECT) header.from=checkatrade.com\r\nFrom: Checkatrade <no-reply@checkatrade.com>\r\n";
+check( 'genuine Checkatrade mail (Gmail: dkim/spf/dmarc pass for checkatrade.com) is accepted', ppg_sender_verified( $ar_ok, 'checkatrade.com' ) );
+check( 'forged From (Gmail: spf/dmarc fail) is rejected', ! ppg_sender_verified( $ar_fake, 'checkatrade.com' ) );
+check( 'authenticated mail from ANOTHER domain claiming to be Checkatrade is rejected', ! ppg_sender_verified( "Authentication-Results: mx.google.com; dkim=pass header.i=@evil.test; spf=pass smtp.mailfrom=a@evil.test; dmarc=pass header.from=evil.test\r\n", 'checkatrade.com' ) );
+check( 'look-alike domain (notcheckatrade.com) is rejected', ! ppg_sender_verified( "Authentication-Results: mx.google.com; dkim=pass header.i=@notcheckatrade.com; dmarc=pass header.from=notcheckatrade.com\r\n", 'checkatrade.com' ) );
+check( 'a forged passing header placed BELOW Gmail\'s real (failing) one is ignored', ! ppg_sender_verified( $ar_fake . "Authentication-Results: mx.google.com; dkim=pass header.i=@checkatrade.com\r\n", 'checkatrade.com' ) );
+check( 'a passing header not written by Gmail is ignored', ! ppg_sender_verified( "Authentication-Results: mail.evil.test; dkim=pass header.i=@checkatrade.com\r\n", 'checkatrade.com' ) );
+check( 'no Authentication-Results header at all is rejected', ! ppg_sender_verified( "From: Checkatrade <no-reply@checkatrade.com>\r\n", 'checkatrade.com' ) && ! ppg_sender_verified( false, 'checkatrade.com' ) );
+
+echo "Duplicate memory is constant-size\n";
+unset( $GLOBALS['o']['ppg_seen'] );
+for ( $i = 0; $i < 1600; $i++ ) {
+	ppg_seen_add( array( 'x' . $i ) );
+}
+check( 'one option, never more than 1500 entries, however many leads arrive', count( $GLOBALS['o']['ppg_seen'] ) <= 1500 );
+check( 'newest remembered, oldest trimmed', ppg_seen_has( array( 'x1599' ) ) && ! ppg_seen_has( array( 'x0' ) ) );
+$GLOBALS['o']['ppg_seen'] = array( 'old' => time() - 3 * WEEK_IN_SECONDS, 'new' => time() );
+check( 'entries expire after two weeks', ! ppg_seen_has( array( 'old' ) ) && ppg_seen_has( array( 'new' ) ) );
+unset( $GLOBALS['o']['ppg_seen'] );
+
+echo "Website forms never wait on a failing HubSpot\n";
+$GLOBALS['t'] = array(); $GLOBALS['gets'] = array(); $GLOBALS['get_script'] = array( array( 500, '{}' ), array( 404, '{}' ) );
+$f = ppg_website_default_lead_status( array( 'email' => 'b@example.org' ) );
+check( 'first failure: form untouched and the circuit breaker opens', ! isset( $f['hs_lead_status'] ) && ! empty( $GLOBALS['t']['ppg_hs_down'] ) );
+$f = ppg_website_default_lead_status( array( 'email' => 'c@example.org' ) );
+check( 'while open, no HubSpot request is made at all (visitors are not slowed down)', 1 === count( $GLOBALS['gets'] ) && ! isset( $f['hs_lead_status'] ) );
+$GLOBALS['t'] = array();
+
+echo "Field lengths are capped\n";
+$GLOBALS['script'] = array(); $GLOBALS['calls'] = array();
+ppg_lead_process( 'checkatrade', array( 'name' => str_repeat( 'N', 500 ), 'message' => str_repeat( 'M', 20000 ), 'postcode' => 'AB1 2CD', 'lead_id' => 'CT-CAP-1', 'dedupe_key' => 'cap-1' ) );
+$up = $GLOBALS['calls'][0][1]['inputs'][0]['properties'] ?? array();
+check( 'name <= 100 and message <= 5000 characters', strlen( $up['firstname'] ?? '' ) <= 100 && strlen( $up['message'] ?? '' ) <= 5000 && strlen( $up['message'] ?? '' ) > 0 );
+unset( $GLOBALS['o']['ppg_seen'] );
+
+echo "Mailbox run (simulated Gmail)\n";
+// A tiny fake IMAP server so the whole poller loop can be exercised without a real mailbox.
+define( 'TYPETEXT', 0 ); define( 'ENCBASE64', 3 ); define( 'ENCQUOTEDPRINTABLE', 4 ); define( 'FT_PEEK', 2 );
+define( 'PPG_IMAP_HOST', '{imap.test:993/imap/ssl}INBOX' ); define( 'PPG_IMAP_USER', 'u' ); define( 'PPG_IMAP_PASS', 'p' );
+define( 'PPG_GO_LIVE', '2020-01-01 00:00:00 UTC' );
+function wp_date( $f, $ts = null, $tz = null ) { return gmdate( $f, $ts ?? time() ); }
+if ( ! function_exists( 'imap_open' ) ) {
+	function imap_open( ...$a ) { return new stdClass(); }
+	function imap_close( ...$a ) { return true; }
+	function imap_last_error() { return ''; }
+	function imap_utf8( $s ) { return $s; }
+	function imap_search( $i, $c ) { return array_keys( $GLOBALS['mbox'] ); }
+	function imap_headerinfo( $i, $n ) { $m = $GLOBALS['mbox'][ $n ]; return (object) array( 'from' => array( (object) array( 'host' => $m['host'] ) ), 'subject' => $m['subject'], 'message_id' => $m['mid'], 'udate' => $m['udate'], 'Size' => $m['size'] ?? 2000 ); }
+	function imap_fetchheader( $i, $n ) { $GLOBALS['hdr_fetches'][] = $n; return $GLOBALS['mbox'][ $n ]['auth']; }
+	function imap_fetchstructure( $i, $n ) { return (object) array( 'type' => 0, 'subtype' => 'PLAIN', 'encoding' => 0, 'parameters' => array() ); }
+	function imap_fetchbody( $i, $n, $p, $f = 0 ) { $GLOBALS['body_fetches'][] = $n; return $GLOBALS['mbox'][ $n ]['body']; }
+}
+$mk = function ( $n, $auth = null, $host = 'mail.checkatrade.com', $extra = array() ) use ( $ar_ok ) {
+	return array_merge( array(
+		'host' => $host, 'mid' => "<m$n@test>", 'udate' => time() - 600 + $n, 'auth' => $auth ?? $ar_ok,
+		'subject' => 'Gutter Cleaning & Clearance in RG41 3AP - respond now',
+		'body'    => "New job request for you\nGutter Cleaning & Clearance in\nRG41 3AP\nCustomer\nPerson\nNumber$n\n Start date\nFlexible\nPerson's message\nPlease clean my gutters $n.\nI'm interested\n",
+	), $extra );
+};
+$reset = function () { $GLOBALS['t'] = array(); $GLOBALS['o'] = array(); $GLOBALS['calls'] = array(); $GLOBALS['script'] = array(); $GLOBALS['hdr_fetches'] = array(); $GLOBALS['body_fetches'] = array(); unset( $GLOBALS['next_http'] ); };
+
+$reset();
+$GLOBALS['mbox'] = array( 1 => $mk( 1 ), 2 => $mk( 2, $ar_fake ), 3 => $mk( 3 ) );
+$st = ppg_poll_mailbox_run();
+check( 'run 1: 2 genuine leads imported, 1 forged email ignored (never reaches HubSpot)', 2 === $st['imported'] && 1 === $st['ignored'] && 'ok' === $st['outcome'] );
+$bodies_before = count( $GLOBALS['body_fetches'] );
+$calls_before  = count( $GLOBALS['calls'] );
+$st = ppg_poll_mailbox_run();
+check( 'run 2 (same mailbox): nothing imported twice, no email body downloaded and no HubSpot call for known leads', 0 === $st['imported'] && 2 === $st['duplicates'] && count( $GLOBALS['body_fetches'] ) === $bodies_before && count( $GLOBALS['calls'] ) === $calls_before );
+
+$reset();
+$GLOBALS['mbox'] = array( 1 => $mk( 1, null, 'mail.checkatrade.com', array( 'size' => 600000 ) ) );
+$st = ppg_poll_mailbox_run();
+check( 'a message over 512 KB is never opened', 0 === $st['imported'] && 0 === count( $GLOBALS['body_fetches'] ) );
+
+$reset();
+$GLOBALS['mbox'] = array(); for ( $n = 1; $n <= 60; $n++ ) { $GLOBALS['mbox'][ $n ] = $mk( $n ); }
+$st = ppg_poll_mailbox_run();
+check( 'flood protection: at most 40 leads per run, the rest wait for the next check', 40 === $st['imported'] && false !== strpos( $st['detail'], 'waiting' ) );
+$st = ppg_poll_mailbox_run();
+check( 'the next run picks up the remaining 20', 20 === $st['imported'] );
+
+$reset();
+$GLOBALS['mbox'] = array( 1 => $mk( 1 ), 2 => $mk( 2 ), 3 => $mk( 3 ) );
+$GLOBALS['next_http'] = 500;
+$st = ppg_poll_mailbox_run();
+check( 'HubSpot down: run stops at the first failure (no hammering) and nothing is marked as done', 1 === $st['failed'] && 0 === $st['imported'] && false !== strpos( $st['detail'], 'retried' ) );
+unset( $GLOBALS['next_http'] ); $GLOBALS['script'] = array();
+$st = ppg_poll_mailbox_run();
+check( 'HubSpot back: the same leads are retried and imported', 3 === $st['imported'] );
+
+$reset();
+$GLOBALS['mbox'] = array( 1 => $mk( 1 ), 2 => $mk( 2, $ar_fake ) );
+ppg_poll_record( time(), ppg_poll_mailbox_run() );
+$d = $GLOBALS['o']['ppg_poll_daily'][ gmdate( 'Y-m-d' ) ] ?? array();
+check( 'daily counter keeps only two numbers: sent and ignored', array( 'sent' => 1, 'ignored' => 1 ) === $d && count( $GLOBALS['o']['ppg_poll_daily'] ) <= 2 && ! isset( $GLOBALS['o']['ppg_poll_log'] ) );
+$GLOBALS['o']['ppg_poll_daily'] = array( '2020-01-01' => array( 'sent' => 1, 'ignored' => 0 ), '2020-01-02' => array( 'sent' => 1, 'ignored' => 0 ), '2020-01-03' => array( 'sent' => 1, 'ignored' => 0 ) );
+ppg_poll_record( time(), array() );
+check( 'only today and yesterday are ever kept', count( $GLOBALS['o']['ppg_poll_daily'] ) <= 2 );
 
 /* ------------------------------------------------------------------ go-live */
 echo "\n$pass passed, $fail failed\n";

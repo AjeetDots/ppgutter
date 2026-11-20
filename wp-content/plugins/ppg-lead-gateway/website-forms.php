@@ -17,6 +17,29 @@ add_filter( 'fluentform/hubspot_field_data', 'ppg_website_default_lead_status', 
 add_filter( 'fluentform/hubspot_field_data', 'ppg_website_lead_source', 20, 4 );
 
 /**
+ * One small, fast HubSpot lookup for the form hooks. These run while a visitor waits for their form to submit, so:
+ * a short timeout, no redirects, and a circuit breaker: if HubSpot errors or is slow once, lookups are skipped for
+ * 60 seconds (the form still submits normally) instead of making every visitor wait on a failing service.
+ * Returns the response, or null when the lookup was skipped or failed.
+ */
+function ppg_hs_form_get( $url, $token ) {
+	if ( get_transient( 'ppg_hs_down' ) ) {
+		return null;
+	}
+	$response = wp_remote_get( $url, array( 'timeout' => 4, 'redirection' => 0, 'headers' => array( 'Authorization' => 'Bearer ' . $token ) ) );
+	if ( is_wp_error( $response ) ) {
+		set_transient( 'ppg_hs_down', 1, 60 );
+		return null;
+	}
+	$code = (int) wp_remote_retrieve_response_code( $response );
+	if ( 429 === $code || $code >= 500 ) {
+		set_transient( 'ppg_hs_down', 1, 60 );
+		return null;
+	}
+	return $response;
+}
+
+/**
  * "Lead Sources" (checkbox property lead_sources): tick the name of the form that was submitted, keeping what is
  * already ticked on a returning contact. Only sent when the form name is an existing option of the property, since
  * HubSpot would reject the whole push for an unknown option. Any lookup problem leaves the push untouched.
@@ -27,12 +50,11 @@ function ppg_website_lead_source( $fields, $feed = null, $entry = null, $form = 
 	if ( ! is_array( $fields ) || '' === $title || '' === $token || ! empty( $fields['lead_sources'] ) ) {
 		return $fields;
 	}
-	$args = array( 'timeout' => 8, 'headers' => array( 'Authorization' => 'Bearer ' . $token ) );
 
 	$options = get_transient( 'ppg_lead_sources_options' );
 	if ( ! is_array( $options ) ) {
-		$response = wp_remote_get( 'https://api.hubapi.com/crm/v3/properties/contacts/lead_sources', $args );
-		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+		$response = ppg_hs_form_get( 'https://api.hubapi.com/crm/v3/properties/contacts/lead_sources', $token );
+		if ( null === $response || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
 			return $fields;
 		}
 		$prop    = json_decode( wp_remote_retrieve_body( $response ), true );
@@ -47,8 +69,8 @@ function ppg_website_lead_source( $fields, $feed = null, $entry = null, $form = 
 	$have  = array();
 	$email = isset( $fields['email'] ) ? (string) $fields['email'] : '';
 	if ( '' !== $email && is_email( $email ) ) {
-		$response = wp_remote_get( 'https://api.hubapi.com/crm/v3/objects/contacts/' . rawurlencode( $email ) . '?idProperty=email&properties=lead_sources', $args );
-		if ( is_wp_error( $response ) ) {
+		$response = ppg_hs_form_get( 'https://api.hubapi.com/crm/v3/objects/contacts/' . rawurlencode( $email ) . '?idProperty=email&properties=lead_sources', $token );
+		if ( null === $response ) {
 			return $fields;
 		}
 		$code = (int) wp_remote_retrieve_response_code( $response );
@@ -76,11 +98,8 @@ function ppg_website_default_lead_status( $fields, $feed = null, $entry = null, 
 		return $fields;
 	}
 
-	$response = wp_remote_get(
-		'https://api.hubapi.com/crm/v3/objects/contacts/' . rawurlencode( $email ) . '?idProperty=email&properties=hs_lead_status',
-		array( 'timeout' => 8, 'headers' => array( 'Authorization' => 'Bearer ' . $token ) )
-	);
-	if ( is_wp_error( $response ) ) {
+	$response = ppg_hs_form_get( 'https://api.hubapi.com/crm/v3/objects/contacts/' . rawurlencode( $email ) . '?idProperty=email&properties=hs_lead_status', $token );
+	if ( null === $response ) {
 		return $fields;
 	}
 	$code = (int) wp_remote_retrieve_response_code( $response );

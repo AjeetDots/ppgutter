@@ -242,7 +242,7 @@ class WPCode_Admin_Page_Settings extends WPCode_Admin_Page {
 			$this->get_checkbox_toggle(
 				wpcode()->settings->get_option( 'abilities_write_enabled' ),
 				'wpcode-abilities-write',
-				esc_html__( 'Let AI assistants and automation tools connected through the WordPress Abilities API create and edit snippets and header & footer code. They can only do what the connected user is allowed to do.', 'insert-headers-and-footers' ),
+				esc_html__( 'Let AI assistants and automation tools connected through the WordPress Abilities API create and edit snippets and header & footer code. Read-only access to snippets, error logs and settings is always on, even when this is off. Tools can only do what the connected user is allowed to do.', 'insert-headers-and-footers' ),
 				1
 			),
 			'wpcode-abilities-write'

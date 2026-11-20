@@ -419,9 +419,6 @@ class WPCode_Abilities_Snippets {
 		}
 
 		$code = $this->prepare_code( $input['code'], $code_type );
-		if ( is_wp_error( $code ) ) {
-			return $code;
-		}
 
 		$data = array_merge(
 			array(
@@ -582,11 +579,7 @@ class WPCode_Abilities_Snippets {
 		// A type change prepares the stored code for the new type too, as the editor does when it sends the code
 		// again: without it, code stored as Blocks would become a Text snippet without the kses filter.
 		if ( $has_code || $type_changed ) {
-			$code = $this->prepare_code( $has_code ? $input['code'] : $snippet->get_code(), $code_type );
-			if ( is_wp_error( $code ) ) {
-				return $code;
-			}
-			$data['code'] = $code;
+			$data['code'] = $this->prepare_code( $has_code ? $input['code'] : $snippet->get_code(), $code_type );
 		}
 		if ( $type_changed ) {
 			$data['code_type'] = $code_type;
@@ -804,11 +797,11 @@ class WPCode_Abilities_Snippets {
 	 * @param string $code      The code, unslashed.
 	 * @param string $code_type The code type.
 	 *
-	 * @return string|WP_Error
+	 * @return string
 	 */
 	private function prepare_code( $code, $code_type ) {
 		$code = WPCode_Snippet_Input::prepare_code( $code, $code_type );
-		if ( ! is_wp_error( $code ) && 'blocks' === $code_type && ! current_user_can( 'unfiltered_html' ) ) {
+		if ( 'blocks' === $code_type && ! current_user_can( 'unfiltered_html' ) ) {
 			$code = wp_kses_post( $code );
 		}
 

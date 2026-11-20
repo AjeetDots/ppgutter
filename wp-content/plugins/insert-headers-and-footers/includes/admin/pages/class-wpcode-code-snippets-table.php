@@ -654,8 +654,7 @@ class WPCode_Code_Snippets_Table extends WP_List_Table {
 			$order_by = 'ID';
 		}
 
-		$per_page    = $this->get_items_per_page( 'wpcode_snippets_per_page', $this->per_page );
-		$is_filtered = false;
+		$per_page = $this->get_items_per_page( 'wpcode_snippets_per_page', $this->per_page );
 
 		$args = array(
 			'orderby'          => $order_by,
@@ -675,7 +674,6 @@ class WPCode_Code_Snippets_Table extends WP_List_Table {
 		}
 
 		if ( ! empty( $_GET['location'] ) ) {
-			$is_filtered       = true;
 			$args['tax_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 				array(
 					'taxonomy' => 'wpcode_location',
@@ -686,7 +684,6 @@ class WPCode_Code_Snippets_Table extends WP_List_Table {
 		}
 
 		if ( ! empty( $_GET['type'] ) ) {
-			$is_filtered = true;
 			if ( ! isset( $args['tax_query'] ) ) {
 				$args['tax_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 			}
@@ -706,7 +703,6 @@ class WPCode_Code_Snippets_Table extends WP_List_Table {
 		}
 
 		if ( ! empty( $_GET['tag'] ) ) {
-			$is_filtered = true;
 			if ( ! isset( $args['tax_query'] ) ) {
 				$args['tax_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 			}
@@ -719,7 +715,8 @@ class WPCode_Code_Snippets_Table extends WP_List_Table {
 
 		if ( ! empty( $_GET['s'] ) ) {
 			$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
-			// This is a search so let's extend it to meta too.
+			// This is a search so let's extend it to meta too, which needs the query filters.
+			$args['suppress_filters'] = false;
 			$this->add_meta_search();
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -765,10 +762,8 @@ class WPCode_Code_Snippets_Table extends WP_List_Table {
 
 		$this->update_count( $args );
 
-		$count_current_view = empty( $this->count[ $this->view ] ) ? 0 : $this->count[ $this->view ];
-		if ( $is_filtered ) {
-			$count_current_view = $items_query->found_posts;
-		}
+		// The query's own total, so searches, filters and views without a count (Has Error) paginate what they list.
+		$count_current_view = $items_query->found_posts;
 
 		// Finalize pagination.
 		$this->set_pagination_args(
@@ -932,7 +927,8 @@ class WPCode_Code_Snippets_Table extends WP_List_Table {
 		global $wpdb;
 
 		if ( is_admin() && isset( $_GET['s'] ) ) {  // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$join .= ' LEFT JOIN ' . $wpdb->postmeta . ' ON ' . $wpdb->posts . '.ID = ' . $wpdb->postmeta . '.post_id ';
+			// Only the note is searched, under an alias so it can't clash with the sort or view meta joins.
+			$join .= " LEFT JOIN {$wpdb->postmeta} AS wpcode_note ON {$wpdb->posts}.ID = wpcode_note.post_id AND wpcode_note.meta_key = '_wpcode_note' ";
 		}
 
 		return $join;
@@ -949,11 +945,16 @@ class WPCode_Code_Snippets_Table extends WP_List_Table {
 		global $wpdb;
 
 		if ( is_admin() && isset( $_GET['s'] ) ) {  // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$where = preg_replace(
-				'/\(\s*' . $wpdb->posts . ".post_title\s+LIKE\s*(\'[^\']+\')\s*\)/",
-				'(' . $wpdb->posts . '.post_title LIKE $1) OR (' . $wpdb->postmeta . '.meta_value LIKE $1)',
+			// Reuse each title LIKE value as core escaped it, including \' and, with NO_BACKSLASH_ESCAPES, ''.
+			// Possessive, so long terms don't exhaust the regex stack; on any failure keep the core clause.
+			$extended = preg_replace(
+				'/\(\s*' . $wpdb->posts . '.post_title\s+LIKE\s*(\'(?:[^\'\\\\]++|\\\\.|\'\')*+\')\s*\)/',
+				'(' . $wpdb->posts . '.post_title LIKE $1) OR (wpcode_note.meta_value LIKE $1)',
 				$where
 			);
+			if ( null !== $extended ) {
+				$where = $extended;
+			}
 		}
 
 		return $where;
@@ -1012,9 +1013,10 @@ class WPCode_Code_Snippets_Table extends WP_List_Table {
 
 		// Construct URL base arguments.
 		$page_args = array( 'page' => 'wpcode' );
-		foreach ( array( 'type', 'filter_action', 'location', 'view' ) as $param ) {
+		foreach ( array( 'type', 'filter_action', 'location', 'view', 's', 'tag' ) as $param ) {
 			if ( ! empty( $_GET[ $param ] ) ) {
-				$page_args[ $param ] = sanitize_text_field( wp_unslash( $_GET[ $param ] ) );
+				// Encoded, since add_query_arg() does not encode values and a search can contain & or #.
+				$page_args[ $param ] = rawurlencode( sanitize_text_field( wp_unslash( $_GET[ $param ] ) ) );
 			}
 		}
 

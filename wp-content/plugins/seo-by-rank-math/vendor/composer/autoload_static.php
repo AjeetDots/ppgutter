@@ -4,11 +4,12 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitf4caa1eb290488028b9931208e4e05f4
+class ComposerStaticInit4841a09ac1e6648243fe7a2d61ff9b06
 {
     public static $files = array (
         '6c592737b91137905268e9a0eb968869' => __DIR__ . '/..' . '/wp-media/apply-filters-typed/functions.php',
         'da5f6548f070d3d306f90eee42dd5de6' => __DIR__ . '/..' . '/donatj/phpuseragentparser/src/UserAgentParser.php',
+        'e07843e268c1bdb09f18658acad9fde5' => __DIR__ . '/..' . '/groupone/wap-client/wap-client.php',
         'bcb90d312f16e4ff52a76c5aa3f98ae0' => __DIR__ . '/..' . '/cmb2/cmb2/init.php',
         '65bb6728e4ea5a6bfba27700e81f7a00' => __DIR__ . '/../..' . '/includes/template-tags.php',
         '49628becc29116377284b725833a0b5a' => __DIR__ . '/..' . '/woocommerce/action-scheduler/action-scheduler.php',
@@ -24,6 +25,10 @@ class ComposerStaticInitf4caa1eb290488028b9931208e4e05f4
             'WPMedia\\Mixpanel\\' => 17,
             'WPMedia\\MCP\\OAuth\\' => 18,
         ),
+        'G' => 
+        array (
+            'GroupOne\\WapClient\\' => 19,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
@@ -38,6 +43,10 @@ class ComposerStaticInitf4caa1eb290488028b9931208e4e05f4
         'WPMedia\\MCP\\OAuth\\' => 
         array (
             0 => __DIR__ . '/..' . '/wp-media/mcp-oauth/inc',
+        ),
+        'GroupOne\\WapClient\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/groupone/wap-client/includes',
         ),
     );
 
@@ -161,6 +170,9 @@ class ComposerStaticInitf4caa1eb290488028b9931208e4e05f4
         'RankMath\\Admin\\Setup_Wizard' => __DIR__ . '/../..' . '/includes/admin/class-setup-wizard.php',
         'RankMath\\Admin\\Watcher' => __DIR__ . '/../..' . '/includes/admin/watcher/class-watcher.php',
         'RankMath\\Admin_Bar_Menu' => __DIR__ . '/../..' . '/includes/admin/class-admin-bar-menu.php',
+        'RankMath\\Agent\\Agent' => __DIR__ . '/../..' . '/includes/modules/agent/class-agent.php',
+        'RankMath\\Agent\\App_Password_Cleanup' => __DIR__ . '/../..' . '/includes/modules/agent/class-app-password-cleanup.php',
+        'RankMath\\Agent\\Support_Agent' => __DIR__ . '/../..' . '/includes/modules/agent/class-support-agent.php',
         'RankMath\\Analytics\\AJAX' => __DIR__ . '/../..' . '/includes/modules/analytics/class-ajax.php',
         'RankMath\\Analytics\\Analytics' => __DIR__ . '/../..' . '/includes/modules/analytics/class-analytics.php',
         'RankMath\\Analytics\\Analytics_Common' => __DIR__ . '/../..' . '/includes/modules/analytics/class-analytics-common.php',
@@ -412,6 +424,8 @@ class ComposerStaticInitf4caa1eb290488028b9931208e4e05f4
         'RankMath\\Tracking' => __DIR__ . '/../..' . '/includes/class-tracking.php',
         'RankMath\\Traits\\Ajax' => __DIR__ . '/../..' . '/includes/traits/class-ajax.php',
         'RankMath\\Traits\\Cache' => __DIR__ . '/../..' . '/includes/traits/class-cache.php',
+        'RankMath\\Traits\\Connect_Cta' => __DIR__ . '/../..' . '/includes/modules/agent/Traits/class-connect-cta.php',
+        'RankMath\\Traits\\Grnd_Provider' => __DIR__ . '/../..' . '/includes/modules/agent/Traits/class-grnd-provider.php',
         'RankMath\\Traits\\Hooker' => __DIR__ . '/../..' . '/includes/traits/class-hooker.php',
         'RankMath\\Traits\\Meta' => __DIR__ . '/../..' . '/includes/traits/class-meta.php',
         'RankMath\\Traits\\Shortcode' => __DIR__ . '/../..' . '/includes/traits/class-shortcode.php',
@@ -490,9 +504,9 @@ class ComposerStaticInitf4caa1eb290488028b9931208e4e05f4
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitf4caa1eb290488028b9931208e4e05f4::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitf4caa1eb290488028b9931208e4e05f4::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInitf4caa1eb290488028b9931208e4e05f4::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit4841a09ac1e6648243fe7a2d61ff9b06::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit4841a09ac1e6648243fe7a2d61ff9b06::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit4841a09ac1e6648243fe7a2d61ff9b06::$classMap;
 
         }, null, ClassLoader::class);
     }

@@ -13,6 +13,10 @@
  * invoices, reminders, replies...), otherwise array( name, email, phone, postcode, message ).
  */
 
+if ( ! defined( 'ABSPATH' ) && 'cli' !== PHP_SAPI ) {
+	exit; // pure helper file: nothing to run when requested directly over the web
+}
+
 /* ---------------------------------------------------------------- text helpers */
 
 /** HTML email -> readable text, keeping link targets as "text (url)". */

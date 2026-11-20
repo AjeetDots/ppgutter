@@ -26,6 +26,26 @@ class WPCode_Abilities_API {
 	public function __construct() {
 		add_action( 'wp_abilities_api_categories_init', array( $this, 'register_categories' ) );
 		add_action( 'wp_abilities_api_init', array( $this, 'register_abilities' ) );
+		add_filter( 'wp_register_ability_args', array( $this, 'expose_to_mcp' ), 10, 2 );
+	}
+
+	/**
+	 * Mark WPCode abilities public for MCP by default.
+	 *
+	 * The MCP Adapter only lists and runs abilities whose meta.mcp.public is true.
+	 * An ability can still opt out by setting the flag itself.
+	 *
+	 * @param array  $args Ability registration arguments.
+	 * @param string $name Ability name.
+	 *
+	 * @return array
+	 */
+	public function expose_to_mcp( $args, $name ) {
+		if ( 0 === strpos( $name, 'wpcode/' ) && ! isset( $args['meta']['mcp']['public'] ) ) {
+			$args['meta']['mcp']['public'] = true;
+		}
+
+		return $args;
 	}
 
 	/**

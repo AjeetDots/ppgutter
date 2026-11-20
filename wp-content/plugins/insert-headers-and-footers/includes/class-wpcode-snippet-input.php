@@ -49,17 +49,9 @@ class WPCode_Snippet_Input {
 	 * @param string $code      The code.
 	 * @param string $code_type The code type.
 	 *
-	 * @return string|WP_Error
+	 * @return string
 	 */
 	public static function prepare_code( $code, $code_type ) {
-		if ( WPCode_Snippet_Execute::is_code_not_allowed( $code ) ) {
-			return new WP_Error(
-				'wpcode_restricted_code',
-				__( 'For your protection, we blocked the addition of certain types of code that could compromise your website\'s security.', 'insert-headers-and-footers' ),
-				array( 'status' => 400 )
-			);
-		}
-
 		if ( 'text' === $code_type ) {
 			$code = wpautop( $code );
 			// Strip script/event-handler HTML from text snippets authored without unfiltered_html.

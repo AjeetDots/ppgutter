@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the WordPress - 7.1.x - Development package.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2026-10-28 19:33:54+0000\n"
+"PO-Revision-Date: 2026-11-11 22:29:00+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1263,7 +1263,7 @@ msgstr "Please log in to %s to proceed with authorization."
 #. translators: 1: Website name, 2: Application name.
 #: wp-login.php:1458
 msgid "Please log in to %1$s to authorize %2$s to connect to your account."
-msgstr "Please log in to %1$s to authorize %2$s to connect to your account."
+msgstr "Please log in to %1$s to authorise %2$s to connect to your account."
 
 #. translators: 1: 'path', 2: filesystem path, 3: style handle
 #: wp-includes/script-loader.php:3125 wp-includes/script-loader.php:3174
@@ -1315,7 +1315,7 @@ msgstr "Navigation Menu updated."
 #. keys.
 #: wp-includes/functions.wp-scripts.php:102
 msgid "Unrecognized key(s) in the %1$s param: %2$s. Supported keys: %3$s"
-msgstr "Unrecognized key(s) in the %1$s param: %2$s. Supported keys: %3$s"
+msgstr "Unrecognised key(s) in the %1$s param: %2$s. Supported keys: %3$s"
 
 #. translators: %s is the CSS that was provided.
 #: wp-includes/customize/class-wp-customize-custom-css-setting.php:231

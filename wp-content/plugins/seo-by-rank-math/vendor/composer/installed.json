@@ -190,6 +190,60 @@
             "install-path": "../donatj/phpuseragentparser"
         },
         {
+            "name": "groupone/wap-client",
+            "version": "2.6.0",
+            "version_normalized": "2.6.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/One-com/wap-client.git",
+                "reference": "cb4f8111f45482161ec2a0f11d4da62c026e28ca"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/One-com/wap-client/zipball/cb4f8111f45482161ec2a0f11d4da62c026e28ca",
+                "reference": "cb4f8111f45482161ec2a0f11d4da62c026e28ca",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.4"
+            },
+            "time": "2026-11-09T19:28:01+00:00",
+            "type": "wordpress-plugin",
+            "installation-source": "dist",
+            "autoload": {
+                "files": [
+                    "wap-client.php"
+                ],
+                "psr-4": {
+                    "GroupOne\\WapClient\\": "includes/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "group.one",
+                    "homepage": "https://www.group.one"
+                }
+            ],
+            "description": "WordPress AI Platform (WAP) client library — drop-in Composer package for integrating AI chat into any WordPress plugin.",
+            "homepage": "https://github.com/One-com/wap-client",
+            "keywords": [
+                "ai",
+                "chat",
+                "group-one",
+                "wap",
+                "wordpress"
+            ],
+            "support": {
+                "issues": "https://github.com/One-com/wap-client/issues",
+                "source": "https://github.com/One-com/wap-client"
+            },
+            "install-path": "../groupone/wap-client"
+        },
+        {
             "name": "woocommerce/action-scheduler",
             "version": "3.9.3",
             "version_normalized": "3.9.3.0",

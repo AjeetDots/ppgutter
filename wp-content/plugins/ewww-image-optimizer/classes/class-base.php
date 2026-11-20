@@ -1023,6 +1023,7 @@ class Base {
 		$this->debug_message( '<b>' . __METHOD__ . '()</b>' );
 		if (
 			\strpos( $image, 'base64,R0lGOD' ) ||
+			\str_contains( $image, 'data:image/png;base64' ) ||
 			\strpos( $image, 'lazy-load/images/1x1' ) ||
 			\strpos( $image, '/assets/images/lazy' ) ||
 			\strpos( $image, '/assets/images/dummy.png' ) ||
@@ -1275,13 +1276,13 @@ class Base {
 		$upload_dir  = \realpath( $upload_dir['basedir'] );
 		$content_dir = \realpath( WP_CONTENT_DIR );
 
-		if ( false !== \strpos( $file, $upload_dir ) ) {
+		if ( $upload_dir && \str_contains( $file, $upload_dir ) ) {
 			return \wp_delete_file_from_directory( $file, $upload_dir );
 		}
-		if ( false !== \strpos( $file, $content_dir ) ) {
+		if ( $content_dir && \str_contains( $file, $content_dir ) ) {
 			return \wp_delete_file_from_directory( $file, $content_dir );
 		}
-		if ( false !== \strpos( $file, $wp_dir ) ) {
+		if ( $wp_dir && \str_contains( $file, $wp_dir ) ) {
 			return \wp_delete_file_from_directory( $file, $wp_dir );
 		}
 		return \wp_delete_file( $file );

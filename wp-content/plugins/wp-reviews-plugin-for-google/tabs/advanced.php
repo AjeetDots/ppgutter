@@ -2,21 +2,13 @@
 defined('ABSPATH') or die('No script kiddies please!');
 if (isset($_GET['toggle_css_inline'])) {
 check_admin_referer('ti-toggle-css');
-$v = (int)$_GET['toggle_css_inline'];
-update_option($pluginManagerInstance->get_option_name('load-css-inline'), $v, false);
-if ($v && is_file($pluginManagerInstance->getCssFile())) {
-wp_delete_file($pluginManagerInstance->getCssFile());
-}
-$pluginManagerInstance->handleCssFile();
+$pluginManagerInstance->setCssInline((bool)(int)$_GET['toggle_css_inline']);
 header('Location: admin.php?page='.esc_attr($_page).'&tab=advanced');
 exit;
 }
 if (isset($_GET['delete_css'])) {
 check_admin_referer('ti-delete-css');
-if (is_file($pluginManagerInstance->getCssFile())) {
-wp_delete_file($pluginManagerInstance->getCssFile());
-}
-$pluginManagerInstance->handleCssFile();
+$pluginManagerInstance->regenerateCssFile();
 header('Location: admin.php?page='.esc_attr($_page).'&tab=advanced');
 exit;
 }
@@ -29,8 +21,7 @@ exit;
 if (isset($_GET['toggle_asset_proxy'])) {
 check_admin_referer('ti-toggle-asset-proxy');
 if (current_user_can('manage_options')) {
-$pluginManagerInstance->getAssetProxy()->setEnabled(1 === (int)$_GET['toggle_asset_proxy']);
-$pluginManagerInstance->handleCssFile();
+$pluginManagerInstance->setGdprModeEnabled(1 === (int)$_GET['toggle_asset_proxy']);
 }
 header('Location: admin.php?page='.esc_attr($_page).'&tab=advanced');
 exit;
@@ -51,16 +42,14 @@ exit;
 }
 if (isset($_POST['save-notification-email'])) {
 check_admin_referer('ti-notification-email-save');
-$type = isset($_POST['type']) ? sanitize_text_field(wp_unslash($_POST['type'])) : null;
-$type = strtolower(trim($type));
-$email = isset($_POST['save-notification-email']) ? sanitize_text_field(wp_unslash($_POST['save-notification-email'])) : null;
-$email = strtolower(trim($email));
-$pluginManagerInstance->setNotificationParam($type, 'email', $email);
+$type = isset($_POST['type']) ? strtolower(trim(sanitize_text_field(wp_unslash($_POST['type'])))) : '';
+$email = isset($_POST['save-notification-email']) ? sanitize_text_field(wp_unslash($_POST['save-notification-email'])) : '';
+$pluginManagerInstance->setNotificationEmail($type, $email);
 exit;
 }
 $yesIcon = '<span class="dashicons dashicons-yes-alt"></span>';
 $noIcon = '<span class="dashicons dashicons-dismiss"></span>';
-$pluginUpdated = ($pluginManagerInstance->get_plugin_current_version() <= "14.3");
+$pluginUpdated = ($pluginManagerInstance->get_plugin_current_version() <= "15.0");
 $cssInline = get_option($pluginManagerInstance->get_option_name('load-css-inline'), 0);
 $widgetHtmlCacheIds = $pluginManagerInstance->getCachedWidgetHtmlIds();
 $css = $pluginManagerInstance->getWidgetCssContent();
@@ -102,7 +91,7 @@ $tiError = esc_html(__('You must provide a password and a valid e-mail!', 'wp-re
 }
 else if ($tiCommand === 'disconnect') {
 check_admin_referer('disconnect-reg_' . $pluginManagerInstance->get_plugin_slug());
-delete_option($pluginManagerInstance->get_option_name('subscription-id'));
+$pluginManagerInstance->disconnectTrustindexAccount();
 setcookie('ti-success', 'disconnected', time() + 60, '/');
 header('Location: #trustindex-admin');
 exit;

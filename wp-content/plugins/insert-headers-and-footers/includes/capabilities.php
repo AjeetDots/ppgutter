@@ -85,3 +85,14 @@ function wpcode_custom_capabilities_keys() {
 	);
 }
 
+/**
+ * Whether the current user can change the Header & Footer code.
+ *
+ * The Header & Footer content is always live, so editing it, or restoring an older version, also
+ * needs activation rights.
+ *
+ * @return bool
+ */
+function wpcode_current_user_can_edit_header_footer() {
+	return current_user_can( 'unfiltered_html', 'wpcode-editor' ) && current_user_can( 'wpcode_activate_snippets' );
+}

@@ -3,7 +3,7 @@ Contributors: nosilver4u
 Donate link: https://ewww.io/donate/
 Tags: compress, convert, webp, resize, lazy load
 Tested up to: 7.1
-Stable tag: 8.9.1
+Stable tag: 8.9.2
 License: GPLv3
 
 Comprehensive image optimization with WebP, AVIF, Lazy Load, and more. Optimize images automatically for Faster Sites and Happy Visitors.
@@ -175,6 +175,18 @@ That's not a question, but since I made it up, I'll answer it. See this resource
 * Feature requests can be viewed and submitted on our [feedback portal](https://feedback.ewww.io/b/features)
 * If you would like to help translate this plugin in your language, [join the team](https://translate.wordpress.org/projects/wp-plugins/ewww-image-optimizer/)
 
+= 8.9.2 =
+*Release Date - November 10, 2026*
+
+* added: eio_lazy_noscript and eio_webp_noscript filters to modify/suppress noscript fall-back elements
+* changed: Add Missing Dimensions no longer fills in height/width if only one dimension is missing
+* fixed: Easy IO skips manually generated srcset attributes with relative URLs
+* fixed: Easy IO only rewrites first background image in a CSS property when parsing internal style elements
+* fixed: optimization results not shown when bulk optimization is in WebP Only mode
+* fixed: failure to remove local images after optimization when using S3 Uploads plugin
+* fixed: local optimization blocked on WP NET VPS hosting
+* security: improved HTML attribute parsing applied to all front-end filters
+
 = 8.9.1 =
 *Release Date - October 29, 2026*
 
@@ -182,7 +194,7 @@ That's not a question, but since I made it up, I'll answer it. See this resource
 * fixed: some images are not auto-optimized if thumbnail dimensions are set to zero
 * fixed: WebP thumbnails for images edited within WordPress use incorrect source image
 * fixed: Force Re-optimize does not recreate WebP images when using ImageMagick
-* security: HTML attribute parsing is now stricter and more secure
+* security: Lazy Load HTML attribute parsing is now stricter and more secure
 
 = 8.9.0 =
 *Release Date - October 13, 2026*

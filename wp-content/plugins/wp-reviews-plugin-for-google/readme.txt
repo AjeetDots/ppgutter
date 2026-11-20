@@ -5,7 +5,7 @@ Tags: google reviews, google business, review widget, review slider, social proo
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 14.3
+Stable tag: 15.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Plugin Name: Widgets for Google Reviews
@@ -14,7 +14,7 @@ Plugin URI: https://wordpress.org/plugins/wp-reviews-plugin-for-google/
 Author: Trustindex.io <support@trustindex.io>
 Author URI: https://www.trustindex.io/
 Text Domain: wp-reviews-plugin-for-google
-Version: 14.3
+Version: 15.0
 
 Google Reviews Widget for WordPress. Display Google reviews in 1 minute with 45 professional layouts. Build trust, boost SEO, and increase sales.
 
@@ -56,6 +56,8 @@ Google reviews widget plugin includes the following features:
 * Linux and Windows (XAMPP, WAMP,...) compatible
 * Multisite compatibility
 * Reviews readable by AI crawlers and search engines
+* AI assistant support for widget setup and customization (WordPress Abilities API)
+* Displaying review photos in supported widget layouts
 
 = GDPR-Compliant Widgets =
 
@@ -79,7 +81,7 @@ With Trustindex Professional Google review widgets, you can build more trust and
 * 60+ professional widget layouts
 * 10+ customizable widget styles
 * Professional review widget configurator
-* Review photos, and personalized widget headers
+* Personalized widget headers
 * AI review summaries
 * AI review translation
 * Integrated widget pop-ups

@@ -43,6 +43,10 @@ $list []= 'trustindex-';
 return $list;
 });
 }
+add_filter('rocket_lazyload_excluded_src', function($list) {
+$list []= 'trustindex-asset=';
+return $list;
+});
 add_filter('sgo_css_combine_exclude', function($list) {
 foreach (array (
  0 => 'facebook',

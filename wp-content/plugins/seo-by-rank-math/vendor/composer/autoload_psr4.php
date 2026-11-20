@@ -9,4 +9,5 @@ return array(
     'donatj\\UserAgent\\' => array($vendorDir . '/donatj/phpuseragentparser/src/UserAgent'),
     'WPMedia\\Mixpanel\\' => array($vendorDir . '/wp-media/wp-mixpanel/src'),
     'WPMedia\\MCP\\OAuth\\' => array($vendorDir . '/wp-media/mcp-oauth/inc'),
+    'GroupOne\\WapClient\\' => array($vendorDir . '/groupone/wap-client/includes'),
 );

@@ -17,10 +17,14 @@
 
 defined( 'ABSPATH' ) || exit;
 
-require_once __DIR__ . '/parsers.php';
-require_once __DIR__ . '/email-poller.php';
+// Light by design: the website-form hooks load on every request (they are tiny); the mailbox poller, parsers and
+// admin pages only load where they are used (WP-Cron, wp-admin, WP-CLI), so normal visitors pay nothing for them.
 require_once __DIR__ . '/website-forms.php';
-require_once __DIR__ . '/status-page.php';
+if ( is_admin() || ( function_exists( 'wp_doing_cron' ) && wp_doing_cron() ) || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+	require_once __DIR__ . '/parsers.php';
+	require_once __DIR__ . '/email-poller.php';
+	require_once __DIR__ . '/status-page.php';
+}
 
 function ppg_lead_cfg( $key ) {
 	if ( defined( $key ) ) {
@@ -46,20 +50,24 @@ function ppg_lead_cfg( $key ) {
  * Only leads that genuinely cannot be created go to the review queue: nothing identifies the lead
  * (no name, email or phone), or HubSpot permanently rejects it. Temporary failures are retried.
  */
+function ppg_cut( $s, $n ) {
+	return function_exists( 'mb_substr' ) ? mb_substr( (string) $s, 0, $n ) : substr( (string) $s, 0, $n );
+}
+
 function ppg_lead_process( $source, array $lead ) {
-	$name     = sanitize_text_field( $lead['name'] ?? '' );
-	$email    = sanitize_email( $lead['email'] ?? '' );
-	$phone    = preg_replace( '/[^\d+]/', '', (string) ( $lead['phone'] ?? '' ) );
-	$postcode = sanitize_text_field( $lead['postcode'] ?? '' );
-	$message  = sanitize_textarea_field( $lead['message'] ?? '' );
+	$name     = ppg_cut( sanitize_text_field( $lead['name'] ?? '' ), 100 );
+	$email    = ppg_cut( sanitize_email( $lead['email'] ?? '' ), 254 );
+	$phone    = ppg_cut( preg_replace( '/[^\d+]/', '', (string) ( $lead['phone'] ?? '' ) ), 20 );
+	$postcode = ppg_cut( sanitize_text_field( $lead['postcode'] ?? '' ), 12 );
+	$message  = ppg_cut( sanitize_textarea_field( $lead['message'] ?? '' ), 5000 );
 	$key      = (string) ( $lead['dedupe_key'] ?? '' );
 
 	$queue_item = array(
 		'name'     => $name,
 		'phone'    => $phone,
 		'postcode' => $postcode,
-		'message'  => $message,
-		'subject'  => sanitize_text_field( $lead['subject'] ?? '' ),
+		'message'  => ppg_cut( $message, 1000 ), // the review queue keeps only a short copy
+		'subject'  => ppg_cut( sanitize_text_field( $lead['subject'] ?? '' ), 200 ),
 		'key'      => '' !== $key ? $key : md5( $source . $name . $postcode . $message ),
 	);
 
@@ -78,13 +86,11 @@ function ppg_lead_process( $source, array $lead ) {
 	// notification does not create a second record. Remembered for two weeks;
 	// HubSpot's own unique matching is the permanent safeguard.
 	$locks = array(
-		'ppg_lead_i_' . md5( $lead_id ),
-		'ppg_lead_c_' . md5( $source . $email . $phone . $name . $postcode . substr( $message, 0, 300 ) ),
+		'i' . substr( md5( $lead_id ), 0, 12 ),
+		'c' . substr( md5( $source . $email . $phone . $name . $postcode . substr( $message, 0, 300 ) ), 0, 12 ),
 	);
-	foreach ( $locks as $lock ) {
-		if ( get_transient( $lock ) ) {
-			return array( 'status' => 'duplicate_ignored' );
-		}
+	if ( ppg_seen_has( $locks ) ) {
+		return array( 'status' => 'duplicate_ignored' );
 	}
 
 	$parts = preg_split( '/\s+/', $name, 2 );
@@ -151,11 +157,39 @@ function ppg_lead_process( $source, array $lead ) {
 		return $result;
 	}
 
-	foreach ( $locks as $lock ) {
-		set_transient( $lock, 1, 2 * WEEK_IN_SECONDS );
-	}
+	ppg_seen_add( $locks );
 	ppg_lead_review_remove( $source, $queue_item['key'] ); // e.g. an earlier rejection that has since been fixed
 	return array( 'status' => 'ok', 'hubspot_id' => $result['id'] );
+}
+
+/* ---------------------------------------------------------------------------
+ * Duplicate memory. One option holding short hashes (never customer data), capped in size and age, so the
+ * database footprint is constant no matter how many leads arrive. HubSpot's unique matching stays the
+ * permanent safeguard; this only avoids re-sending leads we already handled.
+ * ------------------------------------------------------------------------- */
+
+function ppg_seen_has( array $hashes ) {
+	$seen = (array) get_option( 'ppg_seen', array() );
+	$now  = time();
+	foreach ( $hashes as $h ) {
+		if ( isset( $seen[ $h ] ) && $now - (int) $seen[ $h ] < 2 * WEEK_IN_SECONDS ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function ppg_seen_add( array $hashes ) {
+	$seen = (array) get_option( 'ppg_seen', array() );
+	$now  = time();
+	foreach ( $hashes as $h ) {
+		unset( $seen[ $h ] ); // re-insert at the end so the oldest entries are the ones trimmed
+		$seen[ $h ] = $now;
+	}
+	if ( count( $seen ) > 1500 ) {
+		$seen = array_slice( $seen, -1200, null, true );
+	}
+	update_option( 'ppg_seen', $seen, false );
 }
 
 /* ---------------------------------------------------------------------------
@@ -176,7 +210,7 @@ function ppg_lead_review_add( $source, array $item, $reason ) {
 	) );
 	$queue = array_slice( $queue, -200, null, true ); // keep the latest 200
 	update_option( 'ppg_lead_review', $queue, false );
-	error_log( "[ppg-lead-gateway] $source lead held for review ($reason): {$item['name']}" );
+	error_log( "[ppg-lead-gateway] $source lead held for review ($reason)" ); // no customer details in server logs
 	return true;
 }
 
@@ -231,8 +265,10 @@ function ppg_lead_hubspot( $method, $path, $body ) {
 		return new WP_Error( 'ppg_not_configured', 'HubSpot token not configured.', array( 'status' => 500 ) );
 	}
 	$response = wp_remote_request( 'https://api.hubapi.com' . $path, array(
-		'method'  => $method,
-		'timeout' => 15,
+		'method'              => $method,
+		'timeout'             => 15,
+		'redirection'         => 0,
+		'limit_response_size' => 1048576,
 		'headers' => array(
 			'Authorization' => 'Bearer ' . $token,
 			'Content-Type'  => 'application/json',

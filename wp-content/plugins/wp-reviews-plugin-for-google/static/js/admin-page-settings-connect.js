@@ -17,12 +17,32 @@ jQuery(document).ready(function($) {
 		}
 	};
 
-	let removeReviewPhotos = function(place) {
+	let pickKeys = function(object, keys) {
+		let result = {};
+
+		keys.forEach(key => {
+			if (object && typeof object[key] !== 'undefined') {
+				result[key] = object[key];
+			}
+		});
+
+		return result;
+	};
+
+	let encodePlaceData = function(place) {
+		let data = pickKeys(place, [ 'id', 'name', 'address', 'avatar_url', 'access_token', 'rating_number', 'rating_numbers', 'rating_numbers_last', 'rating_score', 'request_id', 'manual_download', 'is_new_reviews', 'next_update_available' ]);
+
 		if (Array.isArray(place.reviews)) {
-			place.reviews.forEach(review => delete review.photos);
+			data.reviews = place.reviews.map(review => Object.assign(pickKeys(review, [ 'id', 'text', 'rating', 'created_at', 'date', 'reply', 'recommendation_type' ]), {
+				reviewer: pickKeys(review.reviewer, [ 'name', 'avatar_url' ]),
+				photos: Array.isArray(review.photos) ? review.photos.map(photo => photo && photo.url ? photo.url : photo) : [],
+			}));
 		}
 
-		return place;
+		let binary = '';
+		new TextEncoder().encode(JSON.stringify(data)).forEach(byte => binary += String.fromCharCode(byte));
+
+		return btoa(binary);
 	};
 
 	/*************************************************************************/
@@ -107,11 +127,7 @@ jQuery(document).ready(function($) {
 						return data.id;
 					},
 					onResponse: function(data) {
-						let jsonStr = JSON.stringify(removeReviewPhotos(data)).replace(/[\u0080-\uffff]/g, c => {
-							return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4);
-						});
-
-						$('#ti-noreg-page-details').val(jsonStr);
+						$('#ti-noreg-page-details').val(encodePlaceData(data));
 
 						button.closest('form').submit();
 					},
@@ -155,7 +171,7 @@ jQuery(document).ready(function($) {
 						type: 'POST',
 						data: {
 							_wpnonce: btn.data('nonce'),
-							download_data: JSON.stringify(removeReviewPhotos(place))
+							download_data: encodePlaceData(place)
 						}
 					}).always(() => location.reload());
 				}

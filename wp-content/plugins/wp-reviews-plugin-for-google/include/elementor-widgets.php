@@ -78,12 +78,19 @@ $this->end_controls_section();
 }
 protected function render()
 {
-$settings = $this->get_settings_for_display();
-$shortcode = '['.$this->shortCodeName.' no-registration='.$this->shortName.']';
-if ('pro' === $settings['type'] && $settings['embed_code']) {
-$shortcode = $settings['embed_code'];
+echo do_shortcode($this->getShortcode());
 }
-echo do_shortcode($shortcode);
+public function render_plain_content()
+{
+echo wp_kses_post($this->getShortcode());
+}
+private function getShortcode()
+{
+$settings = $this->get_settings_for_display();
+if ('pro' === $settings['type'] && $settings['embed_code']) {
+return $settings['embed_code'];
+}
+return '['.$this->shortCodeName.' no-registration='.$this->shortName.']';
 }
 }
 if (!class_exists('Elementor\Control_Choose2')) {

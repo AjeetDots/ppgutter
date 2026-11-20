@@ -13,6 +13,7 @@ CREATE TABLE ". $tiReviewsTableName ." (
  `date` DATE,
  `reviewId` TEXT,
  `reply` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+ `photos` TEXT,
  PRIMARY KEY  (`id`)
 )
 ",

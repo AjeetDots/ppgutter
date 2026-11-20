@@ -1436,21 +1436,7 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 			wp_die( esc_html__( 'Sorry, you are not allowed to edit snippets of this type.', 'insert-headers-and-footers' ), '', array( 'response' => 403 ) );
 		}
 
-		$prepared_code = WPCode_Snippet_Input::prepare_code( $snippet_code, $code_type );
-		if ( is_wp_error( $prepared_code ) ) {
-			$title = esc_html__( 'Restricted Code Detected', 'insert-headers-and-footers' );
-			wp_die(
-				'<h2>' . $title . '</h2>' .
-				sprintf(
-				// Translators: %1$s is the opening link tag, %2$s is the closing link tag.
-					esc_html__( 'For your protection, we blocked the addition of certain types of code that could compromise your website\'s security. If you believe this is in error or need assistance, please %1$scontact our support team%2$s.', 'insert-headers-and-footers' ),
-					'<a href="' . wpcode_utm_url( 'https://wpcode.com/contact', 'error', 'restricted-code' ) . '" target="_blank" rel="noopener noreferrer">',
-					'</a>'
-				),
-				$title
-			);
-		}
-		$snippet_code = $prepared_code;
+		$snippet_code = WPCode_Snippet_Input::prepare_code( $snippet_code, $code_type );
 
 		$tags = array();
 
@@ -1462,6 +1448,8 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 		}
 
 		$rules = isset( $_POST['wpcode_cl_rules'] ) ? json_decode( sanitize_textarea_field( wp_unslash( $_POST['wpcode_cl_rules'] ) ), true ) : array();
+		// save() unslashes the rules, so slash the decoded values to keep their backslashes.
+		$rules = wp_slash( $rules );
 
 		if ( isset( $_POST['wpcode_shortcode_attributes'] ) ) {
 			$attributes = array_map( 'sanitize_key', wp_unslash( $_POST['wpcode_shortcode_attributes'] ) );
@@ -1483,7 +1471,8 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 		$snippet = wpcode_get_snippet(
 			array(
 				'id'                   => $snippet_id,
-				'title'                => isset( $_POST['wpcode_snippet_title'] ) ? sanitize_text_field( wp_unslash( $_POST['wpcode_snippet_title'] ) ) : '',
+				// save() unslashes the title, note and location extra, so slash them again after sanitizing.
+				'title'                => isset( $_POST['wpcode_snippet_title'] ) ? wp_slash( sanitize_text_field( wp_unslash( $_POST['wpcode_snippet_title'] ) ) ) : '',
 				'code'                 => $snippet_code,
 				'active'               => $active,
 				'code_type'            => $code_type,
@@ -1494,8 +1483,8 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 				'use_rules'            => isset( $_POST['wpcode_conditional_logic_enable'] ),
 				'rules'                => $rules,
 				'priority'             => isset( $_POST['wpcode_priority'] ) ? intval( $_POST['wpcode_priority'] ) : 10,
-				'note'                 => isset( $_POST['wpcode_note'] ) ? wp_kses_post( wp_unslash( $_POST['wpcode_note'] ) ) : '',
-				'location_extra'       => isset( $_POST['wpcode_auto_insert_location_extra'] ) ? sanitize_text_field( wp_unslash( $_POST['wpcode_auto_insert_location_extra'] ) ) : '',
+				'note'                 => isset( $_POST['wpcode_note'] ) ? wp_slash( wp_kses_post( wp_unslash( $_POST['wpcode_note'] ) ) ) : '',
+				'location_extra'       => isset( $_POST['wpcode_auto_insert_location_extra'] ) ? wp_slash( sanitize_text_field( wp_unslash( $_POST['wpcode_auto_insert_location_extra'] ) ) ) : '',
 				'shortcode_attributes' => $attributes,
 			)
 		);
@@ -1544,6 +1533,8 @@ class WPCode_Admin_Page_Snippet_Manager extends WPCode_Admin_Page {
 		if ( $execute_now && $id ) {
 			// The on-demand code is the posted, still-slashed value; mark it so the run unslashes it like the activation check.
 			wpcode()->execute->doing_activation();
+			// The rules were slashed for save(), so check them as typed.
+			$snippet->load_from_array( array( 'rules' => wp_unslash( $snippet->get_conditional_rules() ) ) );
 			wpcode()->execute->set_activation_code_slashed( true );
 			$snippet->execute( apply_filters( 'wpcode_on_demand_ignore_conditional_logic', false ) );
 			wpcode()->execute->set_activation_code_slashed( false );
